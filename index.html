@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>予約カレンダー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://static.line-scdn.net">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
@@ -673,8 +675,21 @@ submitBtn.addEventListener("click", async () => {
 });
 
 (async function start(){
-  await initLiff();
-  await Promise.all([fetchAvailability(), fetchMyBookings()]);
+  // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
+  renderMonth();
+  renderSelection();
+
+  // LINEログインと空き状況取得を同時に開始（片方を待たない）
+  const availabilityPromise = fetchAvailability();
+  const liffPromise = initLiff();
+
+  // 空き状況が届き次第、確定していなくても先に反映
+  await availabilityPromise;
+  renderMonth();
+
+  // LINEログインが終わったら、自分の予約情報を重ねて反映
+  await liffPromise;
+  await fetchMyBookings();
   renderMonth();
   renderSelection();
 })();
