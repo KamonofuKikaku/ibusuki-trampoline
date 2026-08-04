@@ -214,6 +214,23 @@
 
   .day-btn:active:not(.full):not(.past) { transform: scale(0.94); }
 
+  /* ---------- business hours ---------- */
+  .business-hours {
+    margin: 4px 20px 0;
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: var(--white);
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(43,35,32,0.06);
+  }
+  .business-hours .value {
+    color: var(--orange);
+    font-family: "Zen Maru Gothic", sans-serif;
+  }
+
   /* ---------- selected chips ---------- */
   .selection-panel {
     padding: 6px 20px 0;
@@ -337,6 +354,8 @@
 
   <div class="grid" id="grid"></div>
 
+  <div class="business-hours" id="businessHours" style="display:none;"></div>
+
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中の日程</div>
     <div class="chip-row" id="chipRow"></div>
@@ -387,6 +406,12 @@ async function fetchAvailability(){
     const data = await res.json();
     availabilityMap = {};
     (data.dates || []).forEach(d => { availabilityMap[d.date] = { full: d.full, remain: d.remain }; });
+
+    const hoursEl = document.getElementById("businessHours");
+    if (data.businessHours){
+      hoursEl.innerHTML = `営業時間 <span class="value">${data.businessHours}</span>`;
+      hoursEl.style.display = "block";
+    }
   } catch (err){
     console.error("availability fetch failed", err);
     showToast("空き状況の取得に失敗しました");
