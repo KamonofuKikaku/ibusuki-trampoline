@@ -392,7 +392,16 @@ async function initLiff(){
       liff.login();
       return;
     }
-    liffProfile = await liff.getProfile();
+    // getProfile()は毎回LINEへ通信が発生し遅い。
+    // ログイン時に受け取るIDトークンにuserId・表示名が既に入っているので、
+    // それをそのまま使うことで通信を1回分減らす。
+    const idToken = liff.getDecodedIDToken();
+    if (idToken){
+      liffProfile = { userId: idToken.sub, displayName: idToken.name || "お客様" };
+    } else {
+      // 念のためのフォールバック（通常はここに来ない）
+      liffProfile = await liff.getProfile();
+    }
   } catch (err){
     console.error("LIFF init failed", err);
     showToast("読み込みに失敗しました。時間をおいて再度お試しください");
@@ -423,6 +432,7 @@ async function fetchMyBookings(){
     const res = await fetch(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
     const data = await res.json();
     bookedSet = new Set((data.bookings || []).map(b => b.date));
+    try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
   } catch (err){
     console.error("myBookings fetch failed", err);
     showToast("予約情報の取得に失敗しました");
@@ -695,6 +705,12 @@ submitBtn.addEventListener("click", async () => {
 });
 
 (async function start(){
+  // 前回開いた時の予約状況があれば、まずそれを即座に表示（体感速度優先）
+  try {
+    const cached = localStorage.getItem("cachedBookedDates");
+    if (cached) bookedSet = new Set(JSON.parse(cached));
+  } catch (e) {}
+
   // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
   renderMonth();
   renderSelection();
@@ -707,7 +723,7 @@ submitBtn.addEventListener("click", async () => {
   await availabilityPromise;
   renderMonth();
 
-  // LINEログインが終わったら、自分の予約情報を重ねて反映
+  // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
   await liffPromise;
   await fetchMyBookings();
   renderMonth();
