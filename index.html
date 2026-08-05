@@ -19,6 +19,8 @@
     --orange-soft: #FFE3D6;
     --mint: #2FBF8F;
     --mint-soft: #DFF6EC;
+    --booked: #4F8FE0;
+    --booked-soft: #E4EFFC;
     --gray-full: #D9D2C7;
     --gray-full-text: #A79E92;
     --white: #FFFFFF;
@@ -107,7 +109,7 @@
   .legend .dot.ok { background: var(--mint); }
   .legend .dot.low { background: var(--orange); }
   .legend .dot.full { background: var(--gray-full-text); }
-  .legend .dot.mint { background: var(--mint); }
+  .legend .dot.mint { background: var(--booked); }
 
   /* ---------- calendar grid ---------- */
   .weekdays {
@@ -192,7 +194,7 @@
   .day-btn.full .day-cap { color: var(--gray-full-text); font-weight: 700; }
 
   /* 予約済み(あなたの予約) = ミントのスタンプ、タップでキャンセル */
-  .day-btn.booked .stamp path { fill: var(--mint); }
+  .day-btn.booked .stamp path { fill: var(--booked); }
   .day-btn.booked .stamp {
     opacity: 1;
     transform: scale(1) rotate(-6deg);
@@ -568,6 +570,13 @@ function confirmCancel(key){
 
 async function doCancel(key){
   if (!liffProfile) return;
+
+  // 先に画面を更新（体感速度優先）。失敗したら後で元に戻す
+  bookedSet.delete(key);
+  try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+  renderMonth();
+  showToast("キャンセルしました");
+
   try {
     const res = await fetch(GAS_ENDPOINT, {
       method: "POST",
@@ -579,15 +588,19 @@ async function doCancel(key){
     });
     const data = await res.json();
     if (data.success){
-      bookedSet.delete(key);
-      await fetchAvailability(); // キャンセルで空きが出るので再取得
-      renderMonth();
-      showToast("キャンセルしました");
+      fetchAvailability().then(renderMonth); // 空きが出るので裏側で更新(表示をブロックしない)
     } else {
-      showToast("キャンセルできませんでした");
+      // 失敗していたので元に戻す
+      bookedSet.add(key);
+      try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+      renderMonth();
+      showToast("キャンセルできませんでした。もう一度お試しください");
     }
   } catch (err){
     console.error("cancel failed", err);
+    bookedSet.add(key);
+    try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+    renderMonth();
     showToast("通信に失敗しました。時間をおいて再度お試しください");
   }
 }
