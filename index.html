@@ -381,6 +381,7 @@ const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvc
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
 
+
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
 let liffProfile = null;       // { userId, displayName }
@@ -702,11 +703,8 @@ submitBtn.addEventListener("click", async () => {
     } else {
       showToast("選択いただいた日程は受け付けできませんでした");
     }
-
-    // LINEのトーク画面に結果が届くので、少し待ってLIFFを閉じる
-    setTimeout(() => {
-      if (liff.isInClient()) liff.closeWindow();
-    }, 1500);
+    // 自動では閉じない。予約済み(青いスタンプ)への変化を確認してから、
+    // 本人が画面右上の×ボタンなどで閉じる。
 
   } catch (err){
     console.error("booking failed", err);
