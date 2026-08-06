@@ -163,12 +163,12 @@
     z-index: 2;
   }
   .day-cap {
-    font-size: 7.5px;
+    font-size: 9.5px;
     font-weight: 700;
     color: var(--ink-soft);
     z-index: 2;
     margin-top: 1px;
-    line-height: 1.15;
+    line-height: 1.2;
     text-align: center;
     white-space: pre-line;
   }
@@ -210,6 +210,7 @@
     transform: scale(1) rotate(-6deg);
   }
   .day-btn.booked .day-num { color: var(--white); font-weight: 700; }
+  .day-btn.booked .day-cap { color: rgba(255,255,255,0.9); }
   .day-btn.booked { cursor: pointer; }
   .day-btn.booked:active { transform: scale(0.94); }
 
@@ -384,12 +385,11 @@
 /* =========================================================
    ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
 ========================================================= */
-const LIFF_ID = "2010959314-SoDIKt2f";              // LINE Developersコンソールで発行したLIFF ID
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";  // GASデプロイ後の .../exec URL
+const LIFF_ID = "YOUR_LIFF_ID_HERE";              // LINE Developersコンソールで発行したLIFF ID
+const GAS_ENDPOINT = "YOUR_GAS_WEBAPP_URL_HERE";  // GASデプロイ後の .../exec URL
 /* =========================================================
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
-
 
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
