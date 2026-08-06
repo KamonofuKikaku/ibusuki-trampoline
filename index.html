@@ -21,6 +21,7 @@
     --mint-soft: #DFF6EC;
     --booked: #4F8FE0;
     --booked-soft: #E4EFFC;
+    --danger: #E0503A;
     --gray-full: #D9D2C7;
     --gray-full-text: #A79E92;
     --white: #FFFFFF;
@@ -109,6 +110,7 @@
   .legend .dot.ok { background: var(--mint); }
   .legend .dot.low { background: var(--orange); }
   .legend .dot.full { background: var(--gray-full-text); }
+  .legend .dot.closed { background: var(--danger); }
   .legend .dot.mint { background: var(--booked); }
 
   /* ---------- calendar grid ---------- */
@@ -161,11 +163,14 @@
     z-index: 2;
   }
   .day-cap {
-    font-size: 10px;
+    font-size: 7.5px;
     font-weight: 700;
     color: var(--ink-soft);
     z-index: 2;
-    margin-top: 2px;
+    margin-top: 1px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: pre-line;
   }
 
   /* stamp = signature element for selected day */
@@ -192,6 +197,11 @@
   .day-btn.full { pointer-events: none; }
   .day-btn.full .day-num { color: var(--gray-full-text); }
   .day-btn.full .day-cap { color: var(--gray-full-text); font-weight: 700; }
+
+  .day-btn.closed { pointer-events: none; }
+  .day-btn.closed .day-num { color: var(--gray-full-text); }
+  .day-btn.closed .day-cap { color: var(--danger); font-weight: 900; }
+  .day-btn.closed .avail-ring { background: var(--gray-full); opacity: 0.5; }
 
   /* 予約済み(あなたの予約) = ミントのスタンプ、タップでキャンセル */
   .day-btn.booked .stamp path { fill: var(--booked); }
@@ -347,6 +357,7 @@
     <span><span class="dot ok"></span>空きあり</span>
     <span><span class="dot low"></span>残りわずか</span>
     <span><span class="dot full"></span>満員</span>
+    <span><span class="dot closed"></span>休館</span>
     <span><span class="dot mint"></span>予約済み(タップでキャンセル)</span>
   </div>
 
@@ -355,8 +366,6 @@
   </div>
 
   <div class="grid" id="grid"></div>
-
-  <div class="business-hours" id="businessHours" style="display:none;"></div>
 
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中の日程</div>
@@ -416,17 +425,23 @@ async function fetchAvailability(){
     const res = await fetch(`${GAS_ENDPOINT}?action=availability`);
     const data = await res.json();
     availabilityMap = {};
-    (data.dates || []).forEach(d => { availabilityMap[d.date] = { full: d.full, remain: d.remain }; });
-
-    const hoursEl = document.getElementById("businessHours");
-    if (data.businessHours){
-      hoursEl.innerHTML = `営業時間 <span class="value">${data.businessHours}</span>`;
-      hoursEl.style.display = "block";
-    }
+    (data.dates || []).forEach(d => {
+      availabilityMap[d.date] = { full: d.full, remain: d.remain, closed: d.closed, hours: d.hours };
+    });
   } catch (err){
     console.error("availability fetch failed", err);
     showToast("空き状況の取得に失敗しました");
   }
+}
+
+// "14:00〜22:00" のような文字列を、セル内で2行の小さい表示用に変換する
+// 例: "1400-" / "2200"
+function formatHoursCompact_(hours){
+  if (!hours) return "";
+  const parts = hours.split("〜");
+  if (parts.length !== 2) return hours;
+  const strip = s => s.replace(":", "").trim();
+  return `${strip(parts[0])}-\n${strip(parts[1])}`;
 }
 
 async function fetchMyBookings(){
@@ -445,6 +460,7 @@ async function fetchMyBookings(){
 function statusOf(key){
   const info = availabilityMap[key];
   if (!info) return { status: "unknown" };
+  if (info.closed) return { status: "closed" };
   if (info.full) return { status: "full" };
   if (typeof info.remain === "number" && info.remain <= 2) return { status: "low" };
   return { status: "ok" };
@@ -516,6 +532,7 @@ function renderMonth(){
     btn.dataset.key = key;
     if (isPast) btn.classList.add("past");
     else if (isBooked) btn.classList.add("booked");
+    else if (status === "closed") btn.classList.add("closed");
     else if (status === "full") btn.classList.add("full");
     else if (status === "low") btn.classList.add("avail-low");
     else if (status === "ok") btn.classList.add("avail-ok");
@@ -538,11 +555,19 @@ function renderMonth(){
 
     const capEl = document.createElement("div");
     capEl.className = "day-cap";
+    if (!isPast){
+      const info = availabilityMap[key];
+      if (status === "closed"){
+        capEl.textContent = "休館";
+      } else if (info && info.hours){
+        capEl.textContent = formatHoursCompact_(info.hours);
+      }
+    }
     btn.appendChild(capEl);
 
     if (!isPast && isBooked){
       btn.addEventListener("click", () => confirmCancel(key));
-    } else if (!isPast && status !== "full"){
+    } else if (!isPast && status !== "full" && status !== "closed"){
       btn.addEventListener("click", () => toggleDate(key, btn));
     }
 
