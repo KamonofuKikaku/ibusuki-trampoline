@@ -446,6 +446,8 @@ async function fetchAvailability(){
     });
   } catch (err){
     console.error("availability fetch failed", err);
+    // ← 原因調査用に一時的に詳細を表示。分かったら消してOK
+    alert("availabilityエラー: " + (err && err.name ? err.name : "?") + " / " + (err && err.message ? err.message : String(err)));
     showToast("空き状況の取得に失敗しました");
   }
 }
