@@ -135,21 +135,22 @@
 
   .day-cell {
     position: relative;
-    aspect-ratio: 1 / 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 2px;
+    padding-top: 2px;
   }
   .day-cell.empty { visibility: hidden; }
 
   .day-btn {
     position: relative;
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1 / 1;
     border: none;
     background: transparent;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     font-family: "Zen Kaku Gothic New", sans-serif;
@@ -162,16 +163,18 @@
     color: var(--ink);
     z-index: 2;
   }
-  .day-cap {
-    font-size: 9.5px;
+
+  /* 丸マークの外側・下に完全に分離した営業時間表示 */
+  .day-hours {
+    font-size: 9px;
     font-weight: 700;
     color: var(--ink-soft);
-    z-index: 2;
-    margin-top: 1px;
-    line-height: 1.2;
+    line-height: 1.15;
     text-align: center;
     white-space: pre-line;
   }
+  .day-cell.is-past .day-hours { visibility: hidden; }
+  .day-cell.is-closed .day-hours { color: var(--danger); font-weight: 900; }
 
   /* stamp = signature element for selected day */
   .stamp {
@@ -188,29 +191,24 @@
     transform: scale(1) rotate(-6deg);
   }
   .day-btn.selected .day-num { color: var(--white); font-weight: 700; }
-  .day-btn.selected .day-cap { color: rgba(255,255,255,0.85); }
 
   .day-btn.past { pointer-events: none; }
   .day-btn.past .day-num { color: #D8D2C7; }
-  .day-btn.past .day-cap { visibility: hidden; }
 
   .day-btn.full { pointer-events: none; }
   .day-btn.full .day-num { color: var(--gray-full-text); }
-  .day-btn.full .day-cap { color: var(--gray-full-text); font-weight: 700; }
 
   .day-btn.closed { pointer-events: none; }
   .day-btn.closed .day-num { color: var(--gray-full-text); }
-  .day-btn.closed .day-cap { color: var(--danger); font-weight: 900; }
   .day-btn.closed .avail-ring { background: var(--gray-full); opacity: 0.5; }
 
-  /* 予約済み(あなたの予約) = ミントのスタンプ、タップでキャンセル */
+  /* 予約済み(あなたの予約) = 青いスタンプ、タップでキャンセル */
   .day-btn.booked .stamp path { fill: var(--booked); }
   .day-btn.booked .stamp {
     opacity: 1;
     transform: scale(1) rotate(-6deg);
   }
   .day-btn.booked .day-num { color: var(--white); font-weight: 700; }
-  .day-btn.booked .day-cap { color: rgba(255,255,255,0.9); }
   .day-btn.booked { cursor: pointer; }
   .day-btn.booked:active { transform: scale(0.94); }
 
@@ -526,6 +524,8 @@ function renderMonth(){
 
     const cell = document.createElement("div");
     cell.className = "day-cell";
+    if (isPast) cell.classList.add("is-past");
+    if (status === "closed") cell.classList.add("is-closed");
 
     const btn = document.createElement("button");
     btn.className = "day-btn";
@@ -553,18 +553,6 @@ function renderMonth(){
     num.textContent = day;
     btn.appendChild(num);
 
-    const capEl = document.createElement("div");
-    capEl.className = "day-cap";
-    if (!isPast){
-      const info = availabilityMap[key];
-      if (status === "closed"){
-        capEl.textContent = "休館";
-      } else if (info && info.hours){
-        capEl.textContent = formatHoursCompact_(info.hours);
-      }
-    }
-    btn.appendChild(capEl);
-
     if (!isPast && isBooked){
       btn.addEventListener("click", () => confirmCancel(key));
     } else if (!isPast && status !== "full" && status !== "closed"){
@@ -572,6 +560,20 @@ function renderMonth(){
     }
 
     cell.appendChild(btn);
+
+    // 丸マークの外側・下に完全に分離した営業時間表示
+    const hoursEl = document.createElement("div");
+    hoursEl.className = "day-hours";
+    if (!isPast){
+      const info = availabilityMap[key];
+      if (status === "closed"){
+        hoursEl.textContent = "休館";
+      } else if (info && info.hours){
+        hoursEl.textContent = formatHoursCompact_(info.hours);
+      }
+    }
+    cell.appendChild(hoursEl);
+
     grid.appendChild(cell);
   }
 }
