@@ -383,11 +383,12 @@
 /* =========================================================
    ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
 ========================================================= */
-const LIFF_ID = "YOUR_LIFF_ID_HERE";              // LINE Developersコンソールで発行したLIFF ID
-const GAS_ENDPOINT = "YOUR_GAS_WEBAPP_URL_HERE";  // GASデプロイ後の .../exec URL
+const LIFF_ID = "2010959314-SoDIKt2f";              // LINE Developersコンソールで発行したLIFF ID
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";  // GASデプロイ後の .../exec URL
 /* =========================================================
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
+
 
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
@@ -418,10 +419,27 @@ async function initLiff(){
   }
 }
 
+// タイムアウト付き・失敗時は自動で数回リトライするfetch
+async function fetchWithRetry_(url, options, retries = 2, timeoutMs = 8000){
+  for (let attempt = 0; attempt <= retries; attempt++){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...(options || {}), signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch (err){
+      clearTimeout(timer);
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, 700 * (attempt + 1))); // 少し待って再試行
+    }
+  }
+}
+
 async function fetchAvailability(){
   try {
-    const res = await fetch(`${GAS_ENDPOINT}?action=availability`);
-    const data = await res.json();
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=availability`);
     availabilityMap = {};
     (data.dates || []).forEach(d => {
       availabilityMap[d.date] = { full: d.full, remain: d.remain, closed: d.closed, hours: d.hours };
@@ -445,8 +463,7 @@ function formatHoursCompact_(hours){
 async function fetchMyBookings(){
   if (!liffProfile) return;
   try {
-    const res = await fetch(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
-    const data = await res.json();
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
     bookedSet = new Set((data.bookings || []).map(b => b.date));
     try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
   } catch (err){
@@ -606,7 +623,7 @@ async function doCancel(key){
   showToast("キャンセルしました");
 
   try {
-    const res = await fetch(GAS_ENDPOINT, {
+    const data = await fetchWithRetry_(GAS_ENDPOINT, {
       method: "POST",
       body: JSON.stringify({
         action: "cancel",
@@ -614,7 +631,6 @@ async function doCancel(key){
         date: key,
       }),
     });
-    const data = await res.json();
     if (data.success){
       fetchAvailability().then(renderMonth); // 空きが出るので裏側で更新(表示をブロックしない)
     } else {
@@ -701,7 +717,7 @@ submitBtn.addEventListener("click", async () => {
   submitBtn.textContent = "送信中…";
 
   try {
-    const res = await fetch(GAS_ENDPOINT, {
+    const data = await fetchWithRetry_(GAS_ENDPOINT, {
       method: "POST",
       body: JSON.stringify({
         action: "book",
@@ -709,8 +725,7 @@ submitBtn.addEventListener("click", async () => {
         displayName: liffProfile.displayName,
         dates: dates,
       }),
-    });
-    const data = await res.json();
+    }, 2, 15000); // 予約処理は少し重いのでタイムアウトを長めに
     const results = data.results || [];
     const succeeded = results.filter(r => r.success).length;
     const failed = results.length - succeeded;
