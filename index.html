@@ -336,6 +336,31 @@
     white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- loading overlay ---------- */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 35, 32, 0.18);
+    z-index: 40;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 90px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .loading-overlay.show { opacity: 1; }
+  .loading-pill {
+    background: var(--ink);
+    color: var(--white);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  }
 </style>
 </head>
 <body>
@@ -376,18 +401,21 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-pill">更新中…</div>
+  </div>
 </div>
 
 <script>
 /* =========================================================
    ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
 ========================================================= */
-const LIFF_ID = "2010959314-SoDIKt2f";              // LINE Developersコンソールで発行したLIFF ID
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";  // GASデプロイ後の .../exec URL
+const LIFF_ID = "YOUR_LIFF_ID_HERE";              // LINE Developersコンソールで発行したLIFF ID
+const GAS_ENDPOINT = "YOUR_GAS_WEBAPP_URL_HERE";  // GASデプロイ後の .../exec URL
 /* =========================================================
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
-
 
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
@@ -443,6 +471,7 @@ async function fetchAvailability(){
     (data.dates || []).forEach(d => {
       availabilityMap[d.date] = { full: d.full, remain: d.remain, closed: d.closed, hours: d.hours };
     });
+    try { localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap)); } catch (e) {}
   } catch (err){
     console.error("availability fetch failed", err);
     showToast("空き状況の取得に失敗しました");
@@ -509,6 +538,14 @@ function showToast(msg){
   toastEl.classList.add("show");
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+const loadingOverlayEl = document.getElementById("loadingOverlay");
+function showLoadingOverlay(){
+  loadingOverlayEl.classList.add("show");
+}
+function hideLoadingOverlay(){
+  loadingOverlayEl.classList.remove("show");
 }
 
 
@@ -755,15 +792,22 @@ submitBtn.addEventListener("click", async () => {
 });
 
 (async function start(){
-  // 前回開いた時の予約状況があれば、まずそれを即座に表示（体感速度優先）
+  // 前回開いた時のデータがあれば、まずそれを即座に表示（体感速度優先）
   try {
-    const cached = localStorage.getItem("cachedBookedDates");
-    if (cached) bookedSet = new Set(JSON.parse(cached));
+    const cachedBooked = localStorage.getItem("cachedBookedDates");
+    if (cachedBooked) bookedSet = new Set(JSON.parse(cachedBooked));
+  } catch (e) {}
+  try {
+    const cachedAvail = localStorage.getItem("cachedAvailability");
+    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
   } catch (e) {}
 
   // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
   renderMonth();
   renderSelection();
+
+  // 最新データが揃うまで、半透明のオーバーレイで「更新中」を示す
+  showLoadingOverlay();
 
   // LINEログインと空き状況取得を同時に開始（片方を待たない）
   const availabilityPromise = fetchAvailability();
@@ -778,6 +822,8 @@ submitBtn.addEventListener("click", async () => {
   await fetchMyBookings();
   renderMonth();
   renderSelection();
+
+  hideLoadingOverlay();
 })();
 </script>
 </body>
