@@ -518,7 +518,7 @@
         <div class="tramp-mat"></div>
         <img src="dino.png" class="dino-img" alt="">
       </div>
-      <div class="loading-text">じゅんびちゅう…</div>
+      <div class="loading-text" id="loadingText">じゅんびちゅう…</div>
     </div>
   </div>
 </div>
@@ -658,11 +658,14 @@ function showToast(msg){
 }
 
 const loadingOverlayEl = document.getElementById("loadingOverlay");
-function showLoadingOverlay(){
+const loadingTextEl = document.getElementById("loadingText");
+function showLoadingOverlay(text){
+  loadingTextEl.textContent = text || "じゅんびちゅう…";
   loadingOverlayEl.classList.add("show");
 }
 function hideLoadingOverlay(){
   loadingOverlayEl.classList.remove("show");
+  loadingTextEl.textContent = "じゅんびちゅう…";
 }
 
 
@@ -866,6 +869,7 @@ submitBtn.addEventListener("click", async () => {
 
   submitBtn.disabled = true;
   submitBtn.textContent = "送信中…";
+  showLoadingOverlay("よやくちゅう…");
 
   try {
     const data = await fetchWithRetry_(GAS_ENDPOINT, {
@@ -905,6 +909,7 @@ submitBtn.addEventListener("click", async () => {
   } finally {
     submitBtn.disabled = selectedDates.size === 0;
     submitBtn.textContent = "この日程で予約する";
+    hideLoadingOverlay();
   }
 });
 
