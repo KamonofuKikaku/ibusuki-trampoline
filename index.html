@@ -340,13 +340,17 @@
   /* ---------- loading overlay (恐竜がトランポリンで跳ねる) ---------- */
   .loading-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(43, 35, 32, 0.18);
     z-index: 40;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding-top: 60px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
@@ -354,10 +358,6 @@
   .loading-overlay.show { opacity: 1; }
 
   .loading-mascot {
-    background: var(--white);
-    border-radius: 24px;
-    padding: 8px 16px 12px;
-    box-shadow: 0 8px 24px rgba(43,35,32,0.18);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -368,40 +368,84 @@
     font-family: "Zen Maru Gothic", sans-serif;
     font-size: 13px;
     font-weight: 700;
-    color: var(--ink-soft);
+    color: var(--white);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.25);
   }
 
-  .dino-group {
-    transform-origin: 58px 148px;
-    animation: dinoBounce 0.9s ease-in-out infinite;
+  .dino-scene {
+    position: relative;
+    width: 130px;
+    height: 160px;
   }
-  .tramp-mat, .tramp-shadow {
-    transform-origin: 70px 148px;
+
+  .tramp-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 26px;
+    width: 96px;
+    height: 14px;
+    margin-left: -48px;
+    border-radius: 50%;
+    background: rgba(43, 35, 32, 0.12);
+  }
+
+  .tramp-mat {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    width: 92px;
+    height: 22px;
+    margin-left: -46px;
+    border-radius: 50%;
+    background: #5C7FA6;
+    border: 3px solid #3E5C7C;
+    transform-origin: center;
     animation: matSquish 0.9s ease-in-out infinite;
   }
+
+  .dino-img {
+    position: absolute;
+    left: 50%;
+    bottom: 34px;
+    width: 82px;
+    margin-left: -41px;
+    transform-origin: 50% 100%;
+    animation: dinoBounce 0.9s ease-in-out infinite;
+  }
+
   .burst {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    width: 5px;
+    height: 32px;
+    border-radius: 3px;
+    background: #FFB648;
     opacity: 0;
     animation: burstFlash 0.9s ease-in-out infinite;
   }
+  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
+  .burst-c { margin-left: -2.5px; background: #FFE07A; }
+  .burst-r { margin-left: 20px; transform: rotate(24deg); }
 
   @keyframes dinoBounce {
-    0%   { transform: translateY(0) scaleY(1); }
-    30%  { transform: translateY(-34px) scaleY(1.03); }
-    55%  { transform: translateY(0) scaleY(0.9); }
-    70%  { transform: translateY(2px) scaleY(0.86); }
-    100% { transform: translateY(0) scaleY(1); }
+    0%   { transform: translateY(0) rotate(0deg); }
+    35%  { transform: translateY(-52px) rotate(190deg); }
+    62%  { transform: translateY(0) rotate(360deg); }
+    76%  { transform: translateY(3px) rotate(360deg); }
+    100% { transform: translateY(0) rotate(360deg); }
   }
   @keyframes matSquish {
     0%   { transform: scaleX(1) scaleY(1); }
-    55%  { transform: scaleX(1) scaleY(1); }
-    68%  { transform: scaleX(1.12) scaleY(0.55); }
-    82%  { transform: scaleX(1) scaleY(1); }
+    58%  { transform: scaleX(1) scaleY(1); }
+    70%  { transform: scaleX(1.12) scaleY(0.55); }
+    84%  { transform: scaleX(1) scaleY(1); }
     100% { transform: scaleX(1) scaleY(1); }
   }
   @keyframes burstFlash {
-    0%, 50% { opacity: 0; }
-    62%     { opacity: 1; }
-    80%, 100% { opacity: 0; }
+    0%, 54% { opacity: 0; }
+    66%     { opacity: 1; }
+    84%, 100% { opacity: 0; }
   }
 </style>
 </head>
@@ -446,50 +490,14 @@
 
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-mascot">
-      <svg class="dino-scene" viewBox="0 0 140 175" width="112" height="140">
-        <!-- トランポリン -->
-        <ellipse class="tramp-shadow" cx="70" cy="150" rx="46" ry="7" fill="rgba(43,35,32,0.12)"/>
-        <line x1="34" y1="152" x2="26" y2="167" stroke="#B99E7A" stroke-width="4" stroke-linecap="round"/>
-        <line x1="106" y1="152" x2="114" y2="167" stroke="#B99E7A" stroke-width="4" stroke-linecap="round"/>
-        <line x1="50" y1="155" x2="45" y2="169" stroke="#B99E7A" stroke-width="4" stroke-linecap="round"/>
-        <line x1="90" y1="155" x2="95" y2="169" stroke="#B99E7A" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="tramp-mat" cx="70" cy="148" rx="44" ry="11" fill="#5C7FA6"/>
-        <ellipse cx="70" cy="148" rx="44" ry="11" fill="none" stroke="#3E5C7C" stroke-width="3"/>
-
-        <!-- 恐竜 -->
-        <g class="dino-group">
-          <!-- 尾 -->
-          <path d="M28 78 Q10 82 14 68 Q20 72 28 78 Z" fill="#9FB8CC"/>
-          <!-- 後ろ足 -->
-          <ellipse cx="45" cy="108" rx="10" ry="7" fill="#9FB8CC"/>
-          <ellipse cx="75" cy="108" rx="10" ry="7" fill="#9FB8CC"/>
-          <!-- 体 -->
-          <ellipse cx="58" cy="72" rx="34" ry="38" fill="#9FB8CC"/>
-          <!-- おなか -->
-          <ellipse cx="54" cy="86" rx="19" ry="24" fill="#FFFBF3"/>
-          <!-- せなかのとげ -->
-          <path d="M62 34 L67 22 L72 36 Z" fill="#8DBFA0"/>
-          <path d="M74 32 L80 20 L84 34 Z" fill="#8DBFA0"/>
-          <path d="M85 36 L91 26 L94 39 Z" fill="#8DBFA0"/>
-          <!-- 頭 -->
-          <circle cx="86" cy="38" r="23" fill="#9FB8CC"/>
-          <!-- ほっぺ -->
-          <circle cx="76" cy="45" r="6" fill="#F4A9B0"/>
-          <!-- 目 -->
-          <circle cx="93" cy="33" r="2.6" fill="#2B2320"/>
-          <!-- 口 -->
-          <path d="M82 47 Q90 54 99 46" stroke="#2B2320" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <!-- 手 -->
-          <path d="M32 55 Q18 40 26 28 Q34 42 40 58 Z" fill="#9FB8CC"/>
-        </g>
-
-        <!-- はねる時の光線 -->
-        <g class="burst">
-          <line x1="70" y1="148" x2="46" y2="120" stroke="#FFB648" stroke-width="5" stroke-linecap="round"/>
-          <line x1="70" y1="148" x2="70" y2="112" stroke="#FFE07A" stroke-width="5" stroke-linecap="round"/>
-          <line x1="70" y1="148" x2="94" y2="120" stroke="#FFB648" stroke-width="5" stroke-linecap="round"/>
-        </g>
-      </svg>
+      <div class="dino-scene">
+        <div class="tramp-shadow"></div>
+        <div class="burst burst-l"></div>
+        <div class="burst burst-c"></div>
+        <div class="burst burst-r"></div>
+        <div class="tramp-mat"></div>
+        <img src="dino.png" class="dino-img" alt="">
+      </div>
       <div class="loading-text">じゅんびちゅう…</div>
     </div>
   </div>
