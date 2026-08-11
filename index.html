@@ -401,14 +401,29 @@
     border: 3px solid #3E5C7C;
     transform-origin: center;
     animation: matSquish 0.9s ease-in-out infinite;
+    z-index: 2;
   }
+
+  .tramp-leg {
+    position: absolute;
+    bottom: 6px;
+    width: 4px;
+    height: 26px;
+    background: #B99E7A;
+    border-radius: 2px;
+    z-index: 1;
+  }
+  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
+  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
+  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
+  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
 
   .dino-img {
     position: absolute;
     left: 50%;
     bottom: 34px;
-    width: 82px;
-    margin-left: -41px;
+    width: 64px;
+    margin-left: -32px;
     transform-origin: 50% 100%;
     animation: dinoBounce 0.9s ease-in-out infinite;
   }
@@ -429,11 +444,11 @@
   .burst-r { margin-left: 20px; transform: rotate(24deg); }
 
   @keyframes dinoBounce {
-    0%   { transform: translateY(0) rotate(0deg); }
-    35%  { transform: translateY(-52px) rotate(190deg); }
-    62%  { transform: translateY(0) rotate(360deg); }
-    76%  { transform: translateY(3px) rotate(360deg); }
-    100% { transform: translateY(0) rotate(360deg); }
+    0%   { transform: translateY(0) scaleY(1); }
+    35%  { transform: translateY(-42px) scaleY(1.03); }
+    62%  { transform: translateY(0) scaleY(0.9); }
+    76%  { transform: translateY(3px) scaleY(0.86); }
+    100% { transform: translateY(0) scaleY(1); }
   }
   @keyframes matSquish {
     0%   { transform: scaleX(1) scaleY(1); }
@@ -495,6 +510,10 @@
         <div class="burst burst-l"></div>
         <div class="burst burst-c"></div>
         <div class="burst burst-r"></div>
+        <div class="tramp-leg tramp-leg-l1"></div>
+        <div class="tramp-leg tramp-leg-l2"></div>
+        <div class="tramp-leg tramp-leg-r1"></div>
+        <div class="tramp-leg tramp-leg-r2"></div>
         <div class="tramp-mat"></div>
         <img src="dino.png" class="dino-img" alt="">
       </div>
