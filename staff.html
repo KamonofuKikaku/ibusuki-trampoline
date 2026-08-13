@@ -2,660 +2,206 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>予約カレンダー</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>スタッフ管理</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://static.line-scdn.net">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
     --cream: #FFFBF3;
-    --cream-deep: #FFF3E2;
     --ink: #2B2320;
     --ink-soft: #7A6F63;
     --orange: #FF6F3C;
     --orange-soft: #FFE3D6;
     --mint: #2FBF8F;
-    --mint-soft: #DFF6EC;
     --booked: #4F8FE0;
-    --booked-soft: #E4EFFC;
     --danger: #E0503A;
-    --gray-full: #D9D2C7;
-    --gray-full-text: #A79E92;
+    --danger-soft: #FDE4DE;
     --white: #FFFFFF;
-    --shadow: 0 6px 20px rgba(255, 111, 60, 0.14);
   }
-
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
+  * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
     background: var(--cream);
     color: var(--ink);
     font-family: "Zen Kaku Gothic New", sans-serif;
-    overscroll-behavior-y: none;
   }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
 
-  #app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    padding-bottom: 96px;
-    position: relative;
-  }
+  header { padding: 20px 20px 8px; text-align: center; }
+  header .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 22px; margin: 6px 0 0; }
 
-  /* ---------- header ---------- */
-  header {
-    padding: 20px 20px 12px;
-    text-align: center;
-  }
-  header .eyebrow {
-    font-size: 13px;
-    color: var(--mint);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-  }
-  header h1 {
-    font-family: "Zen Maru Gothic", sans-serif;
-    font-weight: 900;
-    font-size: 26px;
-    margin: 6px 0 0;
-  }
-  header p.sub {
-    font-size: 14px;
-    color: var(--ink-soft);
-    margin: 6px 0 0;
-  }
-
-  /* ---------- month nav ---------- */
-  .month-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px 4px;
-  }
-  .month-nav .month-label {
-    font-family: "Zen Maru Gothic", sans-serif;
-    font-weight: 700;
-    font-size: 19px;
-  }
-  .month-nav button {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    border: none;
+  /* ---------- login ---------- */
+  .login-box {
+    margin: 40px 20px;
     background: var(--white);
-    box-shadow: 0 2px 8px rgba(43,35,32,0.08);
-    font-size: 17px;
-    color: var(--ink);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .month-nav button:disabled {
-    opacity: 0.3;
-  }
-  .month-nav button:active { transform: scale(0.92); }
-
-  /* ---------- legend ---------- */
-  .legend {
-    display: flex;
-    gap: 12px;
-    padding: 10px 20px 4px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink-soft);
-    flex-wrap: wrap;
-  }
-  .legend .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
-  .legend .dot.ok { background: var(--mint); }
-  .legend .dot.low { background: var(--orange); }
-  .legend .dot.full { background: var(--gray-full-text); }
-  .legend .dot.closed { background: var(--danger); }
-  .legend .dot.mint { background: var(--booked); }
-
-  /* ---------- calendar grid ---------- */
-  .weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    padding: 12px 16px 2px;
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 4px 14px rgba(43,35,32,0.08);
     text-align: center;
-    font-size: 13.5px;
-    color: var(--ink-soft);
-    font-weight: 700;
   }
-  .weekdays .sun { color: var(--orange); }
-  .weekdays .sat { color: #4F8FE0; }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 4px 16px 8px;
-  }
-
-  .day-cell {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0;
-    padding-top: 2px;
-  }
-  .day-cell.empty { visibility: hidden; }
-
-  .day-btn {
-    position: relative;
+  .login-box input {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #E6DFD3;
+    font-size: 15px;
+    margin: 14px 0;
+    text-align: center;
+  }
+  .login-box button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
     border: none;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "Zen Kaku Gothic New", sans-serif;
-    cursor: pointer;
-  }
-
-  .day-num {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--ink);
-    z-index: 2;
-  }
-
-  /* 日付の数字とひとまとまりに見えるよう、間隔を詰めて背景も揃える */
-  .day-hours {
-    margin-top: -4px;
-    padding: 1px 6px 2px;
-    border-radius: 0 0 8px 8px;
-    background: rgba(43, 35, 32, 0.04);
-    font-size: 9px;
+    background: var(--orange);
+    color: var(--white);
     font-weight: 700;
-    color: var(--ink-soft);
-    line-height: 1.15;
-    text-align: center;
-    white-space: pre-line;
+    font-size: 15px;
   }
-  .day-cell.is-past .day-hours { visibility: hidden; }
-  .day-cell.is-closed .day-hours { background: rgba(224, 80, 58, 0.1); color: var(--danger); font-weight: 900; }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
-  /* stamp = signature element for selected day */
-  .stamp {
-    position: absolute;
-    width: 78%;
-    height: 78%;
-    z-index: 1;
-    opacity: 0;
-    transform: scale(0.4) rotate(-8deg);
-    transition: opacity 0.22s ease, transform 0.28s cubic-bezier(.34,1.56,.64,1);
+  /* ---------- today section ---------- */
+  .section { padding: 16px 20px 4px; }
+  .section .label {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 10px;
   }
-  .day-btn.selected .stamp {
-    opacity: 1;
-    transform: scale(1) rotate(-6deg);
-  }
-  .day-btn.selected .day-num { color: var(--white); font-weight: 700; }
-
-  .day-btn.past { pointer-events: none; }
-  .day-btn.past .day-num { color: #D8D2C7; }
-
-  .day-btn.full { pointer-events: none; }
-  .day-btn.full .day-num { color: var(--gray-full-text); }
-
-  .day-btn.closed { pointer-events: none; }
-  .day-btn.closed .day-num { color: var(--gray-full-text); }
-  .day-btn.closed .avail-ring { background: var(--gray-full); opacity: 0.5; }
-
-  /* 予約済み(あなたの予約) = 青いスタンプ、タップでキャンセル */
-  .day-btn.booked .stamp path { fill: var(--booked); }
-  .day-btn.booked .stamp {
-    opacity: 1;
-    transform: scale(1) rotate(-6deg);
-  }
-  .day-btn.booked .day-num { color: var(--white); font-weight: 700; }
-  .day-btn.booked { cursor: pointer; }
-  .day-btn.booked:active { transform: scale(0.94); }
-
-  .avail-ring {
-    position: absolute;
-    width: 74%; height: 74%;
-    border-radius: 50%;
-    z-index: 1;
-  }
-  .day-btn.full .avail-ring { background: var(--gray-full); opacity: 0.5; }
-
-  .day-btn:active:not(.full):not(.past) { transform: scale(0.94); }
-
-  /* ---------- business hours ---------- */
-  .business-hours {
-    margin: 4px 20px 0;
-    padding: 10px 16px;
-    border-radius: 12px;
+  .today-card {
     background: var(--white);
-    color: var(--ink-soft);
-    font-size: 13px;
-    font-weight: 700;
-    text-align: center;
+    border-radius: 14px;
+    padding: 14px 16px;
     box-shadow: 0 2px 8px rgba(43,35,32,0.06);
   }
-  .business-hours .value {
-    color: var(--orange);
-    font-family: "Zen Maru Gothic", sans-serif;
-  }
-
-  /* ---------- selected chips ---------- */
-  .selection-panel {
-    padding: 6px 20px 0;
-  }
-  .selection-panel .label {
-    font-size: 13.5px;
+  .today-count {
+    font-size: 13px;
     color: var(--ink-soft);
-    font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
-  .chip-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .chip {
+  .today-count b { color: var(--booked); font-size: 16px; }
+  .name-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .name-chip {
     background: var(--orange-soft);
     color: var(--orange);
     border-radius: 999px;
-    padding: 8px 12px 8px 14px;
-    font-size: 14.5px;
+    padding: 5px 12px;
+    font-size: 13px;
     font-weight: 700;
+  }
+  .empty-note { color: var(--ink-soft); font-size: 13px; }
+
+  /* ---------- date list ---------- */
+  .date-row {
     display: flex;
     align-items: center;
-    gap: 7px;
-  }
-  .chip button {
-    border: none;
-    background: rgba(255,111,60,0.18);
-    color: var(--orange);
-    width: 19px; height: 19px;
-    border-radius: 50%;
-    font-size: 11px;
-    line-height: 1;
-    display:flex; align-items:center; justify-content:center;
-  }
-
-  /* ---------- sticky CTA ---------- */
-  .cta-bar {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 0;
-    width: 100%;
-    max-width: 480px;
+    gap: 10px;
     background: var(--white);
-    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
-    box-shadow: 0 -8px 24px rgba(43,35,32,0.08);
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
   }
-  .cta-count {
-    font-size: 13.5px;
-    color: var(--ink-soft);
-    white-space: nowrap;
-  }
-  .cta-count b { color: var(--ink); font-size: 17px; }
-  .cta-btn {
-    flex: 1;
-    border: none;
-    border-radius: 14px;
-    padding: 15px;
-    font-family: "Zen Maru Gothic", sans-serif;
+  .date-row .date-label {
+    width: 92px;
+    flex-shrink: 0;
     font-weight: 700;
-    font-size: 17px;
+    font-size: 13.5px;
+  }
+  .date-row .date-label.today { color: var(--booked); }
+  .date-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #E6DFD3;
+    font-size: 13.5px;
+  }
+  .date-row .save-btn {
+    flex-shrink: 0;
+    border: none;
+    background: var(--mint);
     color: var(--white);
-    background: linear-gradient(135deg, var(--orange), #FF9466);
-    box-shadow: var(--shadow);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 10px;
+    border-radius: 8px;
   }
-  .cta-btn:disabled {
-    background: var(--gray-full);
-    box-shadow: none;
-    color: var(--gray-full-text);
+  .date-row .save-btn.saved { background: var(--ink-soft); }
+  .hint {
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 0 4px 10px;
   }
-  .cta-btn:active:not(:disabled) { transform: scale(0.98); }
 
-  /* ---------- toast ---------- */
   .toast {
     position: fixed;
     left: 50%; transform: translateX(-50%) translateY(20px);
-    bottom: 100px;
+    bottom: 30px;
     background: var(--ink);
     color: var(--white);
-    padding: 11px 18px;
+    padding: 10px 18px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 13px;
     opacity: 0;
     transition: opacity 0.25s ease, transform 0.25s ease;
     pointer-events: none;
-    white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  /* ---------- loading overlay (恐竜がトランポリンで跳ねる) ---------- */
-  .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.6);
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-  .loading-overlay.show { opacity: 1; }
-  .loading-overlay.show .dino-img,
-  .loading-overlay.show .tramp-mat,
-  .loading-overlay.show .tramp-shadow,
-  .loading-overlay.show .burst {
-    animation-play-state: running;
-  }
-
-  .loading-mascot {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .loading-text {
-    margin-top: 2px;
-    font-family: "Zen Maru Gothic", sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .dino-scene {
-    position: relative;
-    width: 130px;
-    height: 160px;
-  }
-
-  .tramp-shadow {
-    position: absolute;
-    left: 50%;
-    bottom: 26px;
-    width: 96px;
-    height: 14px;
-    margin-left: -48px;
-    border-radius: 50%;
-    background: rgba(43, 35, 32, 0.12);
-  }
-
-  .tramp-mat {
-    position: absolute;
-    left: 50%;
-    bottom: 28px;
-    width: 92px;
-    height: 22px;
-    margin-left: -46px;
-    border-radius: 50%;
-    background: #5C7FA6;
-    border: 3px solid #3E5C7C;
-    transform-origin: center;
-    animation: matSquish 0.9s ease-in-out infinite;
-    animation-play-state: paused;
-    z-index: 2;
-  }
-
-  .tramp-leg {
-    position: absolute;
-    bottom: 6px;
-    width: 4px;
-    height: 26px;
-    background: #B99E7A;
-    border-radius: 2px;
-    z-index: 1;
-  }
-  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
-  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
-  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
-  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
-
-  .dino-img {
-    position: absolute;
-    left: 50%;
-    bottom: 34px;
-    width: 64px;
-    margin-left: -32px;
-    transform-origin: 50% 100%;
-    animation: dinoBounce 0.9s ease-in-out infinite;
-    animation-play-state: paused;
-    z-index: 3;
-  }
-
-  .burst {
-    position: absolute;
-    left: 50%;
-    bottom: 40px;
-    width: 5px;
-    height: 32px;
-    border-radius: 3px;
-    background: #FFB648;
-    opacity: 0;
-    animation: burstFlash 0.9s ease-in-out infinite;
-    animation-play-state: paused;
-  }
-  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
-  .burst-c { margin-left: -2.5px; background: #FFE07A; }
-  .burst-r { margin-left: 20px; transform: rotate(24deg); }
-
-  @keyframes dinoBounce {
-    0%   { transform: translateY(0) scaleY(1); }
-    35%  { transform: translateY(-42px) scaleY(1.03); }
-    62%  { transform: translateY(0) scaleY(0.9); }
-    76%  { transform: translateY(3px) scaleY(0.86); }
-    100% { transform: translateY(0) scaleY(1); }
-  }
-  @keyframes matSquish {
-    0%   { transform: scaleX(1) scaleY(1); }
-    58%  { transform: scaleX(1) scaleY(1); }
-    70%  { transform: scaleX(1.12) scaleY(0.55); }
-    84%  { transform: scaleX(1) scaleY(1); }
-    100% { transform: scaleX(1) scaleY(1); }
-  }
-  @keyframes burstFlash {
-    0%, 54% { opacity: 0; }
-    66%     { opacity: 1; }
-    84%, 100% { opacity: 0; }
-  }
 </style>
 </head>
 <body>
 <div id="app">
-
   <header>
     <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
-    <h1>希望日を選んでください</h1>
-    <p class="sub">複数の日をまとめて選べます</p>
+    <h1>スタッフ管理</h1>
   </header>
 
-  <div class="month-nav">
-    <button id="prevMonth" aria-label="前の月">‹</button>
-    <div class="month-label" id="monthLabel">2026年8月</div>
-    <button id="nextMonth" aria-label="次の月">›</button>
+  <div id="loginView" class="login-box">
+    <div>パスワードを入力してください</div>
+    <input type="password" id="passwordInput" placeholder="パスワード" />
+    <button id="loginBtn">ログイン</button>
+    <div class="login-error" id="loginError">パスワードが違います</div>
   </div>
 
-  <div class="legend">
-    <span><span class="dot full"></span>満員</span>
-    <span><span class="dot closed"></span>休館</span>
-    <span><span class="dot mint"></span>予約済み(タップでキャンセル)</span>
-  </div>
+  <div id="mainView" style="display:none;">
+    <div class="section">
+      <div class="label">今日の予約者</div>
+      <div class="today-card">
+        <div class="today-count"><b id="todayCount">0</b>人が予約中</div>
+        <div class="name-chip-row" id="todayNames"></div>
+      </div>
+    </div>
 
-  <div class="weekdays">
-    <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
-  </div>
-
-  <div class="grid" id="grid"></div>
-
-  <div class="selection-panel" id="selectionPanel" style="display:none;">
-    <div class="label">選択中の日程</div>
-    <div class="chip-row" id="chipRow"></div>
-  </div>
-
-  <div class="cta-bar">
-    <div class="cta-count"><b id="selCount">0</b>件選択中</div>
-    <button class="cta-btn" id="submitBtn" disabled>この日程で予約する</button>
+    <div class="section">
+      <div class="label">営業時間の編集（空欄にすると休館になります）</div>
+      <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
+      <div id="dateList"></div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
-
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-mascot">
-      <div class="dino-scene">
-        <div class="tramp-shadow"></div>
-        <div class="burst burst-l"></div>
-        <div class="burst burst-c"></div>
-        <div class="burst burst-r"></div>
-        <div class="tramp-leg tramp-leg-l1"></div>
-        <div class="tramp-leg tramp-leg-l2"></div>
-        <div class="tramp-leg tramp-leg-r1"></div>
-        <div class="tramp-leg tramp-leg-r2"></div>
-        <div class="tramp-mat"></div>
-        <img src="dino.png" class="dino-img" alt="">
-      </div>
-      <div class="loading-text" id="loadingText">じゅんびちゅう…</div>
-    </div>
-  </div>
 </div>
 
 <script>
-/* =========================================================
-   ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
-========================================================= */
-const LIFF_ID = "2010959314-SoDIKt2f";
+/* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
 const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
-/* =========================================================
-   ▲▲▲ ここまで ▲▲▲
-========================================================= */
+/* ▲▲▲ ここまで ▲▲▲ */
 
-const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
-
-let liffProfile = null;       // { userId, displayName }
-let availabilityMap = {};     // { "2026-08-10": { full: true/false } }
-let bookedSet = new Set();    // あなたが予約済みの日付("2026-08-10"形式)の集合
-
-async function initLiff(){
-  try {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isLoggedIn()){
-      liff.login();
-      return;
-    }
-    // getProfile()は毎回LINEへ通信が発生し遅い。
-    // ログイン時に受け取るIDトークンにuserId・表示名が既に入っているので、
-    // それをそのまま使うことで通信を1回分減らす。
-    const idToken = liff.getDecodedIDToken();
-    if (idToken){
-      liffProfile = { userId: idToken.sub, displayName: idToken.name || "お客様" };
-    } else {
-      // 念のためのフォールバック（通常はここに来ない）
-      liffProfile = await liff.getProfile();
-    }
-  } catch (err){
-    console.error("LIFF init failed", err);
-    showToast("読み込みに失敗しました。時間をおいて再度お試しください");
-  }
-}
-
-// タイムアウト付き・失敗時は自動で数回リトライするfetch
-async function fetchWithRetry_(url, options, retries = 2, timeoutMs = 8000){
-  for (let attempt = 0; attempt <= retries; attempt++){
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, { ...(options || {}), signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return await res.json();
-    } catch (err){
-      clearTimeout(timer);
-      if (attempt === retries) throw err;
-      await new Promise(r => setTimeout(r, 700 * (attempt + 1))); // 少し待って再試行
-    }
-  }
-}
-
-async function fetchAvailability(){
-  try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=availability`);
-    availabilityMap = {};
-    (data.dates || []).forEach(d => {
-      availabilityMap[d.date] = { full: d.full, remain: d.remain, closed: d.closed, hours: d.hours };
-    });
-    try { localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap)); } catch (e) {}
-  } catch (err){
-    console.error("availability fetch failed", err);
-    showToast("空き状況の取得に失敗しました");
-  }
-}
-
-// "14:00〜22:00" のような文字列を、セル内で2行の小さい表示用に変換する
-// 例: "1400-" / "2200"
-function formatHoursCompact_(hours){
-  if (!hours) return "";
-  const parts = hours.split("〜");
-  if (parts.length !== 2) return hours;
-  const strip = s => s.replace(":", "").trim();
-  return `${strip(parts[0])}-\n${strip(parts[1])}`;
-}
-
-async function fetchMyBookings(){
-  if (!liffProfile) return;
-  try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
-    bookedSet = new Set((data.bookings || []).map(b => b.date));
-    try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
-  } catch (err){
-    console.error("myBookings fetch failed", err);
-    showToast("予約情報の取得に失敗しました");
-  }
-}
-
-function statusOf(key){
-  const info = availabilityMap[key];
-  if (!info) return { status: "unknown" };
-  if (info.closed) return { status: "closed" };
-  if (info.full) return { status: "full" };
-  if (typeof info.remain === "number" && info.remain <= 2) return { status: "low" };
-  return { status: "ok" };
-}
-
-function fmt(d){
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-
-const TODAY = new Date();
-TODAY.setHours(0,0,0,0);
-
-let viewYear = TODAY.getFullYear();
-let viewMonth = TODAY.getMonth(); // 0-indexed
-const MIN_MONTH = TODAY.getFullYear() * 12 + TODAY.getMonth();
-const MAX_MONTH_OFFSET = 2; // 常に向こう3ヶ月（今月含む）
-
-const selectedDates = new Set();
-
-const grid = document.getElementById("grid");
-const monthLabel = document.getElementById("monthLabel");
-const prevBtn = document.getElementById("prevMonth");
-const nextBtn = document.getElementById("nextMonth");
-const selCount = document.getElementById("selCount");
-const submitBtn = document.getElementById("submitBtn");
-const chipRow = document.getElementById("chipRow");
-const selectionPanel = document.getElementById("selectionPanel");
+const loginView = document.getElementById("loginView");
+const mainView = document.getElementById("mainView");
+const passwordInput = document.getElementById("passwordInput");
+const loginBtn = document.getElementById("loginBtn");
+const loginError = document.getElementById("loginError");
+const todayCount = document.getElementById("todayCount");
+const todayNames = document.getElementById("todayNames");
+const dateList = document.getElementById("dateList");
 const toastEl = document.getElementById("toast");
+
+let password = "";
 
 function showToast(msg){
   toastEl.textContent = msg;
@@ -664,295 +210,120 @@ function showToast(msg){
   showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
 }
 
-const loadingOverlayEl = document.getElementById("loadingOverlay");
-const loadingTextEl = document.getElementById("loadingText");
-function showLoadingOverlay(text){
-  loadingTextEl.textContent = text || "じゅんびちゅう…";
-  loadingOverlayEl.classList.add("show");
-}
-function hideLoadingOverlay(){
-  loadingOverlayEl.classList.remove("show");
-  loadingTextEl.textContent = "じゅんびちゅう…";
+async function fetchOverview(pw){
+  const res = await fetch(`${GAS_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(pw)}`);
+  return await res.json();
 }
 
+function formatDateLabel(dateStr, todayStr){
+  const [y,m,d] = dateStr.split("-");
+  const dateObj = new Date(Number(y), Number(m)-1, Number(d));
+  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
+  const label = `${Number(m)}/${Number(d)}(${w})`;
+  return dateStr === todayStr ? label + " 本日" : label;
+}
 
-function renderMonth(){
-  const curMonthIdx = viewYear * 12 + viewMonth;
-  prevBtn.disabled = curMonthIdx <= MIN_MONTH;
-  nextBtn.disabled = curMonthIdx >= MIN_MONTH + MAX_MONTH_OFFSET;
-
-  monthLabel.textContent = `${viewYear}年${viewMonth + 1}月`;
-
-  grid.innerHTML = "";
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-
-  for (let i = 0; i < startWeekday; i++){
-    const empty = document.createElement("div");
-    empty.className = "day-cell empty";
-    grid.appendChild(empty);
+function renderOverview(data){
+  todayCount.textContent = data.todayNames.length;
+  todayNames.innerHTML = "";
+  if (data.todayNames.length === 0){
+    todayNames.innerHTML = `<span class="empty-note">今日の予約はまだありません</span>`;
+  } else {
+    data.todayNames.forEach(name => {
+      const chip = document.createElement("span");
+      chip.className = "name-chip";
+      chip.textContent = name;
+      todayNames.appendChild(chip);
+    });
   }
 
-  for (let day = 1; day <= daysInMonth; day++){
-    const d = new Date(viewYear, viewMonth, day);
-    d.setHours(0,0,0,0);
-    const key = fmt(d);
-    const isPast = d < TODAY;
-    const isBooked = bookedSet.has(key);
-    const { status } = statusOf(key);
+  dateList.innerHTML = "";
+  data.dates.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "date-row";
 
-    const cell = document.createElement("div");
-    cell.className = "day-cell";
-    if (isPast) cell.classList.add("is-past");
-    if (status === "closed") cell.classList.add("is-closed");
+    const label = document.createElement("div");
+    label.className = "date-label" + (item.date === data.today ? " today" : "");
+    label.textContent = formatDateLabel(item.date, data.today);
+    row.appendChild(label);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "空欄=休館";
+    input.value = item.hours || "";
+    row.appendChild(input);
 
     const btn = document.createElement("button");
-    btn.className = "day-btn";
-    btn.dataset.key = key;
-    if (isPast) btn.classList.add("past");
-    else if (isBooked) btn.classList.add("booked");
-    else if (status === "closed") btn.classList.add("closed");
-    else if (status === "full") btn.classList.add("full");
-
-    if (selectedDates.has(key)) btn.classList.add("selected");
-
-    const ring = document.createElement("div");
-    ring.className = "avail-ring";
-    btn.appendChild(ring);
-
-    const stamp = document.createElement("div");
-    stamp.className = "stamp";
-    stamp.innerHTML = stampSVG();
-    btn.appendChild(stamp);
-
-    const num = document.createElement("div");
-    num.className = "day-num";
-    num.textContent = day;
-    btn.appendChild(num);
-
-    if (!isPast && isBooked){
-      btn.addEventListener("click", () => confirmCancel(key));
-    } else if (!isPast && status !== "full" && status !== "closed"){
-      btn.addEventListener("click", () => toggleDate(key, btn));
-    }
-
-    cell.appendChild(btn);
-
-    // 丸マークの外側・下に完全に分離した営業時間表示
-    const hoursEl = document.createElement("div");
-    hoursEl.className = "day-hours";
-    if (!isPast){
-      const info = availabilityMap[key];
-      if (status === "closed"){
-        hoursEl.textContent = "休館";
-      } else if (info && info.hours){
-        hoursEl.textContent = formatHoursCompact_(info.hours);
+    btn.className = "save-btn";
+    btn.textContent = "保存";
+    btn.addEventListener("click", async () => {
+      btn.textContent = "保存中";
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "staffUpdateHours",
+            password: password,
+            date: item.date,
+            hours: input.value.trim(),
+          }),
+        });
+        const result = await res.json();
+        if (result.success){
+          btn.textContent = "保存済み";
+          btn.classList.add("saved");
+          showToast(formatDateLabel(item.date, data.today) + " を保存しました");
+          setTimeout(() => { btn.textContent = "保存"; btn.classList.remove("saved"); }, 1500);
+        } else {
+          btn.textContent = "保存";
+          showToast("保存に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        btn.textContent = "保存";
+        showToast("通信に失敗しました");
       }
-    }
-    cell.appendChild(hoursEl);
-
-    grid.appendChild(cell);
-  }
-}
-
-function stampSVG(){
-  return `<svg viewBox="0 0 100 100" width="100%" height="100%">
-    <path d="M50 4 C70 4 90 10 92 32 C94 50 88 68 76 82 C64 94 40 96 24 86
-             C8 76 2 54 8 34 C14 12 32 4 50 4 Z"
-          fill="var(--orange)" />
-  </svg>`;
-}
-
-function confirmCancel(key){
-  const [y,m,dd] = key.split("-");
-  const d = new Date(Number(y), Number(m)-1, Number(dd));
-  const label = `${Number(m)}月${Number(dd)}日(${WEEKDAY_JP[d.getDay()]})`;
-
-  const ok = window.confirm(`${label} の予約をキャンセルしますか？`);
-  if (!ok) return;
-  doCancel(key);
-}
-
-async function doCancel(key){
-  if (!liffProfile) return;
-
-  // 先に画面を更新（体感速度優先）。失敗したら後で元に戻す
-  bookedSet.delete(key);
-  try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
-  renderMonth();
-  showToast("キャンセルしました");
-
-  try {
-    const data = await fetchWithRetry_(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "cancel",
-        userId: liffProfile.userId,
-        date: key,
-      }),
     });
-    if (data.success){
-      fetchAvailability().then(renderMonth); // 空きが出るので裏側で更新(表示をブロックしない)
-    } else {
-      // 失敗していたので元に戻す
-      bookedSet.add(key);
-      try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
-      renderMonth();
-      showToast("キャンセルできませんでした。もう一度お試しください");
-    }
-  } catch (err){
-    console.error("cancel failed", err);
-    bookedSet.add(key);
-    try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
-    renderMonth();
-    showToast("通信に失敗しました。時間をおいて再度お試しください");
-  }
-}
+    row.appendChild(btn);
 
-function toggleDate(key, btn){
-  if (selectedDates.has(key)){
-    selectedDates.delete(key);
-    btn.classList.remove("selected");
-  } else {
-    selectedDates.add(key);
-    btn.classList.add("selected");
-  }
-  renderSelection();
-}
-
-function renderSelection(){
-  selCount.textContent = selectedDates.size;
-  submitBtn.disabled = selectedDates.size === 0;
-
-  if (selectedDates.size === 0){
-    selectionPanel.style.display = "none";
-    chipRow.innerHTML = "";
-    return;
-  }
-  selectionPanel.style.display = "block";
-  chipRow.innerHTML = "";
-
-  const sorted = Array.from(selectedDates).sort();
-  sorted.forEach(key => {
-    const [y,m,dd] = key.split("-");
-    const d = new Date(Number(y), Number(m)-1, Number(dd));
-    const label = `${Number(m)}/${Number(dd)}(${WEEKDAY_JP[d.getDay()]})`;
-
-    const chip = document.createElement("div");
-    chip.className = "chip";
-    chip.innerHTML = `<span>${label}</span>`;
-    const rm = document.createElement("button");
-    rm.textContent = "×";
-    rm.addEventListener("click", () => {
-      selectedDates.delete(key);
-      renderMonth();
-      renderSelection();
-    });
-    chip.appendChild(rm);
-    chipRow.appendChild(chip);
+    dateList.appendChild(row);
   });
 }
 
-prevBtn.addEventListener("click", () => {
-  viewMonth--;
-  if (viewMonth < 0){ viewMonth = 11; viewYear--; }
-  renderMonth();
-});
-nextBtn.addEventListener("click", () => {
-  viewMonth++;
-  if (viewMonth > 11){ viewMonth = 0; viewYear++; }
-  renderMonth();
-});
-
-submitBtn.addEventListener("click", async () => {
-  const dates = Array.from(selectedDates).sort();
-  if (!dates.length) return;
-
-  if (!liffProfile){
-    showToast("読み込み中です。少し待ってから再度お試しください");
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "送信中…";
-  showLoadingOverlay("よやくちゅう…");
-
+async function tryLogin(pw){
   try {
-    const data = await fetchWithRetry_(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "book",
-        userId: liffProfile.userId,
-        displayName: liffProfile.displayName,
-        dates: dates,
-      }),
-    }, 2, 15000); // 予約処理は少し重いのでタイムアウトを長めに
-    const results = data.results || [];
-    const succeeded = results.filter(r => r.success).length;
-    const failed = results.length - succeeded;
-
-    results.filter(r => r.success).forEach(r => {
-      bookedSet.add(r.date);
-      selectedDates.delete(r.date);
-    });
-    await fetchAvailability(); // 予約人数が変わるので空き状況を再取得
-    renderMonth();
-    renderSelection();
-
-    if (succeeded > 0 && failed === 0){
-      showToast(`${succeeded}件の予約を受け付けました`);
-    } else if (succeeded > 0 && failed > 0){
-      showToast(`${succeeded}件受付・${failed}件は満員のため不可でした`);
-    } else {
-      showToast("選択いただいた日程は受け付けできませんでした");
+    const data = await fetchOverview(pw);
+    if (data.error){
+      loginError.style.display = "block";
+      return;
     }
-    // 自動では閉じない。予約済み(青いスタンプ)への変化を確認してから、
-    // 本人が画面右上の×ボタンなどで閉じる。
-
+    password = pw;
+    try { sessionStorage.setItem("staffPassword", pw); } catch (e) {}
+    loginView.style.display = "none";
+    mainView.style.display = "block";
+    renderOverview(data);
   } catch (err){
-    console.error("booking failed", err);
-    showToast("送信に失敗しました。時間をおいて再度お試しください");
-  } finally {
-    submitBtn.disabled = selectedDates.size === 0;
-    submitBtn.textContent = "この日程で予約する";
-    hideLoadingOverlay();
+    console.error(err);
+    loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
+    loginError.style.display = "block";
   }
+}
+
+loginBtn.addEventListener("click", () => {
+  loginError.style.display = "none";
+  const pw = passwordInput.value.trim();
+  if (!pw) return;
+  tryLogin(pw);
+});
+passwordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loginBtn.click();
 });
 
-(async function start(){
-  // 前回開いた時のデータがあれば、まずそれを即座に表示（体感速度優先）
-  try {
-    const cachedBooked = localStorage.getItem("cachedBookedDates");
-    if (cachedBooked) bookedSet = new Set(JSON.parse(cachedBooked));
-  } catch (e) {}
-  try {
-    const cachedAvail = localStorage.getItem("cachedAvailability");
-    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
-  } catch (e) {}
-
-  // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
-  renderMonth();
-  renderSelection();
-
-  // 最新データが揃うまで、半透明のオーバーレイで「更新中」を示す
-  showLoadingOverlay();
-
-  // LINEログインと空き状況取得を同時に開始（片方を待たない）
-  const availabilityPromise = fetchAvailability();
-  const liffPromise = initLiff();
-
-  // 空き状況が届き次第、確定していなくても先に反映
-  await availabilityPromise;
-  renderMonth();
-
-  // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
-  await liffPromise;
-  await fetchMyBookings();
-  renderMonth();
-  renderSelection();
-
-  hideLoadingOverlay();
+// 前回ログイン済みならパスワード入力を省略
+(function start(){
+  let saved = "";
+  try { saved = sessionStorage.getItem("staffPassword") || ""; } catch (e) {}
+  if (saved) tryLogin(saved);
 })();
 </script>
 </body>
