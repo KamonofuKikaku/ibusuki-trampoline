@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>スタッフ管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream: #FFFBF3;
+    --ink: #2B2320;
+    --ink-soft: #7A6F63;
+    --orange: #FF6F3C;
+    --orange-soft: #FFE3D6;
+    --mint: #2FBF8F;
+    --booked: #4F8FE0;
+    --danger: #E0503A;
+    --danger-soft: #FDE4DE;
+    --white: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", sans-serif;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
+
+  header { padding: 20px 20px 8px; text-align: center; }
+  header .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 22px; margin: 6px 0 0; }
+
+  /* ---------- login ---------- */
+  .login-box {
+    margin: 40px 20px;
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 4px 14px rgba(43,35,32,0.08);
+    text-align: center;
+  }
+  .login-box input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #E6DFD3;
+    font-size: 15px;
+    margin: 14px 0;
+    text-align: center;
+  }
+  .login-box button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--orange);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+  /* ---------- today section ---------- */
+  .section { padding: 16px 20px 4px; }
+  .section .label {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  .today-card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(43,35,32,0.06);
+  }
+  .today-count {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .today-count b { color: var(--booked); font-size: 16px; }
+  .name-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .name-chip {
+    background: var(--orange-soft);
+    color: var(--orange);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .empty-note { color: var(--ink-soft); font-size: 13px; }
+
+  /* ---------- date list ---------- */
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--white);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+  }
+  .date-row .date-label {
+    width: 92px;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 13.5px;
+  }
+  .date-row .date-label.today { color: var(--booked); }
+  .date-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #E6DFD3;
+    font-size: 13.5px;
+  }
+  .date-row .save-btn {
+    flex-shrink: 0;
+    border: none;
+    background: var(--mint);
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+  .date-row .save-btn.saved { background: var(--ink-soft); }
+  .hint {
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 0 4px 10px;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    bottom: 30px;
+    background: var(--ink);
+    color: var(--white);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <h1>スタッフ管理</h1>
+  </header>
+
+  <div id="loginView" class="login-box">
+    <div>パスワードを入力してください</div>
+    <input type="password" id="passwordInput" placeholder="パスワード" />
+    <button id="loginBtn">ログイン</button>
+    <div class="login-error" id="loginError">パスワードが違います</div>
+  </div>
+
+  <div id="mainView" style="display:none;">
+    <div class="section">
+      <div class="label">今日の予約者</div>
+      <div class="today-card">
+        <div class="today-count"><b id="todayCount">0</b>人が予約中</div>
+        <div class="name-chip-row" id="todayNames"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="label">営業時間の編集（空欄にすると休館になります）</div>
+      <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
+      <div id="dateList"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
+const GAS_ENDPOINT = "YOUR_GAS_WEBAPP_URL_HERE";
+/* ▲▲▲ ここまで ▲▲▲ */
+
+const loginView = document.getElementById("loginView");
+const mainView = document.getElementById("mainView");
+const passwordInput = document.getElementById("passwordInput");
+const loginBtn = document.getElementById("loginBtn");
+const loginError = document.getElementById("loginError");
+const todayCount = document.getElementById("todayCount");
+const todayNames = document.getElementById("todayNames");
+const dateList = document.getElementById("dateList");
+const toastEl = document.getElementById("toast");
+
+let password = "";
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+async function fetchOverview(pw){
+  const res = await fetch(`${GAS_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(pw)}`);
+  return await res.json();
+}
+
+function formatDateLabel(dateStr, todayStr){
+  const [y,m,d] = dateStr.split("-");
+  const dateObj = new Date(Number(y), Number(m)-1, Number(d));
+  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
+  const label = `${Number(m)}/${Number(d)}(${w})`;
+  return dateStr === todayStr ? label + " 本日" : label;
+}
+
+function renderOverview(data){
+  todayCount.textContent = data.todayNames.length;
+  todayNames.innerHTML = "";
+  if (data.todayNames.length === 0){
+    todayNames.innerHTML = `<span class="empty-note">今日の予約はまだありません</span>`;
+  } else {
+    data.todayNames.forEach(name => {
+      const chip = document.createElement("span");
+      chip.className = "name-chip";
+      chip.textContent = name;
+      todayNames.appendChild(chip);
+    });
+  }
+
+  dateList.innerHTML = "";
+  data.dates.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "date-row";
+
+    const label = document.createElement("div");
+    label.className = "date-label" + (item.date === data.today ? " today" : "");
+    label.textContent = formatDateLabel(item.date, data.today);
+    row.appendChild(label);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "空欄=休館";
+    input.value = item.hours || "";
+    row.appendChild(input);
+
+    const btn = document.createElement("button");
+    btn.className = "save-btn";
+    btn.textContent = "保存";
+    btn.addEventListener("click", async () => {
+      btn.textContent = "保存中";
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "staffUpdateHours",
+            password: password,
+            date: item.date,
+            hours: input.value.trim(),
+          }),
+        });
+        const result = await res.json();
+        if (result.success){
+          btn.textContent = "保存済み";
+          btn.classList.add("saved");
+          showToast(formatDateLabel(item.date, data.today) + " を保存しました");
+          setTimeout(() => { btn.textContent = "保存"; btn.classList.remove("saved"); }, 1500);
+        } else {
+          btn.textContent = "保存";
+          showToast("保存に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        btn.textContent = "保存";
+        showToast("通信に失敗しました");
+      }
+    });
+    row.appendChild(btn);
+
+    dateList.appendChild(row);
+  });
+}
+
+async function tryLogin(pw){
+  try {
+    const data = await fetchOverview(pw);
+    if (data.error){
+      loginError.style.display = "block";
+      return;
+    }
+    password = pw;
+    try { sessionStorage.setItem("staffPassword", pw); } catch (e) {}
+    loginView.style.display = "none";
+    mainView.style.display = "block";
+    renderOverview(data);
+  } catch (err){
+    console.error(err);
+    loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
+    loginError.style.display = "block";
+  }
+}
+
+loginBtn.addEventListener("click", () => {
+  loginError.style.display = "none";
+  const pw = passwordInput.value.trim();
+  if (!pw) return;
+  tryLogin(pw);
+});
+passwordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loginBtn.click();
+});
+
+// 前回ログイン済みならパスワード入力を省略
+(function start(){
+  let saved = "";
+  try { saved = sessionStorage.getItem("staffPassword") || ""; } catch (e) {}
+  if (saved) tryLogin(saved);
+})();
+</script>
+</body>
+</html>
