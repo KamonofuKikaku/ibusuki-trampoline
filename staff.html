@@ -60,7 +60,10 @@
     color: var(--white);
     font-weight: 700;
     font-size: 15px;
+    transition: transform 0.12s ease, opacity 0.12s ease;
   }
+  .login-box button:active { transform: scale(0.96); opacity: 0.9; }
+  .login-box button:disabled { background: var(--ink-soft); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
   /* ---------- today section ---------- */
@@ -129,7 +132,9 @@
     font-weight: 700;
     padding: 8px 10px;
     border-radius: 8px;
+    transition: transform 0.12s ease, opacity 0.12s ease;
   }
+  .date-row .save-btn:active { transform: scale(0.94); opacity: 0.9; }
   .date-row .save-btn.saved { background: var(--ink-soft); }
   .hint {
     color: var(--ink-soft);
@@ -291,6 +296,8 @@ function renderOverview(data){
 }
 
 async function tryLogin(pw){
+  loginBtn.disabled = true;
+  loginBtn.textContent = "確認中…";
   try {
     const data = await fetchOverview(pw);
     if (data.error){
@@ -306,6 +313,9 @@ async function tryLogin(pw){
     console.error(err);
     loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
     loginError.style.display = "block";
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "ログイン";
   }
 }
 
