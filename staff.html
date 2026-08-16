@@ -97,6 +97,43 @@
   }
   .empty-note { color: var(--ink-soft); font-size: 13px; }
 
+  /* ---------- upcoming (cancellable) ---------- */
+  .upcoming-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+  }
+  .upcoming-card .upcoming-date {
+    font-weight: 700;
+    font-size: 13.5px;
+    margin-bottom: 6px;
+  }
+  .upcoming-card .upcoming-date.today { color: var(--booked); }
+  .cancel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--orange-soft);
+    color: var(--orange);
+    border-radius: 999px;
+    padding: 5px 6px 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 6px 6px 0;
+  }
+  .cancel-chip button {
+    border: none;
+    background: rgba(255,111,60,0.18);
+    color: var(--orange);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
   /* ---------- date list ---------- */
   .date-row {
     display: flex;
@@ -182,6 +219,11 @@
     </div>
 
     <div class="section">
+      <div class="label">今後の予約一覧（今日から2週間・タップでキャンセル）</div>
+      <div id="upcomingList"></div>
+    </div>
+
+    <div class="section">
       <div class="label">営業時間の編集（空欄にすると休館になります）</div>
       <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
       <div id="dateList"></div>
@@ -205,8 +247,10 @@ const todayCount = document.getElementById("todayCount");
 const todayNames = document.getElementById("todayNames");
 const dateList = document.getElementById("dateList");
 const toastEl = document.getElementById("toast");
+const upcomingList = document.getElementById("upcomingList");
 
 let password = "";
+let lastOverviewData = null;
 
 function showToast(msg){
   toastEl.textContent = msg;
@@ -228,7 +272,65 @@ function formatDateLabel(dateStr, todayStr){
   return dateStr === todayStr ? label + " 本日" : label;
 }
 
+function renderUpcoming(upcoming, todayStr){
+  upcomingList.innerHTML = "";
+  if (!upcoming.length){
+    upcomingList.innerHTML = `<span class="empty-note">今後2週間の予約はまだありません</span>`;
+    return;
+  }
+  upcoming.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "upcoming-card";
+
+    const dateEl = document.createElement("div");
+    dateEl.className = "upcoming-date" + (item.date === todayStr ? " today" : "");
+    dateEl.textContent = formatDateLabel(item.date, todayStr);
+    card.appendChild(dateEl);
+
+    item.entries.forEach(entry => {
+      const chip = document.createElement("span");
+      chip.className = "cancel-chip";
+      chip.innerHTML = `<span>${entry.name}</span>`;
+      const x = document.createElement("button");
+      x.textContent = "×";
+      x.addEventListener("click", () => confirmStaffCancel(entry.userId, item.date, entry.name));
+      chip.appendChild(x);
+      card.appendChild(chip);
+    });
+
+    upcomingList.appendChild(card);
+  });
+}
+
+function confirmStaffCancel(userId, dateStr, name){
+  const label = formatDateLabel(dateStr, lastOverviewData ? lastOverviewData.today : "");
+  const ok = window.confirm(`${name}さんの${label}の予約をキャンセルしますか？`);
+  if (!ok) return;
+  doStaffCancel(userId, dateStr);
+}
+
+async function doStaffCancel(userId, dateStr){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("キャンセルしました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("キャンセルできませんでした");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
 function renderOverview(data){
+  lastOverviewData = data;
   todayCount.textContent = data.todayNames.length;
   todayNames.innerHTML = "";
   if (data.todayNames.length === 0){
@@ -241,6 +343,8 @@ function renderOverview(data){
       todayNames.appendChild(chip);
     });
   }
+
+  renderUpcoming(data.upcoming || [], data.today);
 
   dateList.innerHTML = "";
   data.dates.forEach(item => {
