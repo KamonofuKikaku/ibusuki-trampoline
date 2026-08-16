@@ -447,6 +447,7 @@
     opacity: 0;
     animation: burstFlash 0.9s ease-in-out infinite;
     animation-play-state: paused;
+    z-index: 3;
   }
   .burst-l { margin-left: -26px; transform: rotate(-24deg); }
   .burst-c { margin-left: -2.5px; background: #FFE07A; }
@@ -643,7 +644,7 @@ TODAY.setHours(0,0,0,0);
 let viewYear = TODAY.getFullYear();
 let viewMonth = TODAY.getMonth(); // 0-indexed
 const MIN_MONTH = TODAY.getFullYear() * 12 + TODAY.getMonth();
-const MAX_MONTH_OFFSET = 2; // 常に向こう3ヶ月（今月含む）
+const MAX_MONTH_OFFSET = 1; // 常に向こう2ヶ月（今月含む）
 
 const selectedDates = new Set();
 
