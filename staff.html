@@ -268,6 +268,34 @@
     padding: 0 4px 10px;
   }
 
+  /* ---------- tabs ---------- */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 20px 0;
+    position: sticky;
+    top: 0;
+    background: var(--cream);
+    z-index: 10;
+  }
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: var(--white);
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 10px 4px;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 1px 4px rgba(43,35,32,0.05);
+  }
+  .tab-btn.active {
+    background: var(--orange);
+    color: var(--white);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
   .toast {
     position: fixed;
     left: 50%; transform: translateX(-50%) translateY(20px);
@@ -300,29 +328,38 @@
 
   <div id="mainView" style="display:none;">
     <div class="section">
-      <div class="label">今日の予約者</div>
-      <div class="today-card">
-        <div class="today-count"><b id="todayCount">0</b>人が予約中</div>
-        <div class="name-chip-row" id="todayNames"></div>
+      <div class="label">今週の予約者（今日から7日間）</div>
+      <div id="weekList"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="hours">営業時間</button>
+      <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
+      <button class="tab-btn" data-tab="billing">お月謝</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-hours">
+      <div class="section">
+        <div class="label">営業時間の編集（空欄にすると休館になります）</div>
+        <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
+        <div id="dateList"></div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="label">今後の予約一覧（今日から2週間・タップでキャンセル）</div>
-      <div id="upcomingList"></div>
+    <div class="tab-panel" id="tab-bookings">
+      <div class="section">
+        <div class="label">予約状況の確認・修正（今日から約2ヶ月・タップでキャンセル）</div>
+        <div id="upcomingList"></div>
+      </div>
     </div>
 
-    <div class="section">
-      <div class="label">今月の請求</div>
-      <div class="hint">金額を確認・入力してから「請求する」を押してください。カード登録済みの生徒は自動引き落とし、未登録の生徒には支払いリンクが届きます。</div>
-      <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
-      <div id="billingList"></div>
-    </div>
-
-    <div class="section">
-      <div class="label">営業時間の編集（空欄にすると休館になります）</div>
-      <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
-      <div id="dateList"></div>
+    <div class="tab-panel" id="tab-billing">
+      <div class="section">
+        <div class="label">今月の請求</div>
+        <div class="hint">金額は500円単位で入力してください。「請求する」を押すと金額の確認画面が出ます。カード登録済みの生徒は自動引き落とし、未登録の生徒には支払いリンクが届きます。</div>
+        <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
+        <div id="billingList"></div>
+      </div>
     </div>
   </div>
 
@@ -339,8 +376,7 @@ const mainView = document.getElementById("mainView");
 const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
-const todayCount = document.getElementById("todayCount");
-const todayNames = document.getElementById("todayNames");
+const weekList = document.getElementById("weekList");
 const dateList = document.getElementById("dateList");
 const toastEl = document.getElementById("toast");
 const upcomingList = document.getElementById("upcomingList");
@@ -368,6 +404,44 @@ function formatDateLabel(dateStr, todayStr){
   const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
   const label = `${Number(m)}/${Number(d)}(${w})`;
   return dateStr === todayStr ? label + " 本日" : label;
+}
+
+function renderWeek(upcoming, todayStr){
+  weekList.innerHTML = "";
+  const weekEnd = new Date(todayStr);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+
+  const inWeek = upcoming.filter(item => {
+    const d = new Date(item.date);
+    return d >= new Date(todayStr) && d <= weekEnd;
+  });
+
+  if (!inWeek.length){
+    weekList.innerHTML = `<div class="today-card"><span class="empty-note">今週の予約はまだありません</span></div>`;
+    return;
+  }
+
+  inWeek.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "today-card";
+
+    const dateEl = document.createElement("div");
+    dateEl.className = "today-count";
+    dateEl.innerHTML = `<b>${formatDateLabel(item.date, todayStr)}</b>　${item.entries.length}人`;
+    card.appendChild(dateEl);
+
+    const row = document.createElement("div");
+    row.className = "name-chip-row";
+    item.entries.forEach(entry => {
+      const chip = document.createElement("span");
+      chip.className = "name-chip";
+      chip.textContent = entry.name;
+      row.appendChild(chip);
+    });
+    card.appendChild(row);
+
+    weekList.appendChild(card);
+  });
 }
 
 function renderUpcoming(upcoming, todayStr){
@@ -429,19 +503,8 @@ async function doStaffCancel(userId, dateStr){
 
 function renderOverview(data){
   lastOverviewData = data;
-  todayCount.textContent = data.todayNames.length;
-  todayNames.innerHTML = "";
-  if (data.todayNames.length === 0){
-    todayNames.innerHTML = `<span class="empty-note">今日の予約はまだありません</span>`;
-  } else {
-    data.todayNames.forEach(name => {
-      const chip = document.createElement("span");
-      chip.className = "name-chip";
-      chip.textContent = name;
-      todayNames.appendChild(chip);
-    });
-  }
 
+  renderWeek(data.upcoming || [], data.today);
   renderUpcoming(data.upcoming || [], data.today);
 
   dateList.innerHTML = "";
@@ -573,7 +636,9 @@ function renderBilling(list){
 
     const amountInput = document.createElement("input");
     amountInput.type = "number";
-    amountInput.placeholder = "金額(円)";
+    amountInput.step = "500";
+    amountInput.min = "0";
+    amountInput.placeholder = "金額(500円単位)";
     amountInput.value = item.amount || "";
     row.appendChild(amountInput);
 
@@ -581,12 +646,16 @@ function renderBilling(list){
     chargeBtn.className = "charge-btn";
     chargeBtn.textContent = "請求する";
     chargeBtn.addEventListener("click", async () => {
-      const amount = Number(amountInput.value);
-      if (!amount || amount <= 0){
+      const rawAmount = Number(amountInput.value);
+      if (!rawAmount || rawAmount <= 0){
         showToast("金額を入力してください");
         return;
       }
-      const ok = window.confirm(`${item.name}さんに ${amount}円 を請求します。よろしいですか？`);
+      // 500円単位に丸める（入力ミス防止）
+      const amount = Math.round(rawAmount / 500) * 500;
+      amountInput.value = amount;
+
+      const ok = window.confirm(`${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`);
       if (!ok) return;
 
       chargeBtn.disabled = true;
@@ -626,6 +695,16 @@ function renderBilling(list){
     billingList.appendChild(row);
   });
 }
+
+// タブ切り替え
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
 
 refreshCardBtn.addEventListener("click", async () => {
   refreshCardBtn.disabled = true;
