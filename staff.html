@@ -12,8 +12,8 @@
     --cream: #FFFBF3;
     --ink: #2B2320;
     --ink-soft: #7A6F63;
-    --orange: #FF6F3C;
-    --orange-soft: #FFE3D6;
+    --orange: var(--calm-green);
+    --orange-soft: var(--calm-green-soft);
     --mint: #2FBF8F;
     --booked: #4F8FE0;
     --danger: #E0503A;
@@ -90,8 +90,8 @@
   .today-count b { color: var(--booked); font-size: 16px; }
   .name-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .name-chip {
-    background: var(--orange-soft);
-    color: var(--orange);
+    background: var(--calm-green-soft);
+    color: var(--calm-green);
     border-radius: 999px;
     padding: 5px 12px;
     font-size: 13px;
@@ -414,7 +414,7 @@
   .hours-cell .hc-time { font-size: 7.5px; color: var(--ink-soft); font-weight: 700; line-height: 1.1; white-space: pre-line; text-align: center; }
   .hours-cell.is-closed { background: var(--danger-soft); }
   .hours-cell.is-closed .hc-time { color: var(--danger); }
-  .hours-cell.is-selected { background: var(--orange); box-shadow: 0 2px 10px rgba(255,111,60,0.3); }
+  .hours-cell.is-selected { background: var(--orange); box-shadow: 0 2px 10px rgba(110, 143, 111, 0.35); }
   .hours-cell.is-selected .hc-num,
   .hours-cell.is-selected .hc-time { color: var(--white); }
   .hours-cell:active { transform: scale(0.94); }
