@@ -285,18 +285,6 @@
     padding: 0 4px 10px;
   }
 
-  .bulk-set-card {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
-  }
-  .bulk-set-title {
-    font-weight: 700;
-    font-size: 13px;
-    margin-bottom: 8px;
-  }
   .preset-editor-row {
     display: flex;
     align-items: center;
@@ -346,6 +334,147 @@
     width: 30px;
     padding: 4px 0;
     font-size: 11px;
+  }
+
+  /* ---------- hours calendar ---------- */
+  .calendar-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0 8px;
+  }
+  .toolbar-btn {
+    border: none;
+    background: var(--white);
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+  }
+  .toolbar-btn.active { background: var(--ink); color: var(--white); }
+  .toolbar-btn.primary { background: var(--orange); color: var(--white); }
+  .toolbar-btn:active { transform: scale(0.96); }
+
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0 4px;
+  }
+  .month-nav .month-label {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .month-nav button {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(43,35,32,0.08);
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .month-nav button:disabled { opacity: 0.3; }
+
+  .hours-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight: 700;
+    padding: 4px 0;
+  }
+  .hours-weekdays .sun { color: var(--orange); }
+  .hours-weekdays .sat { color: #4F8FE0; }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .hours-cell {
+    aspect-ratio: 1/1;
+    border: none;
+    border-radius: 10px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    box-shadow: 0 1px 4px rgba(43,35,32,0.05);
+  }
+  .hours-cell.empty { visibility: hidden; box-shadow: none; }
+  .hours-cell .hc-num { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .hours-cell .hc-time { font-size: 7.5px; color: var(--ink-soft); font-weight: 700; line-height: 1.1; white-space: pre-line; text-align: center; }
+  .hours-cell.is-closed { background: var(--danger-soft); }
+  .hours-cell.is-closed .hc-time { color: var(--danger); }
+  .hours-cell.is-selected { background: var(--orange); box-shadow: 0 2px 10px rgba(255,111,60,0.3); }
+  .hours-cell.is-selected .hc-num,
+  .hours-cell.is-selected .hc-time { color: var(--white); }
+  .hours-cell:active { transform: scale(0.94); }
+
+  /* ---------- modal ---------- */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(43,35,32,0.35);
+    z-index: 60;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-card {
+    width: calc(100% - 48px);
+    max-width: 340px;
+    background: var(--white);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+  }
+  .modal-title {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .modal-card .time-wrap {
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .modal-closed-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--danger);
+    margin-bottom: 16px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .modal-cancel-btn, .modal-save-btn {
+    flex: 1;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .modal-cancel-btn {
+    background: var(--cream);
+    color: var(--ink-soft);
+  }
+  .modal-save-btn {
+    background: var(--orange);
+    color: var(--white);
   }
 
   /* ---------- tabs ---------- */
@@ -420,33 +549,32 @@
 
     <div class="tab-panel active" id="tab-hours">
       <div class="section">
-        <div class="label">営業時間の編集</div>
-        <div class="hint">入力すると自動で保存されます</div>
+        <div class="label">営業パターン</div>
+        <div class="hint">よく使うパターンを登録しておくと、カレンダーからワンタップで設定できます</div>
+        <div id="presetEditors"></div>
+        <button class="save-btn" id="presetSaveBtn">パターンを保存</button>
+      </div>
 
-        <div class="bulk-set-card">
-          <div class="bulk-set-title">① よく使う営業時間を登録（A・B・C）</div>
-          <div class="hint" style="padding:0 0 8px;">
-            例：Aに「通常営業」、Bに「短縮営業」、Cに「休館」のように登録しておくと、<br>
-            この下の「一括設定」や、日ごとの一覧でワンタップで反映できます。
-          </div>
-          <div id="presetEditors"></div>
-          <button class="save-btn" id="presetSaveBtn">プリセットを保存</button>
+      <div class="section">
+        <div class="label">営業時間カレンダー</div>
+        <div class="hint">日付をタップすると編集できます</div>
+
+        <div class="calendar-toolbar">
+          <button class="toolbar-btn" id="multiToggleBtn">複数選択する</button>
+          <button class="toolbar-btn primary" id="multiEditBtn" style="display:none;">選択した日を編集(<span id="multiCount">0</span>)</button>
         </div>
 
-        <div class="bulk-set-card">
-          <div class="bulk-set-title">② 全ての日にまとめて反映</div>
-          <div class="hint" style="padding:0 0 6px;">上で登録したプリセットのボタンを押すと、下の時刻欄に自動で入ります（そのあと「全日に反映」を押してください）</div>
-          <div class="preset-quick-row" id="bulkPresetRow"></div>
-          <div class="time-wrap">
-            <input type="time" id="bulkStart">
-            <span class="time-tilde">〜</span>
-            <input type="time" id="bulkEnd">
-            <button class="save-btn" id="bulkApplyBtn">全日に反映</button>
-          </div>
-          <div class="hint" style="padding:6px 0 0;">③ 休館にしたい日・時間が違う日だけ、下の一覧で個別に直してください（各日にもA・B・Cのボタンがあります）</div>
+        <div class="month-nav">
+          <button id="hoursPrevMonth" aria-label="前の月">‹</button>
+          <div class="month-label" id="hoursMonthLabel">2026年8月</div>
+          <button id="hoursNextMonth" aria-label="次の月">›</button>
         </div>
 
-        <div id="dateList"></div>
+        <div class="hours-weekdays">
+          <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+        </div>
+
+        <div class="hours-grid" id="hoursGrid"></div>
       </div>
     </div>
 
@@ -468,6 +596,28 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="hoursModal">
+    <div class="modal-card">
+      <div class="modal-title" id="modalTitle">8/20(木) の営業時間</div>
+
+      <div class="preset-quick-row" id="modalPresetRow"></div>
+
+      <div class="time-wrap">
+        <input type="time" id="modalStart">
+        <span class="time-tilde">〜</span>
+        <input type="time" id="modalEnd">
+      </div>
+      <label class="closed-toggle modal-closed-toggle">
+        <input type="checkbox" id="modalClosed">休館にする
+      </label>
+
+      <div class="modal-actions">
+        <button class="modal-cancel-btn" id="modalCancelBtn">キャンセル</button>
+        <button class="modal-save-btn" id="modalSaveBtn">保存する</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -514,13 +664,14 @@ function formatDateLabel(dateStr, todayStr){
 function renderPresetEditors(presets){
   const wrap = document.getElementById("presetEditors");
   wrap.innerHTML = "";
-  presets.forEach((preset, idx) => {
+  presets.forEach((preset) => {
     const row = document.createElement("div");
     row.className = "preset-editor-row";
+    row.dataset.label = preset.label;
 
     const label = document.createElement("div");
     label.className = "preset-label";
-    label.textContent = preset.label + "の設定";
+    label.textContent = preset.label + "パターン";
     row.appendChild(label);
 
     const isClosed = preset.hours === "休館";
@@ -536,7 +687,6 @@ function renderPresetEditors(presets){
     const closedCheckbox = document.createElement("input");
     closedCheckbox.type = "checkbox";
     closedCheckbox.checked = isClosed;
-    closedCheckbox.dataset.presetIdx = idx;
     closedCheckbox.className = "preset-closed-checkbox";
     closedLabel.appendChild(closedCheckbox);
     closedLabel.appendChild(document.createTextNode("休館"));
@@ -567,33 +717,12 @@ function renderPresetEditors(presets){
   });
 }
 
-function renderBulkPresetButtons(presets){
-  const row = document.getElementById("bulkPresetRow");
-  row.innerHTML = "";
-  presets.forEach(preset => {
-    if (!preset.hours) return;
-    const btn = document.createElement("button");
-    btn.className = "preset-quick-btn";
-    btn.textContent = preset.label + (preset.hours === "休館" ? "(休館)" : "(" + preset.hours + ")");
-    btn.addEventListener("click", () => {
-      if (preset.hours === "休館"){
-        showToast("一括設定には休館プリセットは使えません。個別の日で使ってください");
-        return;
-      }
-      const parts = preset.hours.split("〜");
-      document.getElementById("bulkStart").value = (parts[0] || "").trim();
-      document.getElementById("bulkEnd").value = (parts[1] || "").trim();
-    });
-    row.appendChild(btn);
-  });
-}
-
 document.getElementById("presetSaveBtn").addEventListener("click", async () => {
   const wrap = document.getElementById("presetEditors");
   const rows = wrap.querySelectorAll(".preset-editor-row");
   const presets = [];
-  rows.forEach((row, idx) => {
-    const label = row.querySelector(".preset-label").textContent;
+  rows.forEach(row => {
+    const label = row.dataset.label;
     const closed = row.querySelector(".preset-closed-checkbox").checked;
     const start = row.querySelector(".preset-start-input").value;
     const end = row.querySelector(".preset-end-input").value;
@@ -608,10 +737,10 @@ document.getElementById("presetSaveBtn").addEventListener("click", async () => {
     });
     const result = await res.json();
     if (result.success){
-      showToast("プリセットを保存しました");
+      showToast("パターンを保存しました");
       currentPresets = presets;
-      renderBulkPresetButtons(presets);
-      if (lastOverviewData) renderOverview({ ...lastOverviewData, presets: presets });
+      renderModalPresetButtons();
+      if (currentDatesData.length) renderHoursCalendar();
     } else {
       showToast("保存に失敗しました");
     }
@@ -723,143 +852,282 @@ function renderOverview(data){
   renderWeek(data.upcoming || [], data.today);
   renderUpcoming(data.upcoming || [], data.today);
   renderPresetEditors(currentPresets);
-  renderBulkPresetButtons(currentPresets);
+  renderModalPresetButtons();
 
-  dateList.innerHTML = "";
-  data.dates.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "date-row";
+  initHoursCalendarData(data.dates, data.today);
+  renderHoursCalendar();
+}
 
-    const label = document.createElement("div");
-    label.className = "date-label" + (item.date === data.today ? " today" : "");
-    label.textContent = formatDateLabel(item.date, data.today);
-    row.appendChild(label);
+/* ---------- 営業時間カレンダー ---------- */
+let currentDatesData = []; // [{date, hours}, ...]
+let hoursToday = "";
+let hoursViewYear = 0;
+let hoursViewMonth = 0;
+let hoursMinMonthIdx = 0;
+let hoursMaxMonthIdx = 0;
+let multiSelectMode = false;
+let selectedHoursDates = new Set();
 
-    // 既存の "14:00〜22:00" を開始・終了に分解。"休館"や空欄なら休館チェックを入れる
-    const isClosed = !item.hours || item.hours === "休館";
-    let startVal = "", endVal = "";
-    if (!isClosed && item.hours.indexOf("〜") !== -1) {
-      const parts = item.hours.split("〜");
-      startVal = parts[0].trim();
-      endVal = (parts[1] || "").trim();
+const hoursGridEl = document.getElementById("hoursGrid");
+const hoursMonthLabelEl = document.getElementById("hoursMonthLabel");
+const hoursPrevBtn = document.getElementById("hoursPrevMonth");
+const hoursNextBtn = document.getElementById("hoursNextMonth");
+const multiToggleBtn = document.getElementById("multiToggleBtn");
+const multiEditBtn = document.getElementById("multiEditBtn");
+const multiCountEl = document.getElementById("multiCount");
+
+function formatHoursCompactStaff_(hours){
+  if (!hours) return "未設定";
+  if (hours === "休館") return "休館";
+  const parts = hours.split("〜");
+  if (parts.length !== 2) return hours;
+  const strip = s => s.replace(":", "").trim();
+  return `${strip(parts[0])}-\n${strip(parts[1])}`;
+}
+
+function initHoursCalendarData(dates, today){
+  currentDatesData = dates;
+  hoursToday = today;
+  const [ty, tm] = today.split("-").map(Number);
+  hoursViewYear = ty;
+  hoursViewMonth = tm - 1;
+  hoursMinMonthIdx = ty * 12 + (tm - 1);
+
+  if (dates.length){
+    const [ly, lm] = dates[dates.length - 1].date.split("-").map(Number);
+    hoursMaxMonthIdx = ly * 12 + (lm - 1);
+  } else {
+    hoursMaxMonthIdx = hoursMinMonthIdx;
+  }
+}
+
+function renderHoursCalendar(){
+  const curIdx = hoursViewYear * 12 + hoursViewMonth;
+  hoursPrevBtn.disabled = curIdx <= hoursMinMonthIdx;
+  hoursNextBtn.disabled = curIdx >= hoursMaxMonthIdx;
+  hoursMonthLabelEl.textContent = `${hoursViewYear}年${hoursViewMonth + 1}月`;
+
+  const dataByDate = {};
+  currentDatesData.forEach(d => { dataByDate[d.date] = d; });
+
+  hoursGridEl.innerHTML = "";
+  const firstDay = new Date(hoursViewYear, hoursViewMonth, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(hoursViewYear, hoursViewMonth + 1, 0).getDate();
+
+  for (let i = 0; i < startWeekday; i++){
+    const empty = document.createElement("div");
+    empty.className = "hours-cell empty";
+    hoursGridEl.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++){
+    const dateStr = `${hoursViewYear}-${String(hoursViewMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const info = dataByDate[dateStr];
+
+    const cell = document.createElement("button");
+    cell.className = "hours-cell";
+
+    if (!info){
+      cell.classList.add("empty");
+    } else {
+      if (info.hours === "休館") cell.classList.add("is-closed");
+      if (selectedHoursDates.has(dateStr)) cell.classList.add("is-selected");
+
+      const num = document.createElement("div");
+      num.className = "hc-num";
+      num.textContent = day;
+      cell.appendChild(num);
+
+      const timeEl = document.createElement("div");
+      timeEl.className = "hc-time";
+      timeEl.textContent = formatHoursCompactStaff_(info.hours);
+      cell.appendChild(timeEl);
+
+      cell.addEventListener("click", () => onHoursCellClick(dateStr));
     }
 
-    const timeWrap = document.createElement("div");
-    timeWrap.className = "time-wrap";
+    hoursGridEl.appendChild(cell);
+  }
+}
 
-    // A・B・Cの選択(選ぶと下の時間欄に自動で入る。その後も手で調整可能)
-    const presetSelect = document.createElement("select");
-    presetSelect.className = "preset-select";
-    const presetPlaceholder = document.createElement("option");
-    presetPlaceholder.value = "";
-    presetPlaceholder.textContent = "A/B/C";
-    presetSelect.appendChild(presetPlaceholder);
-    (currentPresets || []).forEach(preset => {
-      if (!preset.hours) return;
-      const opt = document.createElement("option");
-      opt.value = preset.label;
-      opt.textContent = preset.label;
-      presetSelect.appendChild(opt);
-    });
-    timeWrap.appendChild(presetSelect);
+function onHoursCellClick(dateStr){
+  if (multiSelectMode){
+    if (selectedHoursDates.has(dateStr)) selectedHoursDates.delete(dateStr);
+    else selectedHoursDates.add(dateStr);
+    updateMultiEditButton();
+    renderHoursCalendar();
+  } else {
+    openHoursModal([dateStr]);
+  }
+}
 
-    const startInput = document.createElement("input");
-    startInput.type = "time";
-    startInput.value = startVal;
-    startInput.disabled = isClosed;
+function updateMultiEditButton(){
+  multiCountEl.textContent = selectedHoursDates.size;
+  multiEditBtn.style.display = selectedHoursDates.size > 0 ? "inline-block" : "none";
+}
 
-    const tilde = document.createElement("span");
-    tilde.className = "time-tilde";
-    tilde.textContent = "〜";
+multiToggleBtn.addEventListener("click", () => {
+  multiSelectMode = !multiSelectMode;
+  multiToggleBtn.classList.toggle("active", multiSelectMode);
+  multiToggleBtn.textContent = multiSelectMode ? "複数選択をやめる" : "複数選択する";
+  if (!multiSelectMode){
+    selectedHoursDates.clear();
+    updateMultiEditButton();
+  }
+  renderHoursCalendar();
+});
 
-    const endInput = document.createElement("input");
-    endInput.type = "time";
-    endInput.value = endVal;
-    endInput.disabled = isClosed;
+multiEditBtn.addEventListener("click", () => {
+  if (!selectedHoursDates.size) return;
+  openHoursModal(Array.from(selectedHoursDates));
+});
 
-    timeWrap.appendChild(startInput);
-    timeWrap.appendChild(tilde);
-    timeWrap.appendChild(endInput);
+hoursPrevBtn.addEventListener("click", () => {
+  hoursViewMonth--;
+  if (hoursViewMonth < 0){ hoursViewMonth = 11; hoursViewYear--; }
+  renderHoursCalendar();
+});
+hoursNextBtn.addEventListener("click", () => {
+  hoursViewMonth++;
+  if (hoursViewMonth > 11){ hoursViewMonth = 0; hoursViewYear++; }
+  renderHoursCalendar();
+});
 
-    // 休館チェックは時間の右側に配置
-    const closedLabel = document.createElement("label");
-    closedLabel.className = "closed-toggle";
-    const closedCheckbox = document.createElement("input");
-    closedCheckbox.type = "checkbox";
-    closedCheckbox.checked = isClosed;
-    closedLabel.appendChild(closedCheckbox);
-    closedLabel.appendChild(document.createTextNode("休館"));
-    timeWrap.appendChild(closedLabel);
+/* ---------- 営業時間の編集ポップアップ ---------- */
+const hoursModalEl = document.getElementById("hoursModal");
+const modalTitleEl = document.getElementById("modalTitle");
+const modalStartEl = document.getElementById("modalStart");
+const modalEndEl = document.getElementById("modalEnd");
+const modalClosedEl = document.getElementById("modalClosed");
+const modalSaveBtn = document.getElementById("modalSaveBtn");
+const modalCancelBtn = document.getElementById("modalCancelBtn");
+let modalTargetDates = [];
 
-    row.appendChild(timeWrap);
-
-    const savedMark = document.createElement("span");
-    savedMark.className = "saved-mark";
-    row.appendChild(savedMark);
-
-    // 入力したらそのまま自動保存する(保存ボタンは無し)
-    async function autoSaveHours(){
-      const hoursValue = closedCheckbox.checked
-        ? "休館"
-        : (startInput.value && endInput.value ? `${startInput.value}〜${endInput.value}` : "");
-      savedMark.textContent = "保存中…";
-      try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({
-            action: "staffUpdateHours",
-            password: password,
-            date: item.date,
-            hours: hoursValue,
-          }),
-        });
-        const result = await res.json();
-        if (result.success){
-          savedMark.textContent = "保存済み";
-          setTimeout(() => { savedMark.textContent = ""; }, 1200);
-        } else {
-          savedMark.textContent = "";
-          showToast("保存に失敗しました");
-        }
-      } catch (err){
-        console.error(err);
-        savedMark.textContent = "";
-        showToast("通信に失敗しました");
-      }
-    }
-
-    closedCheckbox.addEventListener("change", () => {
-      startInput.disabled = closedCheckbox.checked;
-      endInput.disabled = closedCheckbox.checked;
-      autoSaveHours();
-    });
-    startInput.addEventListener("change", autoSaveHours);
-    endInput.addEventListener("change", autoSaveHours);
-
-    // A/B/Cを選ぶと、時間欄に自動で入る（そのあとも手で調整でき、調整すれば自動保存される）
-    presetSelect.addEventListener("change", () => {
-      const preset = (currentPresets || []).find(p => p.label === presetSelect.value);
-      presetSelect.value = ""; // 選択肢は毎回リセットして「操作用ボタン」として使う
-      if (!preset || !preset.hours) return;
-
+function renderModalPresetButtons(){
+  const row = document.getElementById("modalPresetRow");
+  row.innerHTML = "";
+  (currentPresets || []).forEach(preset => {
+    if (!preset.hours) return;
+    const btn = document.createElement("button");
+    btn.className = "preset-quick-btn";
+    btn.textContent = preset.label;
+    btn.addEventListener("click", () => {
       if (preset.hours === "休館"){
-        closedCheckbox.checked = true;
-        startInput.disabled = true;
-        endInput.disabled = true;
+        modalClosedEl.checked = true;
+        modalStartEl.disabled = true;
+        modalEndEl.disabled = true;
       } else {
         const parts = preset.hours.split("〜");
-        closedCheckbox.checked = false;
-        startInput.disabled = false;
-        endInput.disabled = false;
-        startInput.value = (parts[0] || "").trim();
-        endInput.value = (parts[1] || "").trim();
+        modalClosedEl.checked = false;
+        modalStartEl.disabled = false;
+        modalEndEl.disabled = false;
+        modalStartEl.value = (parts[0] || "").trim();
+        modalEndEl.value = (parts[1] || "").trim();
       }
-      autoSaveHours();
     });
-
-    dateList.appendChild(row);
+    row.appendChild(btn);
   });
 }
+
+modalClosedEl.addEventListener("change", () => {
+  modalStartEl.disabled = modalClosedEl.checked;
+  modalEndEl.disabled = modalClosedEl.checked;
+});
+
+function openHoursModal(dates){
+  modalTargetDates = dates;
+  const dataByDate = {};
+  currentDatesData.forEach(d => { dataByDate[d.date] = d; });
+
+  if (dates.length === 1){
+    modalTitleEl.textContent = formatDateLabel(dates[0], hoursToday) + " の営業時間";
+    const info = dataByDate[dates[0]];
+    const hours = info ? info.hours : "";
+    const isClosed = hours === "休館";
+    modalClosedEl.checked = isClosed;
+    if (!isClosed && hours && hours.indexOf("〜") !== -1){
+      const parts = hours.split("〜");
+      modalStartEl.value = (parts[0] || "").trim();
+      modalEndEl.value = (parts[1] || "").trim();
+    } else {
+      modalStartEl.value = "";
+      modalEndEl.value = "";
+    }
+    modalStartEl.disabled = isClosed;
+    modalEndEl.disabled = isClosed;
+  } else {
+    modalTitleEl.textContent = dates.length + "件まとめて編集";
+    modalClosedEl.checked = false;
+    modalStartEl.value = "";
+    modalEndEl.value = "";
+    modalStartEl.disabled = false;
+    modalEndEl.disabled = false;
+  }
+
+  hoursModalEl.classList.add("show");
+}
+
+function closeHoursModal(){
+  hoursModalEl.classList.remove("show");
+}
+
+modalCancelBtn.addEventListener("click", closeHoursModal);
+
+modalSaveBtn.addEventListener("click", async () => {
+  const hoursValue = modalClosedEl.checked
+    ? "休館"
+    : (modalStartEl.value && modalEndEl.value ? `${modalStartEl.value}〜${modalEndEl.value}` : "");
+
+  modalSaveBtn.disabled = true;
+  modalSaveBtn.textContent = "保存中…";
+  try {
+    let result;
+    if (modalTargetDates.length === 1){
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffUpdateHours",
+          password: password,
+          date: modalTargetDates[0],
+          hours: hoursValue,
+        }),
+      });
+      result = await res.json();
+    } else {
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffUpdateHoursMulti",
+          password: password,
+          dates: modalTargetDates,
+          hours: hoursValue,
+        }),
+      });
+      result = await res.json();
+    }
+
+    if (result.success){
+      showToast("保存しました");
+      closeHoursModal();
+      selectedHoursDates.clear();
+      multiSelectMode = false;
+      multiToggleBtn.classList.remove("active");
+      multiToggleBtn.textContent = "複数選択する";
+      updateMultiEditButton();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("保存に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    modalSaveBtn.disabled = false;
+    modalSaveBtn.textContent = "保存する";
+  }
+});
 
 async function fetchBillingList(){
   try {
@@ -955,36 +1223,7 @@ function renderBilling(list){
   });
 }
 
-// 基本の営業時間の一括反映
-document.getElementById("bulkApplyBtn").addEventListener("click", async () => {
-  const start = document.getElementById("bulkStart").value;
-  const end = document.getElementById("bulkEnd").value;
-  if (!start || !end){
-    showToast("開始・終了の時刻を選んでください");
-    return;
-  }
-  const hours = `${start}〜${end}`;
-  const ok = window.confirm(`全ての日付を「${hours}」にします。個別に設定した日も上書きされます。よろしいですか？`);
-  if (!ok) return;
 
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffBulkUpdateHours", password: password, hours: hours }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`${result.updated}日分に反映しました`);
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("反映に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-});
 
 // タブ切り替え
 document.querySelectorAll(".tab-btn").forEach(btn => {
