@@ -225,6 +225,16 @@
     gap: 6px;
     flex-wrap: wrap;
   }
+  .preset-select {
+    flex-shrink: 0;
+    padding: 6px 4px;
+    border-radius: 8px;
+    border: 1px solid #E6DFD3;
+    background: var(--orange-soft);
+    color: var(--orange);
+    font-weight: 700;
+    font-size: 12px;
+  }
   .closed-toggle {
     display: flex;
     align-items: center;
@@ -287,6 +297,56 @@
     font-size: 13px;
     margin-bottom: 8px;
   }
+  .preset-editor-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .preset-editor-row .preset-label {
+    width: 64px;
+    flex-shrink: 0;
+    font-weight: 900;
+    font-size: 12.5px;
+    color: var(--orange);
+  }
+  .preset-editor-row input[type="time"] {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid #E6DFD3;
+    font-size: 13px;
+  }
+  .preset-quick-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .mini-row-label {
+    font-size: 11px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .preset-quick-btn {
+    flex: 1;
+    border: none;
+    background: var(--orange-soft);
+    color: var(--orange);
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 8px 4px;
+    border-radius: 8px;
+  }
+  .preset-quick-btn:active { transform: scale(0.96); }
+  .preset-quick-btn.mini {
+    flex: none;
+    width: 30px;
+    padding: 4px 0;
+    font-size: 11px;
+  }
 
   /* ---------- tabs ---------- */
   .tabs {
@@ -348,7 +408,7 @@
 
   <div id="mainView" style="display:none;">
     <div class="section">
-      <div class="label">今週の予約者（今日から7日間）</div>
+      <div class="label">今週の予約者</div>
       <div id="weekList"></div>
     </div>
 
@@ -360,18 +420,30 @@
 
     <div class="tab-panel active" id="tab-hours">
       <div class="section">
-        <div class="label">営業時間の編集（空欄にすると休館になります）</div>
+        <div class="label">営業時間の編集</div>
         <div class="hint">入力すると自動で保存されます</div>
 
         <div class="bulk-set-card">
-          <div class="bulk-set-title">基本の営業時間を一括設定</div>
+          <div class="bulk-set-title">① よく使う営業時間を登録（A・B・C）</div>
+          <div class="hint" style="padding:0 0 8px;">
+            例：Aに「通常営業」、Bに「短縮営業」、Cに「休館」のように登録しておくと、<br>
+            この下の「一括設定」や、日ごとの一覧でワンタップで反映できます。
+          </div>
+          <div id="presetEditors"></div>
+          <button class="save-btn" id="presetSaveBtn">プリセットを保存</button>
+        </div>
+
+        <div class="bulk-set-card">
+          <div class="bulk-set-title">② 全ての日にまとめて反映</div>
+          <div class="hint" style="padding:0 0 6px;">上で登録したプリセットのボタンを押すと、下の時刻欄に自動で入ります（そのあと「全日に反映」を押してください）</div>
+          <div class="preset-quick-row" id="bulkPresetRow"></div>
           <div class="time-wrap">
             <input type="time" id="bulkStart">
             <span class="time-tilde">〜</span>
             <input type="time" id="bulkEnd">
             <button class="save-btn" id="bulkApplyBtn">全日に反映</button>
           </div>
-          <div class="hint" style="padding:6px 0 0;">休館にしたい日・時間が違う日だけ、下の一覧で個別に直してください</div>
+          <div class="hint" style="padding:6px 0 0;">③ 休館にしたい日・時間が違う日だけ、下の一覧で個別に直してください（各日にもA・B・Cのボタンがあります）</div>
         </div>
 
         <div id="dateList"></div>
@@ -417,6 +489,7 @@ const refreshCardBtn = document.getElementById("refreshCardBtn");
 
 let password = "";
 let lastOverviewData = null;
+let currentPresets = [];
 
 function showToast(msg){
   toastEl.textContent = msg;
@@ -437,6 +510,116 @@ function formatDateLabel(dateStr, todayStr){
   const label = `${Number(m)}/${Number(d)}(${w})`;
   return dateStr === todayStr ? label + " 本日" : label;
 }
+
+function renderPresetEditors(presets){
+  const wrap = document.getElementById("presetEditors");
+  wrap.innerHTML = "";
+  presets.forEach((preset, idx) => {
+    const row = document.createElement("div");
+    row.className = "preset-editor-row";
+
+    const label = document.createElement("div");
+    label.className = "preset-label";
+    label.textContent = preset.label + "の設定";
+    row.appendChild(label);
+
+    const isClosed = preset.hours === "休館";
+    let startVal = "", endVal = "";
+    if (!isClosed && preset.hours && preset.hours.indexOf("〜") !== -1){
+      const parts = preset.hours.split("〜");
+      startVal = parts[0].trim();
+      endVal = (parts[1] || "").trim();
+    }
+
+    const closedLabel = document.createElement("label");
+    closedLabel.className = "closed-toggle";
+    const closedCheckbox = document.createElement("input");
+    closedCheckbox.type = "checkbox";
+    closedCheckbox.checked = isClosed;
+    closedCheckbox.dataset.presetIdx = idx;
+    closedCheckbox.className = "preset-closed-checkbox";
+    closedLabel.appendChild(closedCheckbox);
+    closedLabel.appendChild(document.createTextNode("休館"));
+    row.appendChild(closedLabel);
+
+    const startInput = document.createElement("input");
+    startInput.type = "time";
+    startInput.value = startVal;
+    startInput.disabled = isClosed;
+    startInput.className = "preset-start-input";
+
+    const endInput = document.createElement("input");
+    endInput.type = "time";
+    endInput.value = endVal;
+    endInput.disabled = isClosed;
+    endInput.className = "preset-end-input";
+
+    closedCheckbox.addEventListener("change", () => {
+      startInput.disabled = closedCheckbox.checked;
+      endInput.disabled = closedCheckbox.checked;
+    });
+
+    row.appendChild(startInput);
+    row.appendChild(document.createTextNode("〜"));
+    row.appendChild(endInput);
+
+    wrap.appendChild(row);
+  });
+}
+
+function renderBulkPresetButtons(presets){
+  const row = document.getElementById("bulkPresetRow");
+  row.innerHTML = "";
+  presets.forEach(preset => {
+    if (!preset.hours) return;
+    const btn = document.createElement("button");
+    btn.className = "preset-quick-btn";
+    btn.textContent = preset.label + (preset.hours === "休館" ? "(休館)" : "(" + preset.hours + ")");
+    btn.addEventListener("click", () => {
+      if (preset.hours === "休館"){
+        showToast("一括設定には休館プリセットは使えません。個別の日で使ってください");
+        return;
+      }
+      const parts = preset.hours.split("〜");
+      document.getElementById("bulkStart").value = (parts[0] || "").trim();
+      document.getElementById("bulkEnd").value = (parts[1] || "").trim();
+    });
+    row.appendChild(btn);
+  });
+}
+
+document.getElementById("presetSaveBtn").addEventListener("click", async () => {
+  const wrap = document.getElementById("presetEditors");
+  const rows = wrap.querySelectorAll(".preset-editor-row");
+  const presets = [];
+  rows.forEach((row, idx) => {
+    const label = row.querySelector(".preset-label").textContent;
+    const closed = row.querySelector(".preset-closed-checkbox").checked;
+    const start = row.querySelector(".preset-start-input").value;
+    const end = row.querySelector(".preset-end-input").value;
+    const hours = closed ? "休館" : (start && end ? `${start}〜${end}` : "");
+    presets.push({ label: label, hours: hours });
+  });
+
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffSavePresets", password: password, presets: presets }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("プリセットを保存しました");
+      currentPresets = presets;
+      renderBulkPresetButtons(presets);
+      if (lastOverviewData) renderOverview({ ...lastOverviewData, presets: presets });
+    } else {
+      showToast("保存に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+});
 
 function renderWeek(upcoming, todayStr){
   weekList.innerHTML = "";
@@ -535,9 +718,12 @@ async function doStaffCancel(userId, dateStr){
 
 function renderOverview(data){
   lastOverviewData = data;
+  currentPresets = data.presets || [];
 
   renderWeek(data.upcoming || [], data.today);
   renderUpcoming(data.upcoming || [], data.today);
+  renderPresetEditors(currentPresets);
+  renderBulkPresetButtons(currentPresets);
 
   dateList.innerHTML = "";
   data.dates.forEach(item => {
@@ -561,14 +747,21 @@ function renderOverview(data){
     const timeWrap = document.createElement("div");
     timeWrap.className = "time-wrap";
 
-    const closedLabel = document.createElement("label");
-    closedLabel.className = "closed-toggle";
-    const closedCheckbox = document.createElement("input");
-    closedCheckbox.type = "checkbox";
-    closedCheckbox.checked = isClosed;
-    closedLabel.appendChild(closedCheckbox);
-    closedLabel.appendChild(document.createTextNode("休館"));
-    timeWrap.appendChild(closedLabel);
+    // A・B・Cの選択(選ぶと下の時間欄に自動で入る。その後も手で調整可能)
+    const presetSelect = document.createElement("select");
+    presetSelect.className = "preset-select";
+    const presetPlaceholder = document.createElement("option");
+    presetPlaceholder.value = "";
+    presetPlaceholder.textContent = "A/B/C";
+    presetSelect.appendChild(presetPlaceholder);
+    (currentPresets || []).forEach(preset => {
+      if (!preset.hours) return;
+      const opt = document.createElement("option");
+      opt.value = preset.label;
+      opt.textContent = preset.label;
+      presetSelect.appendChild(opt);
+    });
+    timeWrap.appendChild(presetSelect);
 
     const startInput = document.createElement("input");
     startInput.type = "time";
@@ -584,15 +777,20 @@ function renderOverview(data){
     endInput.value = endVal;
     endInput.disabled = isClosed;
 
-    closedCheckbox.addEventListener("change", () => {
-      startInput.disabled = closedCheckbox.checked;
-      endInput.disabled = closedCheckbox.checked;
-      autoSaveHours();
-    });
-
     timeWrap.appendChild(startInput);
     timeWrap.appendChild(tilde);
     timeWrap.appendChild(endInput);
+
+    // 休館チェックは時間の右側に配置
+    const closedLabel = document.createElement("label");
+    closedLabel.className = "closed-toggle";
+    const closedCheckbox = document.createElement("input");
+    closedCheckbox.type = "checkbox";
+    closedCheckbox.checked = isClosed;
+    closedLabel.appendChild(closedCheckbox);
+    closedLabel.appendChild(document.createTextNode("休館"));
+    timeWrap.appendChild(closedLabel);
+
     row.appendChild(timeWrap);
 
     const savedMark = document.createElement("span");
@@ -630,8 +828,34 @@ function renderOverview(data){
       }
     }
 
+    closedCheckbox.addEventListener("change", () => {
+      startInput.disabled = closedCheckbox.checked;
+      endInput.disabled = closedCheckbox.checked;
+      autoSaveHours();
+    });
     startInput.addEventListener("change", autoSaveHours);
     endInput.addEventListener("change", autoSaveHours);
+
+    // A/B/Cを選ぶと、時間欄に自動で入る（そのあとも手で調整でき、調整すれば自動保存される）
+    presetSelect.addEventListener("change", () => {
+      const preset = (currentPresets || []).find(p => p.label === presetSelect.value);
+      presetSelect.value = ""; // 選択肢は毎回リセットして「操作用ボタン」として使う
+      if (!preset || !preset.hours) return;
+
+      if (preset.hours === "休館"){
+        closedCheckbox.checked = true;
+        startInput.disabled = true;
+        endInput.disabled = true;
+      } else {
+        const parts = preset.hours.split("〜");
+        closedCheckbox.checked = false;
+        startInput.disabled = false;
+        endInput.disabled = false;
+        startInput.value = (parts[0] || "").trim();
+        endInput.value = (parts[1] || "").trim();
+      }
+      autoSaveHours();
+    });
 
     dateList.appendChild(row);
   });
