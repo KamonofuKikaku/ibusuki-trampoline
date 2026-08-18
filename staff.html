@@ -262,10 +262,30 @@
   }
   .date-row .save-btn:active { transform: scale(0.94); opacity: 0.9; }
   .date-row .save-btn.saved { background: var(--ink-soft); }
+  .saved-mark {
+    font-size: 11.5px;
+    color: var(--mint);
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 44px;
+  }
   .hint {
     color: var(--ink-soft);
     font-size: 12px;
     padding: 0 4px 10px;
+  }
+
+  .bulk-set-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+  }
+  .bulk-set-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 8px;
   }
 
   /* ---------- tabs ---------- */
@@ -341,14 +361,26 @@
     <div class="tab-panel active" id="tab-hours">
       <div class="section">
         <div class="label">営業時間の編集（空欄にすると休館になります）</div>
-        <div class="hint">例: 14:00〜22:00　のように入力して保存してください</div>
+        <div class="hint">入力すると自動で保存されます</div>
+
+        <div class="bulk-set-card">
+          <div class="bulk-set-title">基本の営業時間を一括設定</div>
+          <div class="time-wrap">
+            <input type="time" id="bulkStart">
+            <span class="time-tilde">〜</span>
+            <input type="time" id="bulkEnd">
+            <button class="save-btn" id="bulkApplyBtn">全日に反映</button>
+          </div>
+          <div class="hint" style="padding:6px 0 0;">休館にしたい日・時間が違う日だけ、下の一覧で個別に直してください</div>
+        </div>
+
         <div id="dateList"></div>
       </div>
     </div>
 
     <div class="tab-panel" id="tab-bookings">
       <div class="section">
-        <div class="label">予約状況の確認・修正（今日から約2ヶ月・タップでキャンセル）</div>
+        <div class="label">予約状況の確認・修正（タップでキャンセル）</div>
         <div id="upcomingList"></div>
       </div>
     </div>
@@ -555,6 +587,7 @@ function renderOverview(data){
     closedCheckbox.addEventListener("change", () => {
       startInput.disabled = closedCheckbox.checked;
       endInput.disabled = closedCheckbox.checked;
+      autoSaveHours();
     });
 
     timeWrap.appendChild(startInput);
@@ -562,14 +595,16 @@ function renderOverview(data){
     timeWrap.appendChild(endInput);
     row.appendChild(timeWrap);
 
-    const btn = document.createElement("button");
-    btn.className = "save-btn";
-    btn.textContent = "保存";
-    btn.addEventListener("click", async () => {
+    const savedMark = document.createElement("span");
+    savedMark.className = "saved-mark";
+    row.appendChild(savedMark);
+
+    // 入力したらそのまま自動保存する(保存ボタンは無し)
+    async function autoSaveHours(){
       const hoursValue = closedCheckbox.checked
         ? "休館"
         : (startInput.value && endInput.value ? `${startInput.value}〜${endInput.value}` : "");
-      btn.textContent = "保存中";
+      savedMark.textContent = "保存中…";
       try {
         const res = await fetch(GAS_ENDPOINT, {
           method: "POST",
@@ -582,21 +617,21 @@ function renderOverview(data){
         });
         const result = await res.json();
         if (result.success){
-          btn.textContent = "保存済み";
-          btn.classList.add("saved");
-          showToast(formatDateLabel(item.date, data.today) + " を保存しました");
-          setTimeout(() => { btn.textContent = "保存"; btn.classList.remove("saved"); }, 1500);
+          savedMark.textContent = "保存済み";
+          setTimeout(() => { savedMark.textContent = ""; }, 1200);
         } else {
-          btn.textContent = "保存";
+          savedMark.textContent = "";
           showToast("保存に失敗しました");
         }
       } catch (err){
         console.error(err);
-        btn.textContent = "保存";
+        savedMark.textContent = "";
         showToast("通信に失敗しました");
       }
-    });
-    row.appendChild(btn);
+    }
+
+    startInput.addEventListener("change", autoSaveHours);
+    endInput.addEventListener("change", autoSaveHours);
 
     dateList.appendChild(row);
   });
@@ -695,6 +730,37 @@ function renderBilling(list){
     billingList.appendChild(row);
   });
 }
+
+// 基本の営業時間の一括反映
+document.getElementById("bulkApplyBtn").addEventListener("click", async () => {
+  const start = document.getElementById("bulkStart").value;
+  const end = document.getElementById("bulkEnd").value;
+  if (!start || !end){
+    showToast("開始・終了の時刻を選んでください");
+    return;
+  }
+  const hours = `${start}〜${end}`;
+  const ok = window.confirm(`全ての日付を「${hours}」にします。個別に設定した日も上書きされます。よろしいですか？`);
+  if (!ok) return;
+
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffBulkUpdateHours", password: password, hours: hours }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`${result.updated}日分に反映しました`);
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("反映に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+});
 
 // タブ切り替え
 document.querySelectorAll(".tab-btn").forEach(btn => {
