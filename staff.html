@@ -69,7 +69,11 @@
   .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
   /* ---------- today section ---------- */
-  .section { padding: 16px 20px 4px; }
+  .section {
+    padding: 16px 20px 20px;
+    border-bottom: 8px solid var(--cream-deep, #FFF3E2);
+  }
+  .section:last-child { border-bottom: none; }
   .section .label {
     font-family: "Zen Maru Gothic", sans-serif;
     font-weight: 700;
