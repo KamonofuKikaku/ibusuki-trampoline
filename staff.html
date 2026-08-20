@@ -70,10 +70,12 @@
 
   /* ---------- today section ---------- */
   .section {
-    padding: 16px 20px 20px;
-    border-bottom: 8px solid var(--cream-deep, #FFF3E2);
+    margin: 14px 16px;
+    padding: 18px 18px 20px;
+    background: var(--white);
+    border-radius: 18px;
+    box-shadow: 0 3px 14px rgba(43,35,32,0.07);
   }
-  .section:last-child { border-bottom: none; }
   .section .label {
     font-family: "Zen Maru Gothic", sans-serif;
     font-weight: 700;
@@ -81,10 +83,10 @@
     margin-bottom: 10px;
   }
   .today-card {
-    background: var(--white);
+    background: var(--cream);
     border-radius: 14px;
     padding: 14px 16px;
-    box-shadow: 0 2px 8px rgba(43,35,32,0.06);
+    border: 1px solid rgba(43,35,32,0.06);
   }
   .today-count {
     font-size: 13px;
@@ -105,11 +107,11 @@
 
   /* ---------- upcoming (cancellable) ---------- */
   .upcoming-card {
-    background: var(--white);
+    background: var(--cream);
     border-radius: 12px;
     padding: 10px 12px;
     margin-bottom: 7px;
-    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+    border: 1px solid rgba(43,35,32,0.06);
   }
   .upcoming-card .upcoming-date {
     font-weight: 700;
@@ -176,11 +178,11 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    background: var(--white);
+    background: var(--cream);
     border-radius: 12px;
     padding: 10px 12px;
     margin-bottom: 7px;
-    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+    border: 1px solid rgba(43,35,32,0.06);
   }
   .billing-row .row-checkbox { width: 17px; height: 17px; flex-shrink: 0; }
   .billing-dates {
@@ -233,11 +235,11 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    background: var(--white);
+    background: var(--cream);
     border-radius: 12px;
     padding: 10px 12px;
     margin-bottom: 7px;
-    box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+    border: 1px solid rgba(43,35,32,0.06);
   }
   .date-row .date-label {
     width: 100%;
@@ -315,6 +317,14 @@
     padding: 0 4px 10px;
   }
 
+  .bulk-set-card {
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(43,35,32,0.06);
+  }
+
   .preset-editor-row {
     display: flex;
     align-items: center;
@@ -390,32 +400,40 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 0 4px;
+    padding: 2px 4px 10px;
   }
   .month-nav .month-label {
     font-family: "Zen Maru Gothic", sans-serif;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 17px;
   }
   .month-nav button {
     width: 32px; height: 32px;
     border-radius: 50%;
     border: none;
-    background: var(--white);
-    box-shadow: 0 2px 8px rgba(43,35,32,0.08);
+    background: var(--cream);
     font-size: 15px;
     color: var(--ink);
   }
   .month-nav button:disabled { opacity: 0.3; }
 
+  .calendar-card {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 12px 10px 14px;
+    border: 1px solid rgba(43,35,32,0.06);
+  }
+
   .hours-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
-    font-size: 11px;
+    font-size: 11.5px;
     color: var(--ink-soft);
     font-weight: 700;
-    padding: 4px 0;
+    padding: 2px 2px 8px;
+    border-bottom: 1px solid rgba(43,35,32,0.08);
+    margin-bottom: 6px;
   }
   .hours-weekdays .sun { color: var(--orange); }
   .hours-weekdays .sat { color: #4F8FE0; }
@@ -423,11 +441,12 @@
   .hours-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 5px;
+    padding: 0 2px;
   }
   .hours-cell {
     aspect-ratio: 1/1;
-    border: none;
+    border: 1px solid rgba(43,35,32,0.08);
     border-radius: 10px;
     background: var(--white);
     display: flex;
@@ -435,14 +454,14 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    box-shadow: 0 1px 4px rgba(43,35,32,0.05);
   }
-  .hours-cell.empty { visibility: hidden; box-shadow: none; }
+  .hours-cell.empty { visibility: hidden; border: none; }
+  .hours-cell.is-today { border: 2px solid var(--booked); }
   .hours-cell .hc-num { font-size: 13px; font-weight: 700; color: var(--ink); }
   .hours-cell .hc-time { font-size: 7.5px; color: var(--ink-soft); font-weight: 700; line-height: 1.1; white-space: pre-line; text-align: center; }
-  .hours-cell.is-closed { background: var(--danger-soft); }
+  .hours-cell.is-closed { background: var(--danger-soft); border-color: rgba(224,80,58,0.2); }
   .hours-cell.is-closed .hc-time { color: var(--danger); }
-  .hours-cell.is-selected { background: var(--orange); box-shadow: 0 2px 10px rgba(110, 143, 111, 0.35); }
+  .hours-cell.is-selected { background: var(--orange); border-color: var(--orange); box-shadow: 0 2px 10px rgba(110, 143, 111, 0.35); }
   .hours-cell.is-selected .hc-num,
   .hours-cell.is-selected .hc-time { color: var(--white); }
   .hours-cell:active { transform: scale(0.94); }
@@ -575,6 +594,7 @@
       <button class="tab-btn active" data-tab="hours">営業時間</button>
       <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
       <button class="tab-btn" data-tab="billing">お月謝</button>
+      <button class="tab-btn" data-tab="onetime">単発請求</button>
     </div>
 
     <div class="tab-panel active" id="tab-hours">
@@ -600,11 +620,13 @@
           <button id="hoursNextMonth" aria-label="次の月">›</button>
         </div>
 
-        <div class="hours-weekdays">
-          <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
-        </div>
+        <div class="calendar-card">
+          <div class="hours-weekdays">
+            <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+          </div>
 
-        <div class="hours-grid" id="hoursGrid"></div>
+          <div class="hours-grid" id="hoursGrid"></div>
+        </div>
       </div>
     </div>
 
@@ -618,7 +640,7 @@
     <div class="tab-panel" id="tab-billing">
       <div class="section">
         <div class="label">今月の請求</div>
-        <div class="hint">金額は今月の予約回数×1100円が自動入力されます（手で調整も可）。チェックを付けて選んだ生徒に、まとめて請求できます。</div>
+        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。チェックを付けて選んだ生徒に、まとめて請求できます。</div>
         <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
 
         <div class="billing-toolbar">
@@ -631,6 +653,38 @@
         </div>
 
         <div id="billingList"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-onetime">
+      <div class="section">
+        <div class="label">単発請求（年会費など）</div>
+        <div class="hint">請求内容と金額を入力し、対象の生徒にチェックを付けて請求してください。カード登録済みの生徒は自動引き落とし、未登録の生徒には支払いリンクが届きます。</div>
+
+        <div class="bulk-set-card">
+          <div class="preset-editor-row">
+            <div class="preset-label" style="width:70px;">内容</div>
+            <input type="text" id="onetimeTitle" placeholder="例：年会費（自由入力も可）" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #E6DFD3;">
+          </div>
+          <div class="preset-quick-row" style="padding:0 0 4px;">
+            <button type="button" class="preset-quick-btn" data-onetime-title="練習">練習</button>
+            <button type="button" class="preset-quick-btn" data-onetime-title="年会費">年会費</button>
+            <button type="button" class="preset-quick-btn" data-onetime-title="その他">その他</button>
+          </div>
+          <div class="preset-editor-row">
+            <div class="preset-label" style="width:70px;">金額</div>
+            <input type="number" id="onetimeAmount" step="100" min="0" placeholder="例：3300" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #E6DFD3;">
+          </div>
+        </div>
+
+        <div class="billing-toolbar">
+          <label class="billing-select-all">
+            <input type="checkbox" id="onetimeSelectAll">すべて選択
+          </label>
+          <button class="toolbar-btn primary" id="onetimeChargeBtn">選択した生徒に請求(<span id="onetimeSelectedCount">0</span>)</button>
+        </div>
+
+        <div id="onetimeList"></div>
       </div>
     </div>
   </div>
@@ -973,6 +1027,7 @@ function renderHoursCalendar(){
     } else {
       if (info.hours === "休館") cell.classList.add("is-closed");
       if (selectedHoursDates.has(dateStr)) cell.classList.add("is-selected");
+      if (dateStr === hoursToday) cell.classList.add("is-today");
 
       const num = document.createElement("div");
       num.className = "hc-num";
@@ -1174,7 +1229,9 @@ async function fetchBillingList(){
     const res = await fetch(`${GAS_ENDPOINT}?action=staffBillingList&password=${encodeURIComponent(password)}`);
     const data = await res.json();
     if (data.error) return;
-    renderBilling(data.list || []);
+    latestStudentList = data.list || [];
+    renderBilling(latestStudentList);
+    renderOnetimeList(latestStudentList);
   } catch (err){
     console.error(err);
     showToast("請求一覧の取得に失敗しました");
@@ -1342,6 +1399,113 @@ billingBulkBtn.addEventListener("click", async () => {
 
   billingBulkBtn.disabled = false;
   showToast(`一括請求：成功${successCount}件${failCount > 0 ? "・失敗" + failCount + "件" : ""}`);
+});
+
+/* ---------- 単発請求（年会費など） ---------- */
+let latestStudentList = []; // お月謝タブと共有する生徒一覧(名前・userId)
+const onetimeList = document.getElementById("onetimeList");
+const onetimeSelectAll = document.getElementById("onetimeSelectAll");
+const onetimeChargeBtn = document.getElementById("onetimeChargeBtn");
+const onetimeSelectedCountEl = document.getElementById("onetimeSelectedCount");
+const onetimeCheckboxes = []; // {userId, name, checkbox}
+
+// 練習・年会費・その他のクイック選択(押すと内容欄に自動入力。その後も自由に編集可能)
+document.querySelectorAll("[data-onetime-title]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const titleInput = document.getElementById("onetimeTitle");
+    if (btn.dataset.onetimeTitle === "その他"){
+      titleInput.value = "";
+      titleInput.focus();
+    } else {
+      titleInput.value = btn.dataset.onetimeTitle;
+    }
+  });
+});
+
+function renderOnetimeList(list){
+  onetimeList.innerHTML = "";
+  onetimeCheckboxes.length = 0;
+
+  if (!list.length){
+    onetimeList.innerHTML = `<span class="empty-note">対象の生徒がまだいません</span>`;
+    return;
+  }
+
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "billing-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "row-checkbox";
+    checkbox.addEventListener("change", updateOnetimeUI);
+    row.appendChild(checkbox);
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "billing-name";
+    nameRow.innerHTML = `<span>${item.name}</span>`;
+    const badge = document.createElement("span");
+    badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録(初回リンク送信)";
+    nameRow.appendChild(badge);
+    row.appendChild(nameRow);
+
+    onetimeCheckboxes.push({ userId: item.userId, name: item.name, checkbox });
+    onetimeList.appendChild(row);
+  });
+
+  updateOnetimeUI();
+}
+
+function updateOnetimeUI(){
+  const checkedCount = onetimeCheckboxes.filter(r => r.checkbox.checked).length;
+  onetimeSelectedCountEl.textContent = checkedCount;
+  onetimeSelectAll.checked = checkedCount > 0 && checkedCount === onetimeCheckboxes.length;
+}
+
+onetimeSelectAll.addEventListener("change", () => {
+  onetimeCheckboxes.forEach(r => { r.checkbox.checked = onetimeSelectAll.checked; });
+  updateOnetimeUI();
+});
+
+onetimeChargeBtn.addEventListener("click", async () => {
+  const title = document.getElementById("onetimeTitle").value.trim();
+  const rawAmount = Number(document.getElementById("onetimeAmount").value);
+  const targets = onetimeCheckboxes.filter(r => r.checkbox.checked);
+
+  if (!title){ showToast("請求内容を入力してください"); return; }
+  if (!rawAmount || rawAmount <= 0){ showToast("金額を入力してください"); return; }
+  if (!targets.length){ showToast("生徒を選んでください"); return; }
+
+  const summary = targets.map(t => `・${t.name}`).join("\n");
+  const ok = window.confirm(`以下の${targets.length}名に「${title}(${rawAmount.toLocaleString()}円)」を請求します。よろしいですか？\n\n${summary}`);
+  if (!ok) return;
+
+  onetimeChargeBtn.disabled = true;
+  let successCount = 0, failCount = 0;
+
+  for (const t of targets) {
+    try {
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffCharge",
+          password: password,
+          userId: t.userId,
+          amount: rawAmount,
+          title: title,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) successCount++; else failCount++;
+    } catch (err) {
+      console.error(err);
+      failCount++;
+    }
+  }
+
+  onetimeChargeBtn.disabled = false;
+  showToast(`単発請求：成功${successCount}件${failCount > 0 ? "・失敗" + failCount + "件" : ""}`);
 });
 
 
