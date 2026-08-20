@@ -1229,9 +1229,9 @@ function renderBilling(list){
 
     const amountInput = document.createElement("input");
     amountInput.type = "number";
-    amountInput.step = "500";
+    amountInput.step = "1100";
     amountInput.min = "0";
-    amountInput.placeholder = "金額(500円単位)";
+    amountInput.placeholder = "金額(1100円単位)";
     // 今月の予約回数×1100円を自動入力(なければ前回保存値)
     amountInput.value = item.suggestedAmount > 0 ? item.suggestedAmount : (item.amount || "");
     row.appendChild(amountInput);
@@ -1268,7 +1268,7 @@ function renderBilling(list){
         showToast("金額を入力してください");
         return;
       }
-      const amount = Math.round(rawAmount / 500) * 500;
+      const amount = Math.round(rawAmount / 1100) * 1100;
       amountInput.value = amount;
 
       const ok = window.confirm(`${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`);
@@ -1324,7 +1324,7 @@ billingBulkBtn.addEventListener("click", async () => {
   for (const t of targets) {
     const rawAmount = Number(t.amountInput.value);
     if (!rawAmount || rawAmount <= 0){ failCount++; continue; }
-    const amount = Math.round(rawAmount / 500) * 500;
+    const amount = Math.round(rawAmount / 1100) * 1100;
     t.amountInput.value = amount;
     t.chargeBtn.disabled = true;
     t.chargeBtn.textContent = "処理中…";
