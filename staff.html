@@ -154,6 +154,23 @@
   }
   .refresh-btn:active { transform: scale(0.96); }
 
+  .billing-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 0 10px;
+  }
+  .billing-select-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .billing-select-all input { width: 16px; height: 16px; }
+
   .billing-row {
     display: flex;
     align-items: center;
@@ -164,6 +181,13 @@
     padding: 10px 12px;
     margin-bottom: 7px;
     box-shadow: 0 1px 6px rgba(43,35,32,0.05);
+  }
+  .billing-row .row-checkbox { width: 17px; height: 17px; flex-shrink: 0; }
+  .billing-dates {
+    width: 100%;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    padding-left: 25px;
   }
   .billing-row .billing-name {
     width: 100%;
@@ -594,8 +618,18 @@
     <div class="tab-panel" id="tab-billing">
       <div class="section">
         <div class="label">今月の請求</div>
-        <div class="hint">金額は500円単位で入力してください。「請求する」を押すと金額の確認画面が出ます。カード登録済みの生徒は自動引き落とし、未登録の生徒には支払いリンクが届きます。</div>
+        <div class="hint">金額は今月の予約回数×1100円が自動入力されます（手で調整も可）。チェックを付けて選んだ生徒に、まとめて請求できます。</div>
         <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
+
+        <div class="billing-toolbar">
+          <label class="billing-select-all">
+            <input type="checkbox" id="billingSelectAll">すべて選択
+          </label>
+          <button class="toolbar-btn primary" id="billingBulkBtn" style="display:none;">
+            選択した生徒に一括請求(<span id="billingSelectedCount">0</span>)
+          </button>
+        </div>
+
         <div id="billingList"></div>
       </div>
     </div>
@@ -1147,16 +1181,42 @@ async function fetchBillingList(){
   }
 }
 
+const billingRowElements = []; // {userId, name, checkbox, amountInput, chargeBtn, doCharge}
+const billingSelectAll = document.getElementById("billingSelectAll");
+const billingBulkBtn = document.getElementById("billingBulkBtn");
+const billingSelectedCountEl = document.getElementById("billingSelectedCount");
+
+function formatBillingDateLabel_(dateStr){
+  const [, m, d] = dateStr.split("-");
+  return `${Number(m)}/${Number(d)}`;
+}
+
+function updateBillingBulkUI(){
+  const checkedCount = billingRowElements.filter(r => r.checkbox.checked).length;
+  billingSelectedCountEl.textContent = checkedCount;
+  billingBulkBtn.style.display = checkedCount > 0 ? "inline-block" : "none";
+  billingSelectAll.checked = checkedCount > 0 && checkedCount === billingRowElements.length;
+}
+
 function renderBilling(list){
   billingList.innerHTML = "";
+  billingRowElements.length = 0;
+
   if (!list.length){
     billingList.innerHTML = `<span class="empty-note">対象の生徒がまだいません</span>`;
+    billingBulkBtn.style.display = "none";
     return;
   }
 
   list.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "row-checkbox";
+    checkbox.addEventListener("change", updateBillingBulkUI);
+    row.appendChild(checkbox);
 
     const nameRow = document.createElement("div");
     nameRow.className = "billing-name";
@@ -1172,19 +1232,42 @@ function renderBilling(list){
     amountInput.step = "500";
     amountInput.min = "0";
     amountInput.placeholder = "金額(500円単位)";
-    amountInput.value = item.amount || "";
+    // 今月の予約回数×1100円を自動入力(なければ前回保存値)
+    amountInput.value = item.suggestedAmount > 0 ? item.suggestedAmount : (item.amount || "");
     row.appendChild(amountInput);
 
     const chargeBtn = document.createElement("button");
     chargeBtn.className = "charge-btn";
     chargeBtn.textContent = "請求する";
+    row.appendChild(chargeBtn);
+
+    // 予約日を名前の下に表示(分かりやすさのため)
+    const datesEl = document.createElement("div");
+    datesEl.className = "billing-dates";
+    datesEl.textContent = item.bookingDates.length
+      ? `今月の予約(${item.bookingCount}回): ${item.bookingDates.map(formatBillingDateLabel_).join(", ")}`
+      : "今月の予約はまだありません";
+    row.appendChild(datesEl);
+
+    async function doCharge(amount){
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffCharge",
+          password: password,
+          userId: item.userId,
+          amount: amount,
+        }),
+      });
+      return await res.json();
+    }
+
     chargeBtn.addEventListener("click", async () => {
       const rawAmount = Number(amountInput.value);
       if (!rawAmount || rawAmount <= 0){
         showToast("金額を入力してください");
         return;
       }
-      // 500円単位に丸める（入力ミス防止）
       const amount = Math.round(rawAmount / 500) * 500;
       amountInput.value = amount;
 
@@ -1194,16 +1277,7 @@ function renderBilling(list){
       chargeBtn.disabled = true;
       chargeBtn.textContent = "処理中…";
       try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({
-            action: "staffCharge",
-            password: password,
-            userId: item.userId,
-            amount: amount,
-          }),
-        });
-        const result = await res.json();
+        const result = await doCharge(amount);
         if (result.success){
           if (result.status === "charged"){
             showToast(item.name + "さんへの引き落としが完了しました");
@@ -1223,11 +1297,52 @@ function renderBilling(list){
         chargeBtn.textContent = "請求する";
       }
     });
-    row.appendChild(chargeBtn);
 
+    billingRowElements.push({ userId: item.userId, name: item.name, checkbox, amountInput, chargeBtn, doCharge });
     billingList.appendChild(row);
   });
+
+  updateBillingBulkUI();
 }
+
+billingSelectAll.addEventListener("change", () => {
+  billingRowElements.forEach(r => { r.checkbox.checked = billingSelectAll.checked; });
+  updateBillingBulkUI();
+});
+
+billingBulkBtn.addEventListener("click", async () => {
+  const targets = billingRowElements.filter(r => r.checkbox.checked);
+  if (!targets.length) return;
+
+  const summary = targets.map(t => `・${t.name}：${Number(t.amountInput.value).toLocaleString()}円`).join("\n");
+  const ok = window.confirm(`以下の${targets.length}名にまとめて請求します。よろしいですか？\n\n${summary}`);
+  if (!ok) return;
+
+  billingBulkBtn.disabled = true;
+  let successCount = 0, failCount = 0;
+
+  for (const t of targets) {
+    const rawAmount = Number(t.amountInput.value);
+    if (!rawAmount || rawAmount <= 0){ failCount++; continue; }
+    const amount = Math.round(rawAmount / 500) * 500;
+    t.amountInput.value = amount;
+    t.chargeBtn.disabled = true;
+    t.chargeBtn.textContent = "処理中…";
+    try {
+      const result = await t.doCharge(amount);
+      if (result.success) successCount++; else failCount++;
+    } catch (err) {
+      console.error(err);
+      failCount++;
+    } finally {
+      t.chargeBtn.disabled = false;
+      t.chargeBtn.textContent = "請求する";
+    }
+  }
+
+  billingBulkBtn.disabled = false;
+  showToast(`一括請求：成功${successCount}件${failCount > 0 ? "・失敗" + failCount + "件" : ""}`);
+});
 
 
 
