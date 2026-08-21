@@ -69,12 +69,20 @@
     margin: 6px 0 0;
   }
 
-  /* ---------- month nav ---------- */
+  /* ---------- calendar section (スタッフ側と統一したカード・枠線デザイン) ---------- */
+  .calendar-section {
+    margin: 10px 16px 4px;
+    padding: 16px 16px 14px;
+    background: var(--white);
+    border-radius: 18px;
+    box-shadow: 0 3px 14px rgba(43,35,32,0.07);
+  }
+
   .month-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 20px 4px;
+    padding: 0 2px 4px;
   }
   .month-nav .month-label {
     font-family: "Zen Maru Gothic", sans-serif;
@@ -85,8 +93,7 @@
     width: 38px; height: 38px;
     border-radius: 50%;
     border: none;
-    background: var(--white);
-    box-shadow: 0 2px 8px rgba(43,35,32,0.08);
+    background: var(--cream);
     font-size: 17px;
     color: var(--ink);
     display: flex; align-items: center; justify-content: center;
@@ -100,7 +107,7 @@
   .legend {
     display: flex;
     gap: 12px;
-    padding: 10px 20px 4px;
+    padding: 8px 2px 10px;
     font-size: 13px;
     font-weight: 500;
     color: var(--ink-soft);
@@ -114,14 +121,23 @@
   .legend .dot.mint { background: var(--booked); }
 
   /* ---------- calendar grid ---------- */
+  .calendar-card {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 10px 8px 10px;
+    border: 1px solid rgba(43,35,32,0.06);
+  }
+
   .weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    padding: 12px 16px 2px;
+    padding: 2px 4px 8px;
     text-align: center;
     font-size: 13.5px;
     color: var(--ink-soft);
     font-weight: 700;
+    border-bottom: 1px solid rgba(43,35,32,0.08);
+    margin-bottom: 6px;
   }
   .weekdays .sun { color: var(--orange); }
   .weekdays .sat { color: #4F8FE0; }
@@ -129,8 +145,8 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 4px 16px 8px;
+    gap: 5px;
+    padding: 0 2px;
   }
 
   .day-cell {
@@ -140,9 +156,12 @@
     align-items: center;
     justify-content: flex-start;
     gap: 0;
-    padding-top: 2px;
+    padding: 2px 0 4px;
+    background: var(--white);
+    border: 1px solid rgba(43,35,32,0.08);
+    border-radius: 10px;
   }
-  .day-cell.empty { visibility: hidden; }
+  .day-cell.empty { visibility: hidden; border: none; background: transparent; }
 
   .day-btn {
     position: relative;
@@ -166,10 +185,10 @@
 
   /* 日付の数字とひとまとまりに見えるよう、間隔を詰めて背景も揃える */
   .day-hours {
-    margin-top: -4px;
-    padding: 1px 6px 2px;
+    margin-top: -2px;
+    padding: 2px 6px 3px;
     border-radius: 0 0 8px 8px;
-    background: rgba(43, 35, 32, 0.04);
+    background: var(--cream);
     font-size: 9px;
     font-weight: 700;
     color: var(--ink-soft);
@@ -484,23 +503,27 @@
     <p class="sub">複数の日をまとめて選べます</p>
   </header>
 
-  <div class="month-nav">
-    <button id="prevMonth" aria-label="前の月">‹</button>
-    <div class="month-label" id="monthLabel">2026年8月</div>
-    <button id="nextMonth" aria-label="次の月">›</button>
-  </div>
+  <div class="calendar-section">
+    <div class="month-nav">
+      <button id="prevMonth" aria-label="前の月">‹</button>
+      <div class="month-label" id="monthLabel">2026年8月</div>
+      <button id="nextMonth" aria-label="次の月">›</button>
+    </div>
 
-  <div class="legend">
-    <span><span class="dot full"></span>満員</span>
-    <span><span class="dot closed"></span>休館</span>
-    <span><span class="dot mint"></span>予約済み(タップでキャンセル)</span>
-  </div>
+    <div class="legend">
+      <span><span class="dot full"></span>満員</span>
+      <span><span class="dot closed"></span>休館</span>
+      <span><span class="dot mint"></span>予約済み(タップでキャンセル)</span>
+    </div>
 
-  <div class="weekdays">
-    <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
-  </div>
+    <div class="calendar-card">
+      <div class="weekdays">
+        <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+      </div>
 
-  <div class="grid" id="grid"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
 
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中の日程</div>
