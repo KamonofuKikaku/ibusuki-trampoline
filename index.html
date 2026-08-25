@@ -728,9 +728,15 @@ async function fetchMyBookings(){
     // 登録状況もここで一緒に受け取る(別通信を省いて表示を早くするため)
     currentRegisteredName = data.name || "";
     updateRegisteredNameDisplay();
-    if (!data.registered) {
-      document.getElementById("registerOverlay").classList.add("show");
+    if (data.registered) {
+      // 既に登録済みだと分かったので、開いていたフォームを自動で閉じる
+      document.getElementById("registerOverlay").classList.remove("show");
+      try {
+        localStorage.setItem("cachedRegistered", "true");
+        localStorage.setItem("cachedRegisteredName", currentRegisteredName);
+      } catch (e) {}
     }
+    // 未登録の場合は、アプリ起動時から既に開いているフォームをそのまま使ってもらう
   } catch (err){
     console.error("myBookings fetch failed", err);
     showToast("予約情報の取得に失敗しました");
@@ -1034,6 +1040,21 @@ submitBtn.addEventListener("click", async () => {
 });
 
 (async function start(){
+  // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
+  // 記録が無い場合(初めて・未登録の可能性)だけ、念のため先にフォームを開いておく
+  let cachedRegistered = false;
+  try {
+    cachedRegistered = localStorage.getItem("cachedRegistered") === "true";
+    const cachedName = localStorage.getItem("cachedRegisteredName");
+    if (cachedRegistered && cachedName) {
+      currentRegisteredName = cachedName;
+      updateRegisteredNameDisplay();
+    }
+  } catch (e) {}
+  if (!cachedRegistered) {
+    document.getElementById("registerOverlay").classList.add("show");
+  }
+
   // 前回開いた時のデータがあれば、まずそれを即座に表示（体感速度優先）
   try {
     const cachedBooked = localStorage.getItem("cachedBookedDates");
@@ -1093,6 +1114,10 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
     showToast("お名前を入力してください");
     return;
   }
+  if (!liffProfile){
+    showToast("読み込み中です。少し待ってから再度お試しください");
+    return;
+  }
   const btn = document.getElementById("registerSaveBtn");
   btn.disabled = true;
   btn.textContent = "登録中…";
@@ -1111,6 +1136,10 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
       currentRegisteredName = name;
       updateRegisteredNameDisplay();
       document.getElementById("registerOverlay").classList.remove("show");
+      try {
+        localStorage.setItem("cachedRegistered", "true");
+        localStorage.setItem("cachedRegisteredName", name);
+      } catch (e) {}
       showToast("登録しました。よろしくお願いします！");
     } else {
       showToast("登録に失敗しました。もう一度お試しください");
