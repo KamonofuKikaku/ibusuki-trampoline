@@ -1280,8 +1280,40 @@ function renderBilling(list){
     nameRow.innerHTML = `<span>${item.name}</span>`;
     const badge = document.createElement("span");
     badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
-    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録(初回リンク送信)";
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
     nameRow.appendChild(badge);
+
+    if (!item.cardOnFile){
+      const linkBtn = document.createElement("button");
+      linkBtn.className = "toolbar-btn";
+      linkBtn.style.fontSize = "11px";
+      linkBtn.style.padding = "5px 10px";
+      linkBtn.textContent = "登録リンクを送る";
+      linkBtn.addEventListener("click", async () => {
+        linkBtn.disabled = true;
+        linkBtn.textContent = "送信中…";
+        try {
+          const res = await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "sendCardRegisterLink", password: password, userId: item.userId }),
+          });
+          const result = await res.json();
+          if (result.success){
+            showToast(item.name + "さんへ登録リンクを送信しました");
+          } else {
+            showToast("送信に失敗しました: " + (result.reason || ""));
+          }
+        } catch (err){
+          console.error(err);
+          showToast("通信に失敗しました");
+        } finally {
+          linkBtn.disabled = false;
+          linkBtn.textContent = "登録リンクを送る";
+        }
+      });
+      nameRow.appendChild(linkBtn);
+    }
+
     row.appendChild(nameRow);
 
     const amountInput = document.createElement("input");
@@ -1446,7 +1478,7 @@ function renderOnetimeList(list){
     nameRow.innerHTML = `<span>${item.name}</span>`;
     const badge = document.createElement("span");
     badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
-    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録(初回リンク送信)";
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
     nameRow.appendChild(badge);
     row.appendChild(nameRow);
 
