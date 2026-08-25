@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>カードのご登録 | 指宿トランポリンジム</title>
+
+<!--
+  【設定するもの】
+  1. GAS_ENDPOINT: Code.gsのデプロイURL(staff.html/index.htmlと同じもの)
+  2. SQUARE_APP_ID: Square開発者ダッシュボードのApplication ID
+     (本番なら「sq0idp-」から始まるProduction用のID。sandboxのものとは別)
+  3. SQUARE_LOCATION_ID: Square開発者ダッシュボードのLocation ID(本番用)
+
+  【重要】下のscriptタグのSDK読み込み元URLも、環境に合わせて変更が必要です。
+  - Sandboxで試す場合: https://sandbox.web.squarecdn.com/v1/square.js
+  - 本番の場合        : https://web.squarecdn.com/v1/square.js
+  現在は「本番用」のURLになっています。Sandboxで試す場合は書き換えてください。
+-->
+<script src="https://web.squarecdn.com/v1/square.js"></script>
+
+<style>
+  :root{
+    --cream: #FFFBF3;
+    --ink: #2B2320;
+    --ink-soft: #7A6F63;
+    --mint: #2FBF8F;
+    --danger: #E0503A;
+    --white: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+  .eyebrow {
+    text-align: center;
+    color: var(--mint);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+  .sub {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 0 0 28px;
+  }
+  .card-box {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 3px 14px rgba(43,35,32,0.08);
+    margin-bottom: 16px;
+  }
+  #card-container {
+    min-height: 90px;
+    margin-bottom: 16px;
+  }
+  .submit-btn {
+    width: 100%;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--mint), #45D6A0);
+  }
+  .submit-btn:disabled { opacity: 0.5; }
+  .status-msg {
+    text-align: center;
+    font-size: 13.5px;
+    margin-top: 14px;
+    color: var(--ink-soft);
+  }
+  .status-msg.error { color: var(--danger); font-weight: 700; }
+  .status-msg.success { color: var(--mint); font-weight: 700; }
+  .hint {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+  .done-box {
+    display: none;
+    text-align: center;
+    padding: 40px 10px;
+  }
+  .done-box .icon { font-size: 48px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <h1>お支払い方法のご登録</h1>
+    <p class="sub">安全な決済サービス「Square」を使用しています</p>
+
+    <div class="card-box" id="formBox">
+      <div id="card-container"></div>
+      <button class="submit-btn" id="submitBtn" disabled>読み込み中…</button>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <p class="hint">
+      入力されたカード番号は、この画面から直接Square社のサーバーへ安全に送信されます。<br>
+      当ジムがカード番号を直接保存・保持することはありません。
+    </p>
+  </div>
+
+  <div class="done-box" id="doneBox">
+    <div class="icon">✅</div>
+    <h1>登録が完了しました</h1>
+    <p class="sub">このままLINEアプリに戻っていただいて大丈夫です</p>
+  </div>
+
+<script>
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
+const SQUARE_APP_ID = "sq0idp-gZNfM5-eqELTtB1PnFKi_Q";
+const SQUARE_LOCATION_ID = "LD9GHQ49VQTB2";
+
+const params = new URLSearchParams(window.location.search);
+const userId = params.get("userId");
+
+const submitBtn = document.getElementById("submitBtn");
+const statusMsg = document.getElementById("statusMsg");
+const formBox = document.getElementById("formBox");
+const doneBox = document.getElementById("doneBox");
+
+let card;
+
+function showStatus(text, type){
+  statusMsg.textContent = text;
+  statusMsg.className = "status-msg" + (type ? " " + type : "");
+}
+
+async function initializeCard(){
+  if (!userId){
+    showStatus("リンクが正しくありません。お手数ですが、もう一度LINEからリンクを開き直してください。", "error");
+    return;
+  }
+  try {
+    const payments = Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
+    card = await payments.card();
+    await card.attach("#card-container");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "このカードを登録する";
+  } catch (err){
+    console.error(err);
+    showStatus("カード入力欄の読み込みに失敗しました。時間をおいて再度お試しください。", "error");
+  }
+}
+
+submitBtn.addEventListener("click", async () => {
+  submitBtn.disabled = true;
+  submitBtn.textContent = "登録中…";
+  showStatus("");
+
+  try {
+    const result = await card.tokenize();
+    if (result.status !== "OK"){
+      throw new Error((result.errors && result.errors[0] && result.errors[0].message) || "カード情報の確認に失敗しました");
+    }
+
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "saveCardToken",
+        userId: userId,
+        token: result.token,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success){
+      formBox.style.display = "none";
+      document.querySelector(".hint").style.display = "none";
+      doneBox.style.display = "block";
+    } else {
+      throw new Error(data.reason || "登録に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showStatus("登録に失敗しました: " + err.message, "error");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "このカードを登録する";
+  }
+});
+
+initializeCard();
+</script>
+</body>
+</html>
