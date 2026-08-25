@@ -207,6 +207,14 @@
   }
   .card-badge.on { background: var(--mint); color: var(--white); }
   .card-badge.off { background: var(--gray-full, #D9D2C7); color: var(--ink-soft); }
+  .paid-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--orange-soft);
+    color: var(--orange);
+  }
   .billing-row input[type="number"] {
     flex: 1;
     min-width: 90px;
@@ -1283,35 +1291,15 @@ function renderBilling(list){
     badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
     nameRow.appendChild(badge);
 
-    if (!item.cardOnFile){
-      const linkBtn = document.createElement("button");
-      linkBtn.className = "toolbar-btn";
-      linkBtn.style.fontSize = "11px";
-      linkBtn.style.padding = "5px 10px";
-      linkBtn.textContent = "登録リンクを送る";
-      linkBtn.addEventListener("click", async () => {
-        linkBtn.disabled = true;
-        linkBtn.textContent = "送信中…";
-        try {
-          const res = await fetch(GAS_ENDPOINT, {
-            method: "POST",
-            body: JSON.stringify({ action: "sendCardRegisterLink", password: password, userId: item.userId }),
-          });
-          const result = await res.json();
-          if (result.success){
-            showToast(item.name + "さんへ登録リンクを送信しました");
-          } else {
-            showToast("送信に失敗しました: " + (result.reason || ""));
-          }
-        } catch (err){
-          console.error(err);
-          showToast("通信に失敗しました");
-        } finally {
-          linkBtn.disabled = false;
-          linkBtn.textContent = "登録リンクを送る";
-        }
-      });
-      nameRow.appendChild(linkBtn);
+    // 今月すでに支払い済みかどうかを表示(二重請求防止のため)
+    const thisMonthKey = new Date().toISOString().slice(0, 7); // "yyyy-MM"
+    if (item.lastPaidMonth){
+      const paidBadge = document.createElement("span");
+      paidBadge.className = "paid-badge";
+      const [py, pm] = item.lastPaidMonth.split("-");
+      const label = `${Number(pm)}月分支払い済み`;
+      paidBadge.textContent = item.lastPaidMonth === thisMonthKey ? "今月支払い済み" : label;
+      nameRow.appendChild(paidBadge);
     }
 
     row.appendChild(nameRow);
@@ -1360,7 +1348,13 @@ function renderBilling(list){
       const amount = Math.round(rawAmount / 1100) * 1100;
       amountInput.value = amount;
 
-      const ok = window.confirm(`${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`);
+      const thisMonthKey = new Date().toISOString().slice(0, 7);
+      let confirmMessage = `${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`;
+      if (item.lastPaidMonth === thisMonthKey){
+        confirmMessage = `⚠️ ${item.name}さんは今月すでに支払い済みです。\n\n` + confirmMessage + "\n\n二重請求になっていないか、ご確認ください。";
+      }
+
+      const ok = window.confirm(confirmMessage);
       if (!ok) return;
 
       chargeBtn.disabled = true;
@@ -1370,8 +1364,9 @@ function renderBilling(list){
         if (result.success){
           if (result.status === "charged"){
             showToast(item.name + "さんへの引き落としが完了しました");
-          } else if (result.status === "link_sent"){
-            showToast(item.name + "さんへ支払いリンクを送信しました");
+          } else if (result.status === "registration_link_sent"){
+            showToast(item.name + "さんへカード登録リンクを送信しました");
+            fetchBillingList();
           } else {
             showToast(item.name + "さんへ請求しましたが、状態確認できませんでした");
           }
