@@ -407,6 +407,25 @@
   }
   .register-btn:disabled { opacity: 0.6; }
 
+  .edit-name-link {
+    display: block;
+    margin: 10px auto 4px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    text-decoration: underline;
+    padding: 4px;
+  }
+
+  .registered-name {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    margin-top: 6px;
+  }
+
   /* ---------- loading overlay (恐竜がトランポリンで跳ねる) ---------- */
   .loading-overlay {
     position: fixed;
@@ -549,6 +568,7 @@
 
   <header>
     <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <div class="registered-name" id="registeredNameDisplay" style="display:none;"></div>
     <h1>希望日を選んでください</h1>
     <p class="sub">複数の日をまとめて選べます</p>
   </header>
@@ -575,6 +595,8 @@
     </div>
   </div>
 
+  <button class="edit-name-link" id="editNameBtn">登録した名前を変更する</button>
+
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中の日程</div>
     <div class="chip-row" id="chipRow"></div>
@@ -589,8 +611,8 @@
 
   <div class="register-overlay" id="registerOverlay">
     <div class="register-card">
-      <div class="register-title">はじめに、お名前を教えてください</div>
-      <div class="register-hint">予約・お月謝の管理に使用します。フルネームでご入力ください。</div>
+      <div class="register-title">生徒の氏名を教えてください</div>
+      <div class="register-hint">予約・お月謝の管理に使用します。<br>フルネームでご入力ください。</div>
       <input type="text" id="registerNameInput" class="register-input" placeholder="例：山田太郎">
       <button class="register-btn" id="registerSaveBtn">登録する</button>
     </div>
@@ -1031,22 +1053,36 @@ submitBtn.addEventListener("click", async () => {
   renderMonth();
 
   // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
+  // 名前登録の確認も、予約情報の取得と同時に始めて表示を早くする
   await liffPromise;
+  const registrationPromise = checkAndPromptRegistration();
   await fetchMyBookings();
   renderMonth();
   renderSelection();
 
   hideLoadingOverlay();
-
-  // 本名登録がまだの場合は、フォームを表示してそこから先に進めないようにする
-  await checkAndPromptRegistration();
+  await registrationPromise;
 })();
+
+let currentRegisteredName = "";
+
+function updateRegisteredNameDisplay(){
+  const el = document.getElementById("registeredNameDisplay");
+  if (currentRegisteredName){
+    el.textContent = currentRegisteredName + "さん";
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
 
 async function checkAndPromptRegistration(){
   if (!liffProfile) return;
   try {
     const res = await fetch(`${GAS_ENDPOINT}?action=checkRegistered&userId=${encodeURIComponent(liffProfile.userId)}`);
     const data = await res.json();
+    currentRegisteredName = data.name || "";
+    updateRegisteredNameDisplay();
     if (!data.registered) {
       document.getElementById("registerOverlay").classList.add("show");
     }
@@ -1054,6 +1090,11 @@ async function checkAndPromptRegistration(){
     console.error("checkRegistered failed", err);
   }
 }
+
+document.getElementById("editNameBtn").addEventListener("click", () => {
+  document.getElementById("registerNameInput").value = currentRegisteredName;
+  document.getElementById("registerOverlay").classList.add("show");
+});
 
 document.getElementById("registerSaveBtn").addEventListener("click", async () => {
   const input = document.getElementById("registerNameInput");
@@ -1077,6 +1118,8 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
     });
     const result = await res.json();
     if (result.success){
+      currentRegisteredName = name;
+      updateRegisteredNameDisplay();
       document.getElementById("registerOverlay").classList.remove("show");
       showToast("登録しました。よろしくお願いします！");
     } else {
