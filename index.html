@@ -724,6 +724,13 @@ async function fetchMyBookings(){
     const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
     bookedSet = new Set((data.bookings || []).map(b => b.date));
     try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+
+    // 登録状況もここで一緒に受け取る(別通信を省いて表示を早くするため)
+    currentRegisteredName = data.name || "";
+    updateRegisteredNameDisplay();
+    if (!data.registered) {
+      document.getElementById("registerOverlay").classList.add("show");
+    }
   } catch (err){
     console.error("myBookings fetch failed", err);
     showToast("予約情報の取得に失敗しました");
@@ -1053,15 +1060,13 @@ submitBtn.addEventListener("click", async () => {
   renderMonth();
 
   // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
-  // 名前登録の確認も、予約情報の取得と同時に始めて表示を早くする
+  // 名前登録の確認は、この予約情報取得のレスポンスに相乗りさせて別通信を無くしている
   await liffPromise;
-  const registrationPromise = checkAndPromptRegistration();
   await fetchMyBookings();
   renderMonth();
   renderSelection();
 
   hideLoadingOverlay();
-  await registrationPromise;
 })();
 
 let currentRegisteredName = "";
@@ -1073,21 +1078,6 @@ function updateRegisteredNameDisplay(){
     el.style.display = "block";
   } else {
     el.style.display = "none";
-  }
-}
-
-async function checkAndPromptRegistration(){
-  if (!liffProfile) return;
-  try {
-    const res = await fetch(`${GAS_ENDPOINT}?action=checkRegistered&userId=${encodeURIComponent(liffProfile.userId)}`);
-    const data = await res.json();
-    currentRegisteredName = data.name || "";
-    updateRegisteredNameDisplay();
-    if (!data.registered) {
-      document.getElementById("registerOverlay").classList.add("show");
-    }
-  } catch (err){
-    console.error("checkRegistered failed", err);
   }
 }
 
