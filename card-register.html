@@ -82,6 +82,28 @@
     background: linear-gradient(135deg, var(--mint), #45D6A0);
   }
   .submit-btn:disabled { opacity: 0.5; }
+
+  .amount-box {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 16px;
+    box-shadow: 0 3px 14px rgba(43,35,32,0.08);
+  }
+  .amount-label { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .amount-value { font-size: 24px; font-weight: 900; }
+
+  .consent-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .consent-row input { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; }
   .status-msg {
     text-align: center;
     font-size: 13.5px;
@@ -108,11 +130,22 @@
 <body>
   <div class="wrap">
     <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
-    <h1>お支払い方法のご登録</h1>
-    <p class="sub">安全な決済サービス「Square」を使用しています</p>
+    <h1 id="pageTitle">お支払い方法のご登録</h1>
+    <p class="sub" id="pageSub">安全な決済サービス「Square」を使用しています</p>
+
+    <div class="amount-box" id="amountBox" style="display:none;">
+      <div class="amount-label" id="amountLabel"></div>
+      <div class="amount-value" id="amountValue"></div>
+    </div>
 
     <div class="card-box" id="formBox">
       <div id="card-container"></div>
+
+      <label class="consent-row">
+        <input type="checkbox" id="consentCheckbox">
+        <span>カード情報を保存し、次回以降も自動でお引き落としさせていただくことに同意します</span>
+      </label>
+
       <button class="submit-btn" id="submitBtn" disabled>読み込み中…</button>
       <div class="status-msg" id="statusMsg"></div>
     </div>
@@ -136,18 +169,36 @@ const SQUARE_LOCATION_ID = "LD9GHQ49VQTB2";
 
 const params = new URLSearchParams(window.location.search);
 const userId = params.get("userId");
+const amount = params.get("amount");
+const chargeTitle = params.get("title");
 
 const submitBtn = document.getElementById("submitBtn");
 const statusMsg = document.getElementById("statusMsg");
 const formBox = document.getElementById("formBox");
 const doneBox = document.getElementById("doneBox");
+const consentCheckbox = document.getElementById("consentCheckbox");
 
 let card;
+const submitBtnLabel = amount ? "このカードでお支払いを行う" : "このカードを登録する";
+
+// 金額が渡されていれば、金額を大きく表示する
+if (amount) {
+  document.getElementById("pageTitle").textContent = "お支払い";
+  document.getElementById("pageSub").textContent = "カードを登録し、そのままお支払いを行います";
+  document.getElementById("amountBox").style.display = "block";
+  document.getElementById("amountLabel").textContent = chargeTitle || "お支払い金額";
+  document.getElementById("amountValue").textContent = Number(amount).toLocaleString() + "円";
+}
 
 function showStatus(text, type){
   statusMsg.textContent = text;
   statusMsg.className = "status-msg" + (type ? " " + type : "");
 }
+
+function updateSubmitEnabled(){
+  submitBtn.disabled = !(card && consentCheckbox.checked);
+}
+consentCheckbox.addEventListener("change", updateSubmitEnabled);
 
 async function initializeCard(){
   if (!userId){
@@ -158,8 +209,8 @@ async function initializeCard(){
     const payments = Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
     card = await payments.card();
     await card.attach("#card-container");
-    submitBtn.disabled = false;
-    submitBtn.textContent = "このカードを登録する";
+    submitBtn.textContent = submitBtnLabel;
+    updateSubmitEnabled();
   } catch (err){
     console.error(err);
     showStatus("カード入力欄の読み込みに失敗しました。時間をおいて再度お試しください。", "error");
@@ -167,8 +218,12 @@ async function initializeCard(){
 }
 
 submitBtn.addEventListener("click", async () => {
+  if (!consentCheckbox.checked){
+    showStatus("同意のチェックをお願いします", "error");
+    return;
+  }
   submitBtn.disabled = true;
-  submitBtn.textContent = "登録中…";
+  submitBtn.textContent = "処理中…";
   showStatus("");
 
   try {
@@ -190,6 +245,7 @@ submitBtn.addEventListener("click", async () => {
     if (data.success){
       formBox.style.display = "none";
       document.querySelector(".hint").style.display = "none";
+      document.getElementById("amountBox").style.display = "none";
       doneBox.style.display = "block";
     } else {
       throw new Error(data.reason || "登録に失敗しました");
@@ -198,7 +254,7 @@ submitBtn.addEventListener("click", async () => {
     console.error(err);
     showStatus("登録に失敗しました: " + err.message, "error");
     submitBtn.disabled = false;
-    submitBtn.textContent = "このカードを登録する";
+    submitBtn.textContent = submitBtnLabel;
   }
 });
 
