@@ -354,6 +354,59 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ---------- register (初回のお名前登録) ---------- */
+  .register-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(43,35,32,0.4);
+    z-index: 70;
+    align-items: center;
+    justify-content: center;
+  }
+  .register-overlay.show { display: flex; }
+  .register-card {
+    width: calc(100% - 48px);
+    max-width: 340px;
+    background: var(--white);
+    border-radius: 20px;
+    padding: 24px 20px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+  .register-title {
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 900;
+    font-size: 17px;
+    margin-bottom: 8px;
+  }
+  .register-hint {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+  .register-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #E6DFD3;
+    font-size: 15px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .register-btn {
+    width: 100%;
+    border: none;
+    padding: 13px;
+    border-radius: 12px;
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--mint), #45D6A0);
+  }
+  .register-btn:disabled { opacity: 0.6; }
+
   /* ---------- loading overlay (恐竜がトランポリンで跳ねる) ---------- */
   .loading-overlay {
     position: fixed;
@@ -533,6 +586,15 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="register-overlay" id="registerOverlay">
+    <div class="register-card">
+      <div class="register-title">はじめに、お名前を教えてください</div>
+      <div class="register-hint">予約・お月謝の管理に使用します。フルネームでご入力ください。</div>
+      <input type="text" id="registerNameInput" class="register-input" placeholder="例：山田太郎">
+      <button class="register-btn" id="registerSaveBtn">登録する</button>
+    </div>
+  </div>
 
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-mascot">
@@ -975,7 +1037,59 @@ submitBtn.addEventListener("click", async () => {
   renderSelection();
 
   hideLoadingOverlay();
+
+  // 本名登録がまだの場合は、フォームを表示してそこから先に進めないようにする
+  await checkAndPromptRegistration();
 })();
+
+async function checkAndPromptRegistration(){
+  if (!liffProfile) return;
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=checkRegistered&userId=${encodeURIComponent(liffProfile.userId)}`);
+    const data = await res.json();
+    if (!data.registered) {
+      document.getElementById("registerOverlay").classList.add("show");
+    }
+  } catch (err){
+    console.error("checkRegistered failed", err);
+  }
+}
+
+document.getElementById("registerSaveBtn").addEventListener("click", async () => {
+  const input = document.getElementById("registerNameInput");
+  const name = input.value.trim();
+  if (!name){
+    showToast("お名前を入力してください");
+    return;
+  }
+  const btn = document.getElementById("registerSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "登録中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "registerName",
+        userId: liffProfile.userId,
+        displayName: liffProfile.displayName,
+        name: name,
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      document.getElementById("registerOverlay").classList.remove("show");
+      showToast("登録しました。よろしくお願いします！");
+    } else {
+      showToast("登録に失敗しました。もう一度お試しください");
+    }
+  } catch (err){
+    console.error("registerName failed", err);
+    showToast("通信に失敗しました");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "登録する";
+  }
+});
 </script>
 </body>
 </html>
