@@ -1415,21 +1415,29 @@ billingBulkBtn.addEventListener("click", async () => {
   if (!ok) return;
 
   billingBulkBtn.disabled = true;
-  let successCount = 0, failCount = 0;
+  let successCount = 0;
+  const failures = []; // {name, reason}
 
   for (const t of targets) {
     const rawAmount = Number(t.amountInput.value);
-    if (!rawAmount || rawAmount <= 0){ failCount++; continue; }
+    if (!rawAmount || rawAmount <= 0){
+      failures.push({ name: t.name, reason: "金額が未入力です" });
+      continue;
+    }
     const amount = Math.round(rawAmount / 1100) * 1100;
     t.amountInput.value = amount;
     t.chargeBtn.disabled = true;
     t.chargeBtn.textContent = "処理中…";
     try {
       const result = await t.doCharge(amount);
-      if (result.success) successCount++; else failCount++;
+      if (result.success) {
+        successCount++;
+      } else {
+        failures.push({ name: t.name, reason: result.reason || "不明なエラー" });
+      }
     } catch (err) {
       console.error(err);
-      failCount++;
+      failures.push({ name: t.name, reason: "通信エラー" });
     } finally {
       t.chargeBtn.disabled = false;
       t.chargeBtn.textContent = "請求する";
@@ -1437,7 +1445,13 @@ billingBulkBtn.addEventListener("click", async () => {
   }
 
   billingBulkBtn.disabled = false;
-  showToast(`一括請求：成功${successCount}件${failCount > 0 ? "・失敗" + failCount + "件" : ""}`);
+
+  if (failures.length === 0){
+    showToast(`一括請求：成功${successCount}件`);
+  } else {
+    const detail = failures.map(f => `・${f.name}：${f.reason}`).join("\n");
+    window.alert(`一括請求結果\n\n成功：${successCount}件\n失敗：${failures.length}件\n\n【失敗の詳細】\n${detail}`);
+  }
 });
 
 /* ---------- 単発請求（年会費など） ---------- */
