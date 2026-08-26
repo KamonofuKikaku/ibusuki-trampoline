@@ -215,6 +215,14 @@
     background: var(--orange-soft);
     color: var(--orange);
   }
+  .billing-month-input {
+    flex-shrink: 0;
+    padding: 8px 8px;
+    border-radius: 8px;
+    border: 1px solid #E6DFD3;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
   .billing-row input[type="number"] {
     flex: 1;
     min-width: 90px;
@@ -1291,18 +1299,22 @@ function renderBilling(list){
     badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
     nameRow.appendChild(badge);
 
-    // 今月すでに支払い済みかどうかを表示(二重請求防止のため)
-    const thisMonthKey = new Date().toISOString().slice(0, 7); // "yyyy-MM"
+    // 支払い済みの対象月を表示(二重請求防止のため)
     if (item.lastPaidMonth){
       const paidBadge = document.createElement("span");
       paidBadge.className = "paid-badge";
       const [py, pm] = item.lastPaidMonth.split("-");
-      const label = `${Number(pm)}月分支払い済み`;
-      paidBadge.textContent = item.lastPaidMonth === thisMonthKey ? "今月支払い済み" : label;
+      paidBadge.textContent = `${py}年${Number(pm)}月分支払い済み`;
       nameRow.appendChild(paidBadge);
     }
 
     row.appendChild(nameRow);
+
+    const monthInput = document.createElement("input");
+    monthInput.type = "month";
+    monthInput.className = "billing-month-input";
+    monthInput.value = new Date().toISOString().slice(0, 7); // デフォルトは今月
+    row.appendChild(monthInput);
 
     const amountInput = document.createElement("input");
     amountInput.type = "number";
@@ -1334,6 +1346,7 @@ function renderBilling(list){
           password: password,
           userId: item.userId,
           amount: amount,
+          billingMonth: monthInput.value,
         }),
       });
       return await res.json();
@@ -1348,10 +1361,9 @@ function renderBilling(list){
       const amount = Math.round(rawAmount / 1100) * 1100;
       amountInput.value = amount;
 
-      const thisMonthKey = new Date().toISOString().slice(0, 7);
       let confirmMessage = `${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`;
-      if (item.lastPaidMonth === thisMonthKey){
-        confirmMessage = `⚠️ ${item.name}さんは今月すでに支払い済みです。\n\n` + confirmMessage + "\n\n二重請求になっていないか、ご確認ください。";
+      if (item.lastPaidMonth === monthInput.value){
+        confirmMessage = `⚠️ ${item.name}さんは選択中の対象月（${monthInput.value}）分をすでに支払い済みです。\n\n` + confirmMessage + "\n\n二重請求になっていないか、ご確認ください。";
       }
 
       const ok = window.confirm(confirmMessage);
