@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>スタッフ管理（一般用）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream: #FFFBF3;
+    --ink: #2B2320;
+    --ink-soft: #7A6F63;
+    --orange: #FF6F3C;
+    --orange-soft: #FFE3D6;
+    --mint: #2FBF8F;
+    --mint-soft: rgba(47,191,143,0.14);
+    --booked: #4F8FE0;
+    --danger: #E0503A;
+    --danger-soft: #FDE4DE;
+    --white: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
+
+  header { padding: 20px 20px 8px; text-align: center; }
+  header .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 22px; margin: 6px 0 0; }
+
+  .login-box { margin: 40px 20px; background: var(--white); border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 14px rgba(43,35,32,0.08); text-align: center; }
+  .login-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 15px; margin: 14px 0; text-align: center; }
+  .login-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 15px; }
+  .login-box button:disabled { background: var(--ink-soft); }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+  .warn-banner {
+    margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px;
+    background: var(--danger-soft); color: var(--danger); font-size: 13px; font-weight: 700;
+    display: none; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .warn-banner.show { display: flex; }
+  .warn-banner button { border: none; background: var(--danger); color: var(--white); font-weight: 700; font-size: 12.5px; padding: 8px 12px; border-radius: 8px; flex-shrink: 0; }
+
+  .section { margin: 14px 16px; padding: 18px 18px 20px; background: var(--white); border-radius: 18px; box-shadow: 0 3px 14px rgba(43,35,32,0.07); }
+  .section .label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .hint { color: var(--ink-soft); font-size: 12px; margin-bottom: 10px; }
+  .empty-note { color: var(--ink-soft); font-size: 13px; }
+
+  .tabs { display: flex; gap: 6px; padding: 4px 16px; overflow-x: auto; }
+  .tab-btn { flex-shrink: 0; border: none; background: var(--white); color: var(--ink-soft); font-weight: 700; font-size: 13px; padding: 9px 14px; border-radius: 999px; box-shadow: 0 1px 6px rgba(43,35,32,0.05); }
+  .tab-btn.active { background: var(--orange); color: var(--white); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ---------- 曜日テンプレート ---------- */
+  .template-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .template-table th, .template-table td { border: 1px solid #EDE6D8; padding: 3px; text-align: center; }
+  .template-table th { background: var(--cream); font-weight: 700; color: var(--ink-soft); }
+  .template-table input {
+    width: 100%; border: none; text-align: center; font-size: 12px; padding: 6px 2px;
+    background: transparent; color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif;
+  }
+  .template-table input:focus { background: var(--orange-soft); outline: none; border-radius: 6px; }
+  .template-scroll { overflow-x: auto; margin-bottom: 12px; }
+  .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
+  .save-btn:disabled { background: var(--ink-soft); }
+
+  /* ---------- 予約状況 ---------- */
+  .date-block { margin-bottom: 14px; }
+  .date-block .date-title { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
+  .date-block .date-title.today { color: var(--booked); }
+  .slot-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid rgba(43,35,32,0.06);
+  }
+  .slot-row .slot-main { display: flex; flex-direction: column; gap: 2px; }
+  .slot-row .slot-time { font-weight: 700; font-size: 13.5px; }
+  .slot-row .slot-sub { font-size: 11.5px; color: var(--ink-soft); }
+  .slot-row .slot-names { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  .slot-row .edit-btn { border: none; background: var(--white); color: var(--ink-soft); font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 8px; box-shadow: 0 1px 4px rgba(43,35,32,0.06); flex-shrink: 0; }
+  .cancel-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--mint-soft); color: var(--mint); border-radius: 999px; padding: 3px 4px 3px 9px; font-size: 11.5px; font-weight: 700; margin: 2px 4px 0 0; }
+  .cancel-chip button { border: none; background: rgba(47,191,143,0.2); color: var(--mint); width: 15px; height: 15px; border-radius: 50%; font-size: 10px; line-height: 1; }
+
+  .edit-panel { display: none; background: var(--white); border: 1px dashed #E6DFD3; border-radius: 10px; padding: 10px; margin-top: 6px; }
+  .edit-panel.show { display: block; }
+  .edit-panel .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .edit-panel input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; }
+  .edit-panel .actions { display: flex; gap: 8px; }
+  .edit-panel button { flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 700; font-size: 12.5px; }
+  .edit-panel .save { background: var(--mint); color: var(--white); }
+  .edit-panel .close-slot { background: var(--danger-soft); color: var(--danger); }
+
+  /* ---------- お月謝 ---------- */
+  .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
+  .billing-row .billing-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .card-badge.on { background: var(--mint-soft); color: var(--mint); }
+  .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
+  .billing-dates { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
+  .billing-row input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; margin-bottom: 6px; }
+  .charge-btn { width: 100%; padding: 9px; border-radius: 8px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 13px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); bottom: 30px;
+    background: var(--ink); color: var(--white); padding: 10px 18px; border-radius: 999px; font-size: 13px;
+    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="eyebrow">TRAMPOLINE GYM BOOKING — 一般用</div>
+    <h1>スタッフ管理（一般用）</h1>
+  </header>
+
+  <div id="loginView" class="login-box">
+    <div>パスワードを入力してください</div>
+    <input type="password" id="passwordInput" placeholder="パスワード" />
+    <button id="loginBtn">ログイン</button>
+    <div class="login-error" id="loginError">パスワードが違います</div>
+  </div>
+
+  <div id="mainView" style="display:none;">
+    <div class="warn-banner" id="warnBanner">
+      <span id="warnText"></span>
+      <button id="warnApproveBtn">確認する</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="template">曜日テンプレート</button>
+      <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
+      <button class="tab-btn" data-tab="billing">お月謝</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-template">
+      <div class="section">
+        <div class="label">曜日ごとの基本パターン</div>
+        <div class="hint">各マスに担当講師名を入れると営業、空欄にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください）。基本定員: <span id="basicCapacityText">-</span>名</div>
+        <div class="template-scroll">
+          <table class="template-table" id="templateTable"></table>
+        </div>
+        <button class="save-btn" id="templateSaveBtn">変更したマスを保存</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-bookings">
+      <div class="section">
+        <div class="label">予約状況の確認・修正</div>
+        <div class="hint">担当講師や個別定員の変更、休みへの切り替えができます（1週間以内の変更は予約者へLINE通知が届きます）</div>
+        <div id="upcomingList"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-billing">
+      <div class="section">
+        <div class="label">今月の請求</div>
+        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。</div>
+        <button class="save-btn" id="refreshCardBtn" style="background: var(--white); color: var(--ink-soft); box-shadow: 0 1px 6px rgba(43,35,32,0.05); margin-bottom: 10px;">カード登録状況を更新</button>
+        <div id="billingList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
+const GAS_ENDPOINT = "ここに一般用GASの/execのURLを入れる";
+/* ▲▲▲ ここまで ▲▲▲ */
+
+const WEEKDAY_LABELS = ["月","火","水","木","金","土","日"];
+
+const loginView = document.getElementById("loginView");
+const mainView = document.getElementById("mainView");
+const passwordInput = document.getElementById("passwordInput");
+const loginBtn = document.getElementById("loginBtn");
+const loginError = document.getElementById("loginError");
+const toastEl = document.getElementById("toast");
+const warnBanner = document.getElementById("warnBanner");
+const warnText = document.getElementById("warnText");
+const warnApproveBtn = document.getElementById("warnApproveBtn");
+const upcomingList = document.getElementById("upcomingList");
+const billingList = document.getElementById("billingList");
+const refreshCardBtn = document.getElementById("refreshCardBtn");
+
+let password = "";
+let lastOverviewData = null;
+let pendingWarnMonth = null;
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+async function fetchOverview(pw){
+  const res = await fetch(`${GAS_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(pw)}`);
+  return await res.json();
+}
+
+function formatDateLabel(dateStr, todayStr){
+  const [y,m,d] = dateStr.split("-");
+  const dateObj = new Date(Number(y), Number(m)-1, Number(d));
+  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
+  const label = `${Number(m)}/${Number(d)}(${w})`;
+  return dateStr === todayStr ? label + " 本日" : label;
+}
+
+/* ---------- タブ切り替え ---------- */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---------- 月次承認バナー ---------- */
+function renderApprovalBanner(approvals, todayStr){
+  const [ty, tm] = todayStr.split("-").map(Number);
+  const curMonth = `${ty}-${String(tm).padStart(2,"0")}`;
+  const nextD = new Date(ty, tm, 1); // 翌月1日
+  const nextMonth = `${nextD.getFullYear()}-${String(nextD.getMonth()+1).padStart(2,"0")}`;
+
+  const byMonth = {};
+  (approvals || []).forEach(a => byMonth[a.month] = a);
+
+  const unapproved = [curMonth, nextMonth].filter(m => byMonth[m] && byMonth[m].status === "未承認");
+  if (!unapproved.length){
+    warnBanner.classList.remove("show");
+    pendingWarnMonth = null;
+    return;
+  }
+  pendingWarnMonth = unapproved[0];
+  warnText.textContent = `${unapproved.join("・")}分の営業予定がまだ確認されていません`;
+  warnBanner.classList.add("show");
+}
+
+warnApproveBtn.addEventListener("click", async () => {
+  if (!pendingWarnMonth) return;
+  warnApproveBtn.disabled = true;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffApproveMonth", password: password, month: pendingWarnMonth, approver: "スタッフ" }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(pendingWarnMonth + "分を確認済みにしました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("処理に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    warnApproveBtn.disabled = false;
+  }
+});
+
+/* ---------- 曜日テンプレート ---------- */
+const templateTable = document.getElementById("templateTable");
+const templateSaveBtn = document.getElementById("templateSaveBtn");
+let originalTemplate = {}; // "月|10:00" -> teacher
+
+function renderTemplate(template){
+  templateTable.innerHTML = "";
+  originalTemplate = {};
+
+  const headRow = document.createElement("tr");
+  headRow.appendChild(document.createElement("th"));
+  template.hours.forEach(h => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  templateTable.appendChild(headRow);
+
+  WEEKDAY_LABELS.forEach(wd => {
+    const row = document.createElement("tr");
+    const wdTh = document.createElement("th");
+    wdTh.textContent = wd;
+    row.appendChild(wdTh);
+
+    template.hours.forEach(h => {
+      const teacher = (template.byWeekday[wd] || {})[h] || "";
+      originalTemplate[wd + "|" + h] = teacher;
+
+      const td = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = teacher;
+      input.placeholder = "休み";
+      input.dataset.weekday = wd;
+      input.dataset.time = h;
+      td.appendChild(input);
+      row.appendChild(td);
+    });
+    templateTable.appendChild(row);
+  });
+}
+
+templateSaveBtn.addEventListener("click", async () => {
+  const inputs = Array.from(templateTable.querySelectorAll("input"));
+  const changed = inputs.filter(inp => (originalTemplate[inp.dataset.weekday + "|" + inp.dataset.time] || "") !== inp.value.trim());
+  if (!changed.length){
+    showToast("変更はありません");
+    return;
+  }
+  templateSaveBtn.disabled = true;
+  templateSaveBtn.textContent = "保存中…";
+  try {
+    for (const inp of changed) {
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffUpdateTemplate", password: password,
+          weekday: inp.dataset.weekday, time: inp.dataset.time, teacher: inp.value.trim(),
+        }),
+      });
+      const result = await res.json();
+      if (result.success) originalTemplate[inp.dataset.weekday + "|" + inp.dataset.time] = inp.value.trim();
+    }
+    showToast(changed.length + "件のマスを保存しました");
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    templateSaveBtn.disabled = false;
+    templateSaveBtn.textContent = "変更したマスを保存";
+  }
+});
+
+/* ---------- 予約状況 ---------- */
+function renderUpcoming(upcoming, todayStr){
+  upcomingList.innerHTML = "";
+  if (!upcoming.length){
+    upcomingList.innerHTML = `<span class="empty-note">今後2ヶ月の予約枠はまだありません</span>`;
+    return;
+  }
+
+  upcoming.forEach(dateItem => {
+    const block = document.createElement("div");
+    block.className = "date-block";
+
+    const title = document.createElement("div");
+    title.className = "date-title" + (dateItem.date === todayStr ? " today" : "");
+    title.textContent = formatDateLabel(dateItem.date, todayStr);
+    block.appendChild(title);
+
+    dateItem.slots.forEach(slot => {
+      const row = document.createElement("div");
+      row.className = "slot-row";
+
+      const main = document.createElement("div");
+      main.className = "slot-main";
+      const timeEl = document.createElement("div");
+      timeEl.className = "slot-time";
+      timeEl.textContent = slot.time + "〜（担当: " + (slot.teacher || "休み") + "）";
+      main.appendChild(timeEl);
+      const subEl = document.createElement("div");
+      subEl.className = "slot-sub";
+      subEl.textContent = `定員${slot.capacity} / 予約${slot.booked}人`;
+      main.appendChild(subEl);
+
+      if (slot.entries && slot.entries.length){
+        const namesEl = document.createElement("div");
+        namesEl.className = "slot-names";
+        slot.entries.forEach(entry => {
+          const chip = document.createElement("span");
+          chip.className = "cancel-chip";
+          chip.innerHTML = `<span>${entry.name}</span>`;
+          const x = document.createElement("button");
+          x.textContent = "×";
+          x.addEventListener("click", () => confirmStaffCancel(entry.userId, dateItem.date, slot.time, entry.name));
+          chip.appendChild(x);
+          namesEl.appendChild(chip);
+        });
+        main.appendChild(namesEl);
+      }
+      row.appendChild(main);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-btn";
+      editBtn.textContent = "編集";
+      row.appendChild(editBtn);
+
+      const editPanel = document.createElement("div");
+      editPanel.className = "edit-panel";
+      const teacherInput = document.createElement("input");
+      teacherInput.type = "text";
+      teacherInput.placeholder = "担当講師";
+      teacherInput.value = slot.teacher || "";
+      const capacityInput = document.createElement("input");
+      capacityInput.type = "number";
+      capacityInput.placeholder = "個別定員(空欄=基本定員)";
+      const rowWrap = document.createElement("div");
+      rowWrap.className = "row";
+      rowWrap.appendChild(teacherInput);
+      rowWrap.appendChild(capacityInput);
+      editPanel.appendChild(rowWrap);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "save";
+      saveBtn.textContent = "保存";
+      saveBtn.addEventListener("click", () => doUpdateSlot(dateItem.date, slot.time, teacherInput.value.trim(), capacityInput.value));
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "close-slot";
+      closeBtn.textContent = "このコマを休みにする";
+      closeBtn.addEventListener("click", () => {
+        if (!window.confirm(formatDateLabel(dateItem.date, todayStr) + " " + slot.time + "〜 を休みにしますか？既存の予約は自動キャンセルされます。")) return;
+        doUpdateSlot(dateItem.date, slot.time, "", "");
+      });
+      actions.appendChild(saveBtn);
+      actions.appendChild(closeBtn);
+      editPanel.appendChild(actions);
+
+      editBtn.addEventListener("click", () => editPanel.classList.toggle("show"));
+      block.appendChild(row);
+      block.appendChild(editPanel);
+    });
+
+    upcomingList.appendChild(block);
+  });
+}
+
+async function doUpdateSlot(dateStr, timeStr, teacher, capacity){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffUpdateSlot", password: password,
+        date: dateStr, time: timeStr, teacher: teacher,
+        capacity: capacity === "" ? "" : Number(capacity),
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("更新しました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("更新に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+function confirmStaffCancel(userId, dateStr, timeStr, name){
+  const label = formatDateLabel(dateStr, lastOverviewData ? lastOverviewData.today : "") + " " + timeStr + "〜";
+  const ok = window.confirm(`${name}さんの${label}の予約をキャンセルしますか？`);
+  if (!ok) return;
+  doStaffCancel(userId, dateStr, timeStr);
+}
+
+async function doStaffCancel(userId, dateStr, timeStr){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("キャンセルしました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("キャンセルできませんでした");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+/* ---------- お月謝 ---------- */
+async function fetchBillingList(){
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=staffBillingList&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    if (data.error) return;
+    renderBilling(data.list || []);
+  } catch (err){
+    console.error(err);
+    showToast("請求一覧の取得に失敗しました");
+  }
+}
+
+function renderBilling(list){
+  billingList.innerHTML = "";
+  if (!list.length){
+    billingList.innerHTML = `<span class="empty-note">対象の利用者がまだいません</span>`;
+    return;
+  }
+
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "billing-row";
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "billing-name";
+    nameRow.innerHTML = `<span>${item.name}</span>`;
+    const badge = document.createElement("span");
+    badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
+    nameRow.appendChild(badge);
+    row.appendChild(nameRow);
+
+    const datesEl = document.createElement("div");
+    datesEl.className = "billing-dates";
+    datesEl.textContent = item.bookingEntries.length
+      ? `今月の予約(${item.bookingCount}回): ${item.bookingEntries.join(", ")}`
+      : "今月の予約はまだありません";
+    row.appendChild(datesEl);
+
+    const amountInput = document.createElement("input");
+    amountInput.type = "number";
+    amountInput.step = "100";
+    amountInput.min = "0";
+    amountInput.placeholder = "金額";
+    amountInput.value = item.amount || "";
+    row.appendChild(amountInput);
+
+    const chargeBtn = document.createElement("button");
+    chargeBtn.className = "charge-btn";
+    chargeBtn.textContent = "請求する";
+    chargeBtn.addEventListener("click", async () => {
+      const amount = Number(amountInput.value);
+      if (!amount || amount <= 0){
+        showToast("金額を入力してください");
+        return;
+      }
+      const ok = window.confirm(`${item.name}さんに${amount.toLocaleString()}円を請求します。よろしいですか？`);
+      if (!ok) return;
+
+      chargeBtn.disabled = true;
+      chargeBtn.textContent = "処理中…";
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffCharge", password: password, userId: item.userId, amount: amount }),
+        });
+        const result = await res.json();
+        if (result.success){
+          showToast(item.name + "さんへの請求処理が完了しました");
+        } else {
+          showToast("請求に失敗しました: " + (result.reason || ""));
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      } finally {
+        chargeBtn.disabled = false;
+        chargeBtn.textContent = "請求する";
+      }
+    });
+    row.appendChild(chargeBtn);
+
+    billingList.appendChild(row);
+  });
+}
+
+refreshCardBtn.addEventListener("click", async () => {
+  refreshCardBtn.disabled = true;
+  refreshCardBtn.textContent = "更新中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "refreshCardStatus", password: password }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`${result.updated}件のカード登録状況を更新しました`);
+      fetchBillingList();
+    } else {
+      showToast("更新に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    refreshCardBtn.disabled = false;
+    refreshCardBtn.textContent = "カード登録状況を更新";
+  }
+});
+
+/* ---------- 全体描画・ログイン ---------- */
+function renderOverview(data){
+  lastOverviewData = data;
+  document.getElementById("basicCapacityText").textContent = data.basicCapacity;
+  renderApprovalBanner(data.approvals, data.today);
+  renderTemplate(data.template);
+  renderUpcoming(data.upcoming || [], data.today);
+}
+
+async function tryLogin(pw){
+  loginBtn.disabled = true;
+  loginBtn.textContent = "確認中…";
+  try {
+    const data = await fetchOverview(pw);
+    if (data.error){
+      loginError.style.display = "block";
+      return;
+    }
+    password = pw;
+    try { sessionStorage.setItem("staffPasswordGeneral", pw); } catch (e) {}
+    loginView.style.display = "none";
+    mainView.style.display = "block";
+    renderOverview(data);
+    fetchBillingList();
+  } catch (err){
+    console.error(err);
+    loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
+    loginError.style.display = "block";
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "ログイン";
+  }
+}
+
+loginBtn.addEventListener("click", () => {
+  loginError.style.display = "none";
+  const pw = passwordInput.value.trim();
+  if (!pw) return;
+  tryLogin(pw);
+});
+passwordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loginBtn.click();
+});
+
+// 統合スタッフ画面(親ページ)からiframeとして開かれた場合は、
+// URLの ?pw=... を使って自動ログインする
+(function start(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromParent = urlParams.get("pw");
+  if (fromParent){
+    tryLogin(fromParent);
+    return;
+  }
+  let saved = "";
+  try { saved = sessionStorage.getItem("staffPasswordGeneral") || ""; } catch (e) {}
+  if (saved) tryLogin(saved);
+})();
+</script>
+</body>
+</html>
