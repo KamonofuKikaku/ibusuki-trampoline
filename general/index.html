@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>一般予約カレンダー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://static.line-scdn.net">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --cream: #FFFBF3;
+    --cream-deep: #FFF3E2;
+    --ink: #2B2320;
+    --ink-soft: #7A6F63;
+    --orange: #FF6F3C;
+    --orange-soft: #FFE3D6;
+    --mint: #2FBF8F;
+    --mint-soft: #DFF6EC;
+    --booked: #4F8FE0;
+    --booked-soft: #E4EFFC;
+    --danger: #E0503A;
+    --gray-full: #D9D2C7;
+    --gray-full-text: #A79E92;
+    --white: #FFFFFF;
+    --shadow: 0 6px 20px rgba(255, 111, 60, 0.14);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", sans-serif;
+    overscroll-behavior-y: none;
+  }
+
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: 96px;
+    position: relative;
+  }
+
+  /* ---------- header ---------- */
+  header { padding: 20px 20px 12px; text-align: center; }
+  header .eyebrow { font-size: 13px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 26px; margin: 6px 0 0; }
+  header p.sub { font-size: 14px; color: var(--ink-soft); margin: 6px 0 0; }
+
+  /* ---------- month nav ---------- */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 4px; }
+  .month-nav .month-label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 19px; }
+  .month-nav button {
+    width: 38px; height: 38px; border-radius: 50%; border: none;
+    background: var(--white); box-shadow: 0 2px 8px rgba(43,35,32,0.08);
+    font-size: 17px; color: var(--ink); display: flex; align-items: center; justify-content: center;
+  }
+  .month-nav button:disabled { opacity: 0.3; }
+  .month-nav button:active { transform: scale(0.92); }
+
+  /* ---------- legend ---------- */
+  .legend { display: flex; gap: 12px; padding: 10px 20px 4px; font-size: 12.5px; color: var(--ink-soft); flex-wrap: wrap; }
+  .legend .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .legend .dot.ok { background: var(--mint); }
+  .legend .dot.low { background: var(--orange); }
+  .legend .dot.full { background: var(--gray-full-text); }
+  .legend .dot.off { background: var(--danger); }
+  .legend .dot.mint { background: var(--booked); }
+
+  /* ---------- calendar grid ---------- */
+  .weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    padding: 12px 16px 2px; text-align: center; font-size: 13.5px; color: var(--ink-soft); font-weight: 700;
+  }
+  .weekdays .sun { color: var(--orange); }
+  .weekdays .sat { color: #4F8FE0; }
+
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 4px 16px 8px; }
+
+  .day-cell {
+    position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; gap: 0; padding-top: 2px;
+  }
+  .day-cell.empty { visibility: hidden; }
+
+  .day-btn {
+    position: relative; width: 100%; aspect-ratio: 1 / 1; border: none;
+    background: transparent; display: flex; align-items: center; justify-content: center;
+    font-family: "Zen Kaku Gothic New", sans-serif; cursor: pointer;
+  }
+
+  .day-num { font-size: 18px; font-weight: 600; color: var(--ink); z-index: 2; }
+
+  .day-badge {
+    margin-top: -4px; padding: 1px 6px 2px; border-radius: 0 0 8px 8px;
+    background: rgba(43, 35, 32, 0.04); font-size: 9px; font-weight: 700;
+    color: var(--ink-soft); line-height: 1.15; text-align: center; white-space: pre-line;
+  }
+  .day-cell.is-past .day-badge { visibility: hidden; }
+  .day-cell.is-off .day-badge { background: rgba(224, 80, 58, 0.08); color: var(--danger); font-weight: 900; }
+
+  .stamp {
+    position: absolute; width: 78%; height: 78%; z-index: 1;
+    opacity: 0; transform: scale(0.4) rotate(-8deg);
+    transition: opacity 0.22s ease, transform 0.28s cubic-bezier(.34,1.56,.64,1);
+  }
+  .day-btn.has-selection .stamp,
+  .day-btn.has-booking .stamp { opacity: 1; transform: scale(1) rotate(-6deg); }
+  .day-btn.has-selection .day-num,
+  .day-btn.has-booking .day-num { color: var(--white); font-weight: 700; }
+
+  .day-btn.past { pointer-events: none; }
+  .day-btn.past .day-num { color: #D8D2C7; }
+
+  .day-btn.full .day-num { color: var(--gray-full-text); }
+  .day-btn.off .day-num { color: var(--gray-full-text); }
+  .day-btn.off .avail-ring { background: var(--gray-full); opacity: 0.5; }
+
+  .day-btn.has-booking .stamp path { fill: var(--booked); }
+  .day-btn.has-booking.has-selection .stamp path { fill: var(--orange); } /* 予約済み+選択中が混在する日 */
+
+  .avail-ring { position: absolute; width: 74%; height: 74%; border-radius: 50%; z-index: 1; }
+  .day-btn.full .avail-ring { background: var(--gray-full); opacity: 0.5; }
+
+  .day-btn:active:not(.past) { transform: scale(0.94); }
+
+  /* ---------- selected chips ---------- */
+  .selection-panel { padding: 6px 20px 0; }
+  .selection-panel .label { font-size: 13.5px; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; }
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    background: var(--orange-soft); color: var(--orange); border-radius: 999px;
+    padding: 8px 12px 8px 14px; font-size: 13.5px; font-weight: 700;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .chip button {
+    border: none; background: rgba(255,111,60,0.18); color: var(--orange);
+    width: 19px; height: 19px; border-radius: 50%; font-size: 11px; line-height: 1;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- sticky CTA ---------- */
+  .cta-bar {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
+    width: 100%; max-width: 480px; background: var(--white);
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 24px rgba(43,35,32,0.08); display: flex; align-items: center; gap: 12px;
+    z-index: 20;
+  }
+  .cta-count { font-size: 13.5px; color: var(--ink-soft); white-space: nowrap; }
+  .cta-count b { color: var(--ink); font-size: 17px; }
+  .cta-btn {
+    flex: 1; border: none; border-radius: 14px; padding: 15px;
+    font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 17px; color: var(--white);
+    background: linear-gradient(135deg, var(--orange), #FF9466); box-shadow: var(--shadow);
+  }
+  .cta-btn:disabled { background: var(--gray-full); box-shadow: none; color: var(--gray-full-text); }
+  .cta-btn:active:not(:disabled) { transform: scale(0.98); }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); bottom: 100px;
+    background: var(--ink); color: var(--white); padding: 11px 18px; border-radius: 999px;
+    font-size: 14px; opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none; white-space: nowrap; z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- slot sheet (bottom sheet) ---------- */
+  .sheet-overlay {
+    position: fixed; inset: 0; background: rgba(43,35,32,0.35);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 30;
+  }
+  .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed; left: 50%; transform: translate(-50%, 100%); bottom: 0;
+    width: 100%; max-width: 480px; max-height: 78vh; background: var(--white);
+    border-radius: 20px 20px 0 0; box-shadow: 0 -10px 30px rgba(43,35,32,0.18);
+    z-index: 31; transition: transform 0.28s cubic-bezier(.22,1,.36,1);
+    display: flex; flex-direction: column;
+  }
+  .sheet.show { transform: translate(-50%, 0); }
+
+  .sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--gray-full); margin: 10px auto 4px; }
+  .sheet-header { padding: 4px 20px 10px; text-align: center; }
+  .sheet-header .date-label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 18px; }
+  .sheet-header .close-btn {
+    position: absolute; right: 14px; top: 12px; width: 30px; height: 30px; border-radius: 50%;
+    border: none; background: var(--cream-deep); color: var(--ink-soft); font-size: 15px;
+  }
+
+  .slot-list { overflow-y: auto; padding: 4px 16px 20px; flex: 1; }
+  .slot-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--cream); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .slot-row .slot-info { display: flex; flex-direction: column; gap: 2px; }
+  .slot-row .slot-time { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 16px; }
+  .slot-row .slot-teacher { font-size: 12.5px; color: var(--ink-soft); }
+  .slot-row .slot-remain { font-size: 11.5px; color: var(--mint); font-weight: 700; }
+  .slot-row .slot-remain.low { color: var(--orange); }
+
+  .slot-toggle {
+    flex-shrink: 0; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 999px;
+  }
+  .slot-toggle.selected { background: var(--orange); color: var(--white); }
+  .slot-toggle:active { transform: scale(0.95); }
+
+  .slot-row.is-full .slot-remain { color: var(--gray-full-text); }
+  .slot-toggle.disabled { border-color: var(--gray-full); color: var(--gray-full-text); background: var(--white); pointer-events: none; }
+
+  .slot-toggle.booked { border-color: var(--booked); background: var(--booked); color: var(--white); }
+
+  .sheet-empty { text-align: center; color: var(--ink-soft); font-size: 13.5px; padding: 30px 20px; }
+
+  /* ---------- loading overlay ---------- */
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.6); z-index: 50; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .loading-overlay.show { opacity: 1; }
+  .loading-overlay.show .dino-img, .loading-overlay.show .tramp-mat,
+  .loading-overlay.show .tramp-shadow, .loading-overlay.show .burst { animation-play-state: running; }
+
+  .loading-mascot { display: flex; flex-direction: column; align-items: center; }
+  .loading-text { margin-top: 2px; font-family: "Zen Maru Gothic", sans-serif; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dino-scene { position: relative; width: 130px; height: 160px; }
+  .tramp-shadow { position: absolute; left: 50%; bottom: 26px; width: 96px; height: 14px; margin-left: -48px; border-radius: 50%; background: rgba(43, 35, 32, 0.12); }
+  .tramp-mat {
+    position: absolute; left: 50%; bottom: 28px; width: 92px; height: 22px; margin-left: -46px;
+    border-radius: 50%; background: #5C7FA6; border: 3px solid #3E5C7C; transform-origin: center;
+    animation: matSquish 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 2;
+  }
+  .tramp-leg { position: absolute; bottom: 6px; width: 4px; height: 26px; background: #B99E7A; border-radius: 2px; z-index: 1; }
+  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
+  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
+  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
+  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
+  .dino-img {
+    position: absolute; left: 50%; bottom: 34px; width: 64px; margin-left: -32px; transform-origin: 50% 100%;
+    animation: dinoBounce 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 3;
+  }
+  .burst {
+    position: absolute; left: 50%; bottom: 40px; width: 5px; height: 32px; border-radius: 3px;
+    background: #FFB648; opacity: 0; animation: burstFlash 0.9s ease-in-out infinite; animation-play-state: paused;
+  }
+  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
+  .burst-c { margin-left: -2.5px; background: #FFE07A; }
+  .burst-r { margin-left: 20px; transform: rotate(24deg); }
+
+  @keyframes dinoBounce {
+    0%   { transform: translateY(0) scaleY(1); }
+    35%  { transform: translateY(-42px) scaleY(1.03); }
+    62%  { transform: translateY(0) scaleY(0.9); }
+    76%  { transform: translateY(3px) scaleY(0.86); }
+    100% { transform: translateY(0) scaleY(1); }
+  }
+  @keyframes matSquish {
+    0%   { transform: scaleX(1) scaleY(1); }
+    58%  { transform: scaleX(1) scaleY(1); }
+    70%  { transform: scaleX(1.12) scaleY(0.55); }
+    84%  { transform: scaleX(1) scaleY(1); }
+    100% { transform: scaleX(1) scaleY(1); }
+  }
+  @keyframes burstFlash {
+    0%, 54% { opacity: 0; }
+    66%     { opacity: 1; }
+    84%, 100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <h1>コマを選んでください</h1>
+    <p class="sub">日付をタップすると時間が選べます</p>
+  </header>
+
+  <div class="month-nav">
+    <button id="prevMonth" aria-label="前の月">‹</button>
+    <div class="month-label" id="monthLabel">2026年8月</div>
+    <button id="nextMonth" aria-label="次の月">›</button>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot ok"></span>空きあり</span>
+    <span><span class="dot full"></span>満員</span>
+    <span><span class="dot off"></span>定休</span>
+    <span><span class="dot mint"></span>予約済み</span>
+  </div>
+
+  <div class="weekdays">
+    <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="selection-panel" id="selectionPanel" style="display:none;">
+    <div class="label">選択中のコマ</div>
+    <div class="chip-row" id="chipRow"></div>
+  </div>
+
+  <div class="cta-bar">
+    <div class="cta-count"><b id="selCount">0</b>件選択中</div>
+    <button class="cta-btn" id="submitBtn" disabled>この日程で予約する</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="sheet-overlay" id="sheetOverlay"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="date-label" id="sheetDateLabel">8月10日(月)</div>
+      <button class="close-btn" id="sheetCloseBtn" aria-label="閉じる">×</button>
+    </div>
+    <div class="slot-list" id="slotList"></div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-mascot">
+      <div class="dino-scene">
+        <div class="tramp-shadow"></div>
+        <div class="burst burst-l"></div>
+        <div class="burst burst-c"></div>
+        <div class="burst burst-r"></div>
+        <div class="tramp-leg tramp-leg-l1"></div>
+        <div class="tramp-leg tramp-leg-l2"></div>
+        <div class="tramp-leg tramp-leg-r1"></div>
+        <div class="tramp-leg tramp-leg-r2"></div>
+        <div class="tramp-mat"></div>
+        <img src="dino.png" class="dino-img" alt="">
+      </div>
+      <div class="loading-text" id="loadingText">じゅんびちゅう…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
+========================================================= */
+const LIFF_ID = "ここに一般用のLIFF IDを入れる";
+const GAS_ENDPOINT = "ここに一般用GASの/execのURLを入れる";
+/* =========================================================
+   ▲▲▲ ここまで ▲▲▲
+========================================================= */
+
+const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
+
+let liffProfile = null;        // { userId, displayName }
+let availabilityMap = {};      // { "2026-08-10": [{time,teacher,capacity,remain,full}] }
+let bookedMap = {};             // { "2026-08-10": Set(["16:00", ...]) } すでに予約済みのコマ
+let selectedMap = {};           // { "2026-08-10": Set(["17:00", ...]) } まだ送信していない選択中のコマ
+let openSheetDate = null;       // 現在シートを開いている日付("2026-08-10")
+
+async function initLiff(){
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()){
+      liff.login();
+      return;
+    }
+    const idToken = liff.getDecodedIDToken();
+    if (idToken){
+      liffProfile = { userId: idToken.sub, displayName: idToken.name || "お客様" };
+    } else {
+      liffProfile = await liff.getProfile();
+    }
+  } catch (err){
+    console.error("LIFF init failed", err);
+    showToast("読み込みに失敗しました。時間をおいて再度お試しください");
+  }
+}
+
+async function fetchWithRetry_(url, options, retries = 2, timeoutMs = 8000){
+  for (let attempt = 0; attempt <= retries; attempt++){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...(options || {}), signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch (err){
+      clearTimeout(timer);
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, 700 * (attempt + 1)));
+    }
+  }
+}
+
+async function fetchAvailability(){
+  try {
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=availability`);
+    availabilityMap = {};
+    (data.dates || []).forEach(d => { availabilityMap[d.date] = d.slots || []; });
+    try { localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap)); } catch (e) {}
+  } catch (err){
+    console.error("availability fetch failed", err);
+    showToast("空き状況の取得に失敗しました");
+  }
+}
+
+async function fetchMyBookings(){
+  if (!liffProfile) return;
+  try {
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
+    bookedMap = {};
+    (data.bookings || []).forEach(b => {
+      if (!bookedMap[b.date]) bookedMap[b.date] = new Set();
+      bookedMap[b.date].add(b.time);
+    });
+    try {
+      const plain = {};
+      Object.keys(bookedMap).forEach(k => plain[k] = Array.from(bookedMap[k]));
+      localStorage.setItem("cachedBookedMap", JSON.stringify(plain));
+    } catch (e) {}
+  } catch (err){
+    console.error("myBookings fetch failed", err);
+    showToast("予約情報の取得に失敗しました");
+  }
+}
+
+// その日の状態を、カレンダーのバッジ表示用にまとめる
+function dayStatus(key){
+  const slots = availabilityMap[key];
+  const hasBooking = !!(bookedMap[key] && bookedMap[key].size > 0);
+  const hasSelection = !!(selectedMap[key] && selectedMap[key].size > 0);
+
+  if (!slots || slots.length === 0){
+    return { kind: "off", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
+  }
+  const remainTotal = slots.reduce((sum, s) => sum + (s.full ? 0 : s.remain), 0);
+  const allFull = slots.every(s => s.full);
+  return {
+    kind: allFull ? "full" : (remainTotal <= 2 ? "low" : "ok"),
+    hasBooking, hasSelection, remainTotal, slotCount: slots.length,
+  };
+}
+
+function fmt(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+let viewYear = TODAY.getFullYear();
+let viewMonth = TODAY.getMonth(); // 0-indexed
+const MIN_MONTH = TODAY.getFullYear() * 12 + TODAY.getMonth();
+const MAX_MONTH_OFFSET = 2; // 常に向こう3ヶ月（今月含む）
+
+const grid = document.getElementById("grid");
+const monthLabel = document.getElementById("monthLabel");
+const prevBtn = document.getElementById("prevMonth");
+const nextBtn = document.getElementById("nextMonth");
+const selCount = document.getElementById("selCount");
+const submitBtn = document.getElementById("submitBtn");
+const chipRow = document.getElementById("chipRow");
+const selectionPanel = document.getElementById("selectionPanel");
+const toastEl = document.getElementById("toast");
+const sheetOverlay = document.getElementById("sheetOverlay");
+const sheetEl = document.getElementById("sheet");
+const sheetDateLabel = document.getElementById("sheetDateLabel");
+const sheetCloseBtn = document.getElementById("sheetCloseBtn");
+const slotList = document.getElementById("slotList");
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+const loadingOverlayEl = document.getElementById("loadingOverlay");
+const loadingTextEl = document.getElementById("loadingText");
+function showLoadingOverlay(text){
+  loadingTextEl.textContent = text || "じゅんびちゅう…";
+  loadingOverlayEl.classList.add("show");
+}
+function hideLoadingOverlay(){
+  loadingOverlayEl.classList.remove("show");
+  loadingTextEl.textContent = "じゅんびちゅう…";
+}
+
+function renderMonth(){
+  const curMonthIdx = viewYear * 12 + viewMonth;
+  prevBtn.disabled = curMonthIdx <= MIN_MONTH;
+  nextBtn.disabled = curMonthIdx >= MIN_MONTH + MAX_MONTH_OFFSET;
+
+  monthLabel.textContent = `${viewYear}年${viewMonth + 1}月`;
+
+  grid.innerHTML = "";
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  for (let i = 0; i < startWeekday; i++){
+    const empty = document.createElement("div");
+    empty.className = "day-cell empty";
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++){
+    const d = new Date(viewYear, viewMonth, day);
+    d.setHours(0,0,0,0);
+    const key = fmt(d);
+    const isPast = d < TODAY;
+    const st = dayStatus(key);
+
+    const cell = document.createElement("div");
+    cell.className = "day-cell";
+    if (isPast) cell.classList.add("is-past");
+    if (st.kind === "off") cell.classList.add("is-off");
+
+    const btn = document.createElement("button");
+    btn.className = "day-btn";
+    btn.dataset.key = key;
+    if (isPast) btn.classList.add("past");
+    if (st.kind === "full") btn.classList.add("full");
+    if (st.kind === "off") btn.classList.add("off");
+    if (st.hasBooking) btn.classList.add("has-booking");
+    if (st.hasSelection) btn.classList.add("has-selection");
+
+    const ring = document.createElement("div");
+    ring.className = "avail-ring";
+    btn.appendChild(ring);
+
+    const stamp = document.createElement("div");
+    stamp.className = "stamp";
+    stamp.innerHTML = stampSVG();
+    btn.appendChild(stamp);
+
+    const num = document.createElement("div");
+    num.className = "day-num";
+    num.textContent = day;
+    btn.appendChild(num);
+
+    if (!isPast && st.kind !== "off"){
+      btn.addEventListener("click", () => openSlotSheet(key));
+    } else if (!isPast && st.kind === "off" && st.hasBooking){
+      // 通常は定休だが、代講都合等で既存の予約が残っているような例外ケースの保険
+      btn.addEventListener("click", () => openSlotSheet(key));
+    }
+
+    cell.appendChild(btn);
+
+    const badge = document.createElement("div");
+    badge.className = "day-badge";
+    if (!isPast){
+      if (st.kind === "off") badge.textContent = "定休";
+      else if (st.kind === "full") badge.textContent = "満員";
+      else badge.textContent = `空き${st.remainTotal}`;
+    }
+    cell.appendChild(badge);
+
+    grid.appendChild(cell);
+  }
+}
+
+function stampSVG(){
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%">
+    <path d="M50 4 C70 4 90 10 92 32 C94 50 88 68 76 82 C64 94 40 96 24 86
+             C8 76 2 54 8 34 C14 12 32 4 50 4 Z"
+          fill="var(--orange)" />
+  </svg>`;
+}
+
+/* ---------- スロット選択シート ---------- */
+
+function openSlotSheet(key){
+  openSheetDate = key;
+  const d = parseKey_(key);
+  sheetDateLabel.textContent = `${d.getMonth()+1}月${d.getDate()}日(${WEEKDAY_JP[d.getDay()]})`;
+  renderSlotList(key);
+  sheetOverlay.classList.add("show");
+  sheetEl.classList.add("show");
+}
+
+function closeSlotSheet(){
+  sheetOverlay.classList.remove("show");
+  sheetEl.classList.remove("show");
+  openSheetDate = null;
+}
+
+function parseKey_(key){
+  const [y,m,dd] = key.split("-");
+  return new Date(Number(y), Number(m)-1, Number(dd));
+}
+
+function renderSlotList(key){
+  const slots = availabilityMap[key] || [];
+  slotList.innerHTML = "";
+
+  if (slots.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "sheet-empty";
+    empty.textContent = "この日は定休日です";
+    slotList.appendChild(empty);
+    return;
+  }
+
+  const bookedSet = bookedMap[key] || new Set();
+  const selectedSet = selectedMap[key] || new Set();
+
+  slots.forEach(slot => {
+    const isBooked = bookedSet.has(slot.time);
+    const isSelected = selectedSet.has(slot.time);
+
+    const row = document.createElement("div");
+    row.className = "slot-row" + (slot.full ? " is-full" : "");
+
+    const info = document.createElement("div");
+    info.className = "slot-info";
+    const timeEl = document.createElement("div");
+    timeEl.className = "slot-time";
+    timeEl.textContent = slot.time + "〜";
+    const teacherEl = document.createElement("div");
+    teacherEl.className = "slot-teacher";
+    teacherEl.textContent = "担当: " + slot.teacher;
+    const remainEl = document.createElement("div");
+    remainEl.className = "slot-remain" + (!slot.full && slot.remain <= 2 ? " low" : "");
+    remainEl.textContent = slot.full ? "満席" : `残り${slot.remain}/${slot.capacity}`;
+    info.appendChild(timeEl);
+    info.appendChild(teacherEl);
+    info.appendChild(remainEl);
+    row.appendChild(info);
+
+    const toggle = document.createElement("button");
+    toggle.className = "slot-toggle";
+    if (isBooked){
+      toggle.classList.add("booked");
+      toggle.textContent = "予約済み";
+      toggle.addEventListener("click", () => confirmCancel(key, slot.time));
+    } else if (slot.full){
+      toggle.classList.add("disabled");
+      toggle.textContent = "満席";
+    } else {
+      if (isSelected) toggle.classList.add("selected");
+      toggle.textContent = isSelected ? "選択中" : "選ぶ";
+      toggle.addEventListener("click", () => toggleSlotSelection(key, slot.time, toggle));
+    }
+    row.appendChild(toggle);
+
+    slotList.appendChild(row);
+  });
+}
+
+function toggleSlotSelection(key, time, toggleBtn){
+  if (!selectedMap[key]) selectedMap[key] = new Set();
+  if (selectedMap[key].has(time)){
+    selectedMap[key].delete(time);
+    toggleBtn.classList.remove("selected");
+    toggleBtn.textContent = "選ぶ";
+  } else {
+    selectedMap[key].add(time);
+    toggleBtn.classList.add("selected");
+    toggleBtn.textContent = "選択中";
+  }
+  renderSelection();
+  renderMonth(); // カレンダー側のスタンプ表示に反映(シートは開いたままなのでリストは触らない)
+  reopenSheetIfNeeded_(key);
+}
+
+// renderMonth()はgrid全体を再描画するため、開いているシートのボタン参照は失われない
+// (シート自体はgrid外の別要素なので問題ないが、念のため状態を保つためのフック)
+function reopenSheetIfNeeded_(key){
+  if (openSheetDate === key){
+    // シートの中身は選択状態が変わっただけなので再描画は不要（ボタンのクラスは既に更新済み）
+  }
+}
+
+function confirmCancel(key, time){
+  const d = parseKey_(key);
+  const label = `${d.getMonth()+1}月${d.getDate()}日(${WEEKDAY_JP[d.getDay()]}) ${time}〜`;
+  const ok = window.confirm(`${label} の予約をキャンセルしますか？`);
+  if (!ok) return;
+  doCancel(key, time);
+}
+
+async function doCancel(key, time){
+  if (!liffProfile) return;
+
+  bookedMap[key] && bookedMap[key].delete(time);
+  renderSlotList(key);
+  renderMonth();
+  showToast("キャンセルしました");
+
+  try {
+    const data = await fetchWithRetry_(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "cancel", userId: liffProfile.userId, date: key, time: time }),
+    });
+    if (data.success){
+      await fetchAvailability();
+      renderSlotList(key);
+      renderMonth();
+    } else {
+      if (!bookedMap[key]) bookedMap[key] = new Set();
+      bookedMap[key].add(time);
+      renderSlotList(key);
+      renderMonth();
+      showToast("キャンセルできませんでした。もう一度お試しください");
+    }
+  } catch (err){
+    console.error("cancel failed", err);
+    if (!bookedMap[key]) bookedMap[key] = new Set();
+    bookedMap[key].add(time);
+    renderSlotList(key);
+    renderMonth();
+    showToast("通信に失敗しました。時間をおいて再度お試しください");
+  }
+}
+
+function renderSelection(){
+  const entries = [];
+  Object.keys(selectedMap).forEach(key => {
+    selectedMap[key].forEach(time => entries.push({ date: key, time: time }));
+  });
+  entries.sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
+
+  selCount.textContent = entries.length;
+  submitBtn.disabled = entries.length === 0;
+
+  if (entries.length === 0){
+    selectionPanel.style.display = "none";
+    chipRow.innerHTML = "";
+    return;
+  }
+  selectionPanel.style.display = "block";
+  chipRow.innerHTML = "";
+
+  entries.forEach(en => {
+    const d = parseKey_(en.date);
+    const label = `${d.getMonth()+1}/${d.getDate()}(${WEEKDAY_JP[d.getDay()]}) ${en.time}〜`;
+
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.innerHTML = `<span>${label}</span>`;
+    const rm = document.createElement("button");
+    rm.textContent = "×";
+    rm.addEventListener("click", () => {
+      selectedMap[en.date].delete(en.time);
+      renderSelection();
+      renderMonth();
+      if (openSheetDate === en.date) renderSlotList(en.date);
+    });
+    chip.appendChild(rm);
+    chipRow.appendChild(chip);
+  });
+}
+
+sheetCloseBtn.addEventListener("click", closeSlotSheet);
+sheetOverlay.addEventListener("click", closeSlotSheet);
+
+prevBtn.addEventListener("click", () => {
+  viewMonth--;
+  if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+  renderMonth();
+});
+nextBtn.addEventListener("click", () => {
+  viewMonth++;
+  if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+  renderMonth();
+});
+
+submitBtn.addEventListener("click", async () => {
+  const entries = [];
+  Object.keys(selectedMap).forEach(key => {
+    selectedMap[key].forEach(time => entries.push({ date: key, time: time }));
+  });
+  if (!entries.length) return;
+
+  if (!liffProfile){
+    showToast("読み込み中です。少し待ってから再度お試しください");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "送信中…";
+  showLoadingOverlay("よやくちゅう…");
+
+  try {
+    const data = await fetchWithRetry_(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "book",
+        userId: liffProfile.userId,
+        displayName: liffProfile.displayName,
+        entries: entries,
+      }),
+    }, 2, 15000);
+    const results = data.results || [];
+    const succeeded = results.filter(r => r.success).length;
+    const failed = results.length - succeeded;
+
+    results.filter(r => r.success).forEach(r => {
+      if (!bookedMap[r.date]) bookedMap[r.date] = new Set();
+      bookedMap[r.date].add(r.time);
+      selectedMap[r.date] && selectedMap[r.date].delete(r.time);
+    });
+
+    await fetchAvailability();
+    renderMonth();
+    renderSelection();
+    if (openSheetDate) renderSlotList(openSheetDate);
+
+    if (succeeded > 0 && failed === 0){
+      showToast(`${succeeded}件の予約を受け付けました`);
+    } else if (succeeded > 0 && failed > 0){
+      showToast(`${succeeded}件受付・${failed}件は満席等のため不可でした`);
+    } else {
+      showToast("選択いただいたコマは受け付けできませんでした");
+    }
+  } catch (err){
+    console.error("booking failed", err);
+    showToast("送信に失敗しました。時間をおいて再度お試しください");
+  } finally {
+    const remaining = Object.values(selectedMap).some(s => s.size > 0);
+    submitBtn.disabled = !remaining;
+    submitBtn.textContent = "この日程で予約する";
+    hideLoadingOverlay();
+  }
+});
+
+(async function start(){
+  try {
+    const cachedBooked = localStorage.getItem("cachedBookedMap");
+    if (cachedBooked){
+      const plain = JSON.parse(cachedBooked);
+      Object.keys(plain).forEach(k => bookedMap[k] = new Set(plain[k]));
+    }
+  } catch (e) {}
+  try {
+    const cachedAvail = localStorage.getItem("cachedAvailability");
+    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
+  } catch (e) {}
+
+  renderMonth();
+  renderSelection();
+  showLoadingOverlay();
+
+  const availabilityPromise = fetchAvailability();
+  const liffPromise = initLiff();
+
+  await availabilityPromise;
+  renderMonth();
+
+  await liffPromise;
+  await fetchMyBookings();
+  renderMonth();
+  renderSelection();
+
+  hideLoadingOverlay();
+})();
+</script>
+</body>
+</html>
