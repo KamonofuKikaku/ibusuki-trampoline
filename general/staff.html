@@ -57,19 +57,17 @@
   /* ---------- 講師管理 ---------- */
   .teacher-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .teacher-chip {
-    display: flex; align-items: center; gap: 6px; background: var(--cream);
-    border: 1px solid #EDE6D8; border-radius: 999px; padding: 6px 6px 6px 14px;
+    display: flex; align-items: center; gap: 8px; background: var(--cream);
+    border: 1px solid #EDE6D8; border-radius: 14px; padding: 8px 8px 8px 14px;
   }
-  .teacher-chip input {
-    border: none; background: transparent; font-size: 13.5px; font-weight: 700; color: var(--ink);
-    width: 70px; font-family: "Zen Kaku Gothic New", sans-serif;
-  }
-  .teacher-chip input:focus { outline: none; }
+  .teacher-chip .teacher-names { display: flex; flex-direction: column; line-height: 1.3; }
+  .teacher-chip .teacher-display-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .teacher-chip .teacher-full-name { font-size: 10.5px; color: var(--ink-soft); }
   .teacher-chip button {
-    border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; line-height: 1;
+    border: none; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 1;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .teacher-chip .save-teacher { background: var(--mint-soft); color: var(--mint); }
+  .teacher-chip .edit-teacher { background: var(--mint-soft); color: var(--mint); }
   .teacher-chip .del-teacher { background: var(--danger-soft); color: var(--danger); }
   .add-teacher-row { display: none; }
 
@@ -85,6 +83,7 @@
   }
   .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
   .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
+  .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
   .modal-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
@@ -230,8 +229,11 @@
 
   <div class="modal-overlay" id="teacherModalOverlay"></div>
   <div class="modal-box" id="teacherModal">
-    <div class="modal-title">講師を追加</div>
-    <input type="text" id="newTeacherInput" placeholder="講師名" />
+    <div class="modal-title" id="teacherModalTitle">講師を追加</div>
+    <label class="modal-field-label">正式名（フルネーム）</label>
+    <input type="text" id="teacherFullNameInput" placeholder="例：山田太郎" />
+    <label class="modal-field-label">表示名（3文字目安・カレンダー等に表示）</label>
+    <input type="text" id="teacherDisplayNameInput" placeholder="例：山田" maxlength="6" />
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
       <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
@@ -344,10 +346,13 @@ const teacherChipRow = document.getElementById("teacherChipRow");
 const openAddTeacherBtn = document.getElementById("openAddTeacherBtn");
 const teacherModalOverlay = document.getElementById("teacherModalOverlay");
 const teacherModal = document.getElementById("teacherModal");
-const newTeacherInput = document.getElementById("newTeacherInput");
+const teacherModalTitle = document.getElementById("teacherModalTitle");
+const teacherFullNameInput = document.getElementById("teacherFullNameInput");
+const teacherDisplayNameInput = document.getElementById("teacherDisplayNameInput");
 const cancelAddTeacherBtn = document.getElementById("cancelAddTeacherBtn");
 const confirmAddTeacherBtn = document.getElementById("confirmAddTeacherBtn");
-let currentTeachers = [];
+let currentTeachers = []; // [{fullName, displayName}, ...]
+let editingDisplayName = null; // null=新規追加モード、値あり=編集モード（元の表示名）
 
 function renderTeachers(teachers){
   currentTeachers = teachers || [];
@@ -356,34 +361,36 @@ function renderTeachers(teachers){
     teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下のボタンから追加してください</span>`;
     return;
   }
-  currentTeachers.forEach(name => {
+  currentTeachers.forEach(t => {
     const chip = document.createElement("div");
     chip.className = "teacher-chip";
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.value = name;
-    chip.appendChild(input);
+    const names = document.createElement("div");
+    names.className = "teacher-names";
+    const displayEl = document.createElement("div");
+    displayEl.className = "teacher-display-name";
+    displayEl.textContent = t.displayName;
+    names.appendChild(displayEl);
+    const fullEl = document.createElement("div");
+    fullEl.className = "teacher-full-name";
+    fullEl.textContent = t.fullName;
+    names.appendChild(fullEl);
+    chip.appendChild(names);
 
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "save-teacher";
-    saveBtn.textContent = "✓";
-    saveBtn.title = "この名前で一括変更";
-    saveBtn.addEventListener("click", () => {
-      const newName = input.value.trim();
-      if (!newName || newName === name) return;
-      if (!window.confirm(`「${name}」を「${newName}」に一括で変更します。よろしいですか？`)) return;
-      doRenameTeacher(name, newName);
-    });
-    chip.appendChild(saveBtn);
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit-teacher";
+    editBtn.textContent = "✎";
+    editBtn.title = "編集";
+    editBtn.addEventListener("click", () => openTeacherModal(t));
+    chip.appendChild(editBtn);
 
     const delBtn = document.createElement("button");
     delBtn.className = "del-teacher";
     delBtn.textContent = "×";
     delBtn.title = "名簿から削除";
     delBtn.addEventListener("click", () => {
-      if (!window.confirm(`「${name}」を名簿から削除しますか？（すでに設定済みのマスはそのまま残ります）`)) return;
-      doDeleteTeacher(name);
+      if (!window.confirm(`「${t.displayName}」を名簿から削除しますか？（すでに設定済みのマスはそのまま残ります）`)) return;
+      doDeleteTeacher(t.displayName);
     });
     chip.appendChild(delBtn);
 
@@ -391,35 +398,15 @@ function renderTeachers(teachers){
   });
 }
 
-async function doRenameTeacher(oldName, newName){
+async function doDeleteTeacher(displayName){
   try {
     const res = await fetch(GAS_ENDPOINT, {
       method: "POST",
-      body: JSON.stringify({ action: "staffRenameTeacher", password: password, oldName: oldName, newName: newName }),
+      body: JSON.stringify({ action: "staffDeleteTeacher", password: password, displayName: displayName }),
     });
     const result = await res.json();
     if (result.success){
-      showToast(`「${oldName}」を「${newName}」に変更しました`);
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("変更に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-async function doDeleteTeacher(name){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffDeleteTeacher", password: password, name: name }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`「${name}」を削除しました`);
+      showToast(`「${displayName}」を削除しました`);
       renderTeachers(result.teachers);
     } else {
       showToast("削除に失敗しました");
@@ -430,45 +417,77 @@ async function doDeleteTeacher(name){
   }
 }
 
-function openTeacherModal(){
-  newTeacherInput.value = "";
+// teacher: null なら新規追加モード、{fullName,displayName} なら編集モード
+function openTeacherModal(teacher){
+  editingDisplayName = teacher ? teacher.displayName : null;
+  teacherModalTitle.textContent = teacher ? "講師情報を編集" : "講師を追加";
+  teacherFullNameInput.value = teacher ? teacher.fullName : "";
+  teacherDisplayNameInput.value = teacher ? teacher.displayName : "";
+  confirmAddTeacherBtn.textContent = teacher ? "変更する" : "追加する";
   teacherModalOverlay.classList.add("show");
   teacherModal.classList.add("show");
-  setTimeout(() => newTeacherInput.focus(), 50);
+  setTimeout(() => teacherFullNameInput.focus(), 50);
 }
 function closeTeacherModal(){
   teacherModalOverlay.classList.remove("show");
   teacherModal.classList.remove("show");
 }
 
-openAddTeacherBtn.addEventListener("click", openTeacherModal);
+openAddTeacherBtn.addEventListener("click", () => openTeacherModal(null));
 cancelAddTeacherBtn.addEventListener("click", closeTeacherModal);
 teacherModalOverlay.addEventListener("click", closeTeacherModal);
-newTeacherInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") confirmAddTeacherBtn.click();
-});
+// Enterキーでの送信は行わない（日本語入力の変換確定Enterと誤認識するため、
+// ボタンを押した時だけ登録・変更する）
 
 confirmAddTeacherBtn.addEventListener("click", async () => {
-  const name = newTeacherInput.value.trim();
-  if (!name){
-    showToast("講師名を入力してください");
+  const fullName = teacherFullNameInput.value.trim();
+  const displayName = teacherDisplayNameInput.value.trim();
+  if (!fullName || !displayName){
+    showToast("正式名・表示名を両方入力してください");
     return;
   }
+
   confirmAddTeacherBtn.disabled = true;
   try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffAddTeacher", password: password, name: name }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`「${name}」を追加しました`);
-      closeTeacherModal();
-      renderTeachers(result.teachers);
-    } else if (result.reason === "duplicate"){
-      showToast("すでに同じ名前の講師がいます");
+    if (editingDisplayName){
+      // 編集モード：一括変更
+      if (editingDisplayName !== displayName &&
+          !window.confirm(`表示名を「${editingDisplayName}」から「${displayName}」に変更すると、すでに設定済みの箇所も全て一括で変わります。よろしいですか？`)) {
+        confirmAddTeacherBtn.disabled = false;
+        return;
+      }
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffRenameTeacher", password: password,
+          oldDisplayName: editingDisplayName, newFullName: fullName, newDisplayName: displayName,
+        }),
+      });
+      const result = await res.json();
+      if (result.success){
+        showToast(`「${displayName}」に変更しました`);
+        closeTeacherModal();
+        const data = await fetchOverview(password);
+        if (!data.error) renderOverview(data);
+      } else {
+        showToast("変更に失敗しました");
+      }
     } else {
-      showToast("追加に失敗しました");
+      // 新規追加モード
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({ action: "staffAddTeacher", password: password, fullName: fullName, displayName: displayName }),
+      });
+      const result = await res.json();
+      if (result.success){
+        showToast(`「${displayName}」を追加しました`);
+        closeTeacherModal();
+        renderTeachers(result.teachers);
+      } else if (result.reason === "duplicate"){
+        showToast("すでに同じ表示名の講師がいます");
+      } else {
+        showToast("追加に失敗しました");
+      }
     }
   } catch (err){
     console.error(err);
@@ -516,14 +535,14 @@ function renderTemplate(template){
       offOpt.textContent = "休み";
       select.appendChild(offOpt);
 
-      currentTeachers.forEach(name => {
+      currentTeachers.forEach(t => {
         const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
+        opt.value = t.displayName;
+        opt.textContent = t.displayName;
         select.appendChild(opt);
       });
       // 名簿には無いが過去の設定で入っている名前も、消えないよう選択肢に追加しておく
-      if (teacher && currentTeachers.indexOf(teacher) === -1){
+      if (teacher && !currentTeachers.some(t => t.displayName === teacher)){
         const opt = document.createElement("option");
         opt.value = teacher;
         opt.textContent = teacher + "（名簿になし）";
