@@ -93,30 +93,27 @@
   .modal-cancel { background: var(--cream); color: var(--ink-soft); }
   .modal-confirm { background: var(--orange); color: var(--white); }
 
-  /* ---------- 曜日テンプレート ---------- */
-  .template-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
-  .template-table th, .template-table td { border-bottom: 1px solid #F0EAE0; padding: 0; text-align: center; }
-  .template-table th {
-    background: var(--cream); font-weight: 700; color: var(--ink-soft); padding: 8px 2px;
-    position: sticky; top: 0; z-index: 2;
+  /* ---------- 曜日ごとの担当ブロック（タイムライン） ---------- */
+  .weekday-tabs { display: flex; gap: 5px; margin-bottom: 12px; overflow-x: auto; }
+  .weekday-tab-btn {
+    flex-shrink: 0; border: none; background: var(--cream); color: var(--ink-soft); font-weight: 700;
+    font-size: 13px; padding: 8px 14px; border-radius: 999px;
   }
-  .template-table th:first-child { position: sticky; left: 0; z-index: 3; }
-  .template-table td:first-child {
-    position: sticky; left: 0; background: var(--cream); font-weight: 700; color: var(--ink-soft);
-    padding: 8px 6px; z-index: 1; white-space: nowrap;
+  .weekday-tab-btn.active { background: var(--orange); color: var(--white); }
+  .timeline { border: 1px solid #F0EAE0; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+  .timeline-empty-row {
+    display: flex; align-items: center; padding: 7px 12px; font-size: 11.5px; color: var(--gray-full-text);
+    border-bottom: 1px solid #F5F0E6; background: var(--white);
   }
-  .template-table tr:nth-child(even) td:not(:first-child) { background: #FCFAF4; }
-  .template-table select {
-    width: 100%; height: 100%; border: none; text-align: center; font-size: 12px; padding: 9px 2px;
-    background: transparent; color: var(--ink-soft); font-family: "Zen Kaku Gothic New", sans-serif;
-    appearance: none; -webkit-appearance: none;
+  .timeline-empty-row:active { background: var(--orange-soft); }
+  .timeline-block-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 12px;
+    border-bottom: 1px solid #F5F0E6; background: var(--orange-soft);
   }
-  .template-table select.filled { color: var(--orange); font-weight: 700; background: var(--orange-soft); }
-  .template-table select:focus { outline: 2px solid var(--orange); outline-offset: -2px; }
-  .template-scroll { overflow: auto; margin-bottom: 12px; max-height: 60vh; border-radius: 10px; border: 1px solid #F0EAE0; }
-  .template-table.multi-mode select { pointer-events: none; opacity: 0.5; }
-  .template-table.multi-mode td:not(:first-child) { cursor: pointer; }
-  .template-table td.multi-selected { background: var(--orange-soft) !important; box-shadow: inset 0 0 0 2px var(--orange); }
+  .timeline-block-row:active { opacity: 0.85; }
+  .timeline-block-row .block-time { font-weight: 700; font-size: 13.5px; color: var(--orange); }
+  .timeline-block-row .block-teacher { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .timeline-note { padding: 14px; text-align: center; color: var(--ink-soft); font-size: 12.5px; }
   .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
   .save-btn:disabled { background: var(--ink-soft); }
 
@@ -204,13 +201,10 @@
       </div>
 
       <div class="section">
-        <div class="label">曜日ごとの基本パターン</div>
-        <div class="hint">基本定員: <span id="basicCapacityText">-</span>名（表の各マスから担当講師・休みを選べます）</div>
-        <button class="save-btn" id="multiSelectBtn" style="background: var(--white); color: var(--orange); border: 2px solid var(--orange); margin-bottom: 10px;">複数選択で設定</button>
-        <div class="template-scroll">
-          <table class="template-table" id="templateTable"></table>
-        </div>
-        <button class="save-btn" id="templateSaveBtn">変更したマスを保存</button>
+        <div class="label">曜日ごとの担当ブロック</div>
+        <div class="hint">基本定員: <span id="basicCapacityText">-</span>名。空いている時間帯をタップすると、担当ブロックを追加できます。すでにあるブロックをタップすると編集・削除できます。<span id="athleteHoursHint"></span></div>
+        <div class="weekday-tabs" id="weekdayTabs"></div>
+        <div class="timeline" id="timelineList"></div>
       </div>
     </div>
 
@@ -247,16 +241,23 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="bulkModalOverlay"></div>
-  <div class="modal-box" id="bulkModal">
-    <div class="modal-title" id="bulkModalTitle">講師を選んでください</div>
-    <select id="bulkTeacherSelect"></select>
+  <div class="modal-overlay" id="blockModalOverlay"></div>
+  <div class="modal-box" id="blockModal">
+    <div class="modal-title" id="blockModalTitle">担当ブロックを追加</div>
+    <label class="modal-field-label">開始時刻</label>
+    <input type="time" id="blockStartInput" step="900" />
+    <label class="modal-field-label">終了時刻</label>
+    <input type="time" id="blockEndInput" step="900" />
+    <label class="modal-field-label">担当講師</label>
+    <select id="blockTeacherSelect"></select>
     <div class="modal-actions">
-      <button class="modal-cancel" id="cancelBulkBtn">キャンセル</button>
-      <button class="modal-confirm" id="confirmBulkBtn">適用する</button>
+      <button class="modal-cancel" id="cancelBlockBtn">キャンセル</button>
+      <button class="modal-cancel" id="deleteBlockBtn" style="display:none; background: var(--danger-soft); color: var(--danger);">削除</button>
+      <button class="modal-confirm" id="confirmBlockBtn">追加する</button>
     </div>
   </div>
 </div>
+
 
 <script>
 /* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
@@ -425,7 +426,7 @@ async function doDeleteTeacher(displayName){
     if (result.success){
       showToast(`「${displayName}」を削除しました`);
       renderTeachers(result.teachers);
-      if (lastOverviewData) renderTemplate(lastOverviewData.template);
+      if (lastOverviewData) renderTemplate(lastOverviewData);
     } else {
       showToast("削除に失敗しました");
     }
@@ -501,7 +502,7 @@ confirmAddTeacherBtn.addEventListener("click", async () => {
         showToast(`「${displayName}」を追加しました`);
         closeTeacherModal();
         renderTeachers(result.teachers);
-        if (lastOverviewData) renderTemplate(lastOverviewData.template); // 新しい講師をプルダウンに反映
+        if (lastOverviewData) renderTemplate(lastOverviewData); // 新しい講師をプルダウンに反映
       } else if (result.reason === "duplicate"){
         showToast("すでに同じ表示名の講師がいます");
       } else {
@@ -516,220 +517,228 @@ confirmAddTeacherBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- 曜日テンプレート ---------- */
-const templateTable = document.getElementById("templateTable");
-const templateSaveBtn = document.getElementById("templateSaveBtn");
-let originalTemplate = {}; // "月|10:00" -> teacher
+/* ---------- 曜日ごとの担当ブロック（タイムライン） ---------- */
+const weekdayTabs = document.getElementById("weekdayTabs");
+const timelineList = document.getElementById("timelineList");
+const athleteHoursHint = document.getElementById("athleteHoursHint");
 
-function renderTemplate(template){
-  templateTable.innerHTML = "";
-  originalTemplate = {};
+const blockModalOverlay = document.getElementById("blockModalOverlay");
+const blockModal = document.getElementById("blockModal");
+const blockModalTitle = document.getElementById("blockModalTitle");
+const blockStartInput = document.getElementById("blockStartInput");
+const blockEndInput = document.getElementById("blockEndInput");
+const blockTeacherSelect = document.getElementById("blockTeacherSelect");
+const cancelBlockBtn = document.getElementById("cancelBlockBtn");
+const deleteBlockBtn = document.getElementById("deleteBlockBtn");
+const confirmBlockBtn = document.getElementById("confirmBlockBtn");
 
-  const headRow = document.createElement("tr");
-  headRow.appendChild(document.createElement("th"));
+const TODAY_WEEKDAY = WEEKDAY_LABELS[(new Date().getDay() + 6) % 7];
+let currentTemplateWeekday = TODAY_WEEKDAY;
+let currentBlocksData = { byWeekday: {} };
+let currentAthleteHours = {};
+let editingBlockOldStart = null; // null=新規追加モード、値あり=編集モード（元の開始時刻）
+let lastUsedTeacherDisplayName = "";
+
+function timeStrToMinutes_(t){
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+function minutesToTimeStr_(mins){
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+function renderWeekdayTabs(){
+  weekdayTabs.innerHTML = "";
   WEEKDAY_LABELS.forEach(wd => {
-    const th = document.createElement("th");
-    th.textContent = wd;
-    headRow.appendChild(th);
-  });
-  templateTable.appendChild(headRow);
-
-  template.hours.forEach(h => {
-    const row = document.createElement("tr");
-    const timeTh = document.createElement("th");
-    timeTh.textContent = h;
-    row.appendChild(timeTh);
-
-    WEEKDAY_LABELS.forEach(wd => {
-      const teacher = (template.byWeekday[wd] || {})[h] || "";
-      originalTemplate[wd + "|" + h] = teacher;
-
-      const td = document.createElement("td");
-      td.dataset.weekday = wd;
-      td.dataset.time = h;
-      const cellKey = wd + "|" + h;
-      if (multiSelectedCells.has(cellKey)) td.classList.add("multi-selected");
-      td.addEventListener("click", () => {
-        if (!multiSelectMode) return;
-        toggleMultiSelectCell(cellKey, td);
-      });
-
-      const select = document.createElement("select");
-      select.dataset.weekday = wd;
-      select.dataset.time = h;
-
-      const offOpt = document.createElement("option");
-      offOpt.value = "";
-      offOpt.textContent = "休み";
-      select.appendChild(offOpt);
-
-      currentTeachers.forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t.displayName;
-        opt.textContent = t.displayName;
-        select.appendChild(opt);
-      });
-      // 名簿には無いが過去の設定で入っている名前も、消えないよう選択肢に追加しておく
-      if (teacher && !currentTeachers.some(t => t.displayName === teacher)){
-        const opt = document.createElement("option");
-        opt.value = teacher;
-        opt.textContent = teacher + "（名簿になし）";
-        select.appendChild(opt);
-      }
-
-      select.value = teacher;
-      select.className = teacher ? "filled" : "";
-      select.addEventListener("change", () => {
-        select.className = select.value ? "filled" : "";
-      });
-      td.appendChild(select);
-      row.appendChild(td);
+    const btn = document.createElement("button");
+    btn.className = "weekday-tab-btn" + (wd === currentTemplateWeekday ? " active" : "");
+    btn.textContent = wd;
+    btn.addEventListener("click", () => {
+      currentTemplateWeekday = wd;
+      renderWeekdayTabs();
+      renderTimeline();
     });
-    templateTable.appendChild(row);
+    weekdayTabs.appendChild(btn);
   });
 }
 
-/* ---------- 複数選択で一括設定 ---------- */
-const multiSelectBtn = document.getElementById("multiSelectBtn");
-const bulkModalOverlay = document.getElementById("bulkModalOverlay");
-const bulkModal = document.getElementById("bulkModal");
-const bulkTeacherSelect = document.getElementById("bulkTeacherSelect");
-const cancelBulkBtn = document.getElementById("cancelBulkBtn");
-const confirmBulkBtn = document.getElementById("confirmBulkBtn");
-
-let multiSelectMode = false;
-let multiSelectedCells = new Set(); // "月|10:00" のようなキーの集合
-
-function toggleMultiSelectCell(cellKey, td){
-  if (multiSelectedCells.has(cellKey)){
-    multiSelectedCells.delete(cellKey);
-    td.classList.remove("multi-selected");
-  } else {
-    multiSelectedCells.add(cellKey);
-    td.classList.add("multi-selected");
-  }
-  updateMultiSelectBtnLabel();
+function renderTemplate(data){
+  currentBlocksData = data.blocks || { byWeekday: {} };
+  currentAthleteHours = data.athleteHours || {};
+  renderWeekdayTabs();
+  renderTimeline();
 }
 
-function updateMultiSelectBtnLabel(){
-  if (multiSelectMode){
-    multiSelectBtn.textContent = `選択完了（${multiSelectedCells.size}件選択中）`;
+function renderTimeline(){
+  const wd = currentTemplateWeekday;
+  const blocks = (currentBlocksData.byWeekday && currentBlocksData.byWeekday[wd]) || [];
+  const athleteRange = currentAthleteHours[wd];
+
+  if (athleteRange){
+    athleteHoursHint.textContent = ` 参考：選手用の営業時間 ${athleteRange.start}〜${athleteRange.end}`;
   } else {
-    multiSelectBtn.textContent = "複数選択で設定";
+    athleteHoursHint.textContent = "";
+  }
+
+  // タイムラインの表示範囲：選手用の営業時間があればそれを、無ければ10:00〜21:00を目安にする
+  // （すでにブロックがあり、その範囲より外にはみ出していれば、はみ出た分まで表示を広げる）
+  let rangeStart = athleteRange ? timeStrToMinutes_(athleteRange.start) : timeStrToMinutes_("10:00");
+  let rangeEnd = athleteRange ? timeStrToMinutes_(athleteRange.end) : timeStrToMinutes_("21:00");
+  blocks.forEach(b => {
+    rangeStart = Math.min(rangeStart, timeStrToMinutes_(b.start));
+    rangeEnd = Math.max(rangeEnd, timeStrToMinutes_(b.end));
+  });
+
+  timelineList.innerHTML = "";
+  if (rangeEnd <= rangeStart){
+    timelineList.innerHTML = `<div class="timeline-note">この曜日の時間帯を取得できませんでした</div>`;
+    return;
+  }
+
+  let cursor = rangeStart;
+  while (cursor < rangeEnd){
+    const cursorStr = minutesToTimeStr_(cursor);
+    const block = blocks.find(b => timeStrToMinutes_(b.start) === cursor);
+
+    if (block){
+      const row = document.createElement("div");
+      row.className = "timeline-block-row";
+      row.innerHTML = `<div><div class="block-time">${block.start}〜${block.end}</div><div class="block-teacher">担当: ${block.teacher}</div></div>`;
+      row.addEventListener("click", () => openBlockModal(wd, block));
+      timelineList.appendChild(row);
+      cursor = timeStrToMinutes_(block.end);
+    } else {
+      const row = document.createElement("div");
+      row.className = "timeline-empty-row";
+      row.textContent = cursorStr + " （タップして追加）";
+      row.addEventListener("click", () => openBlockModal(wd, null, cursorStr));
+      timelineList.appendChild(row);
+      cursor += 15;
+    }
   }
 }
 
-multiSelectBtn.addEventListener("click", () => {
-  if (!multiSelectMode){
-    multiSelectMode = true;
-    multiSelectedCells.clear();
-    templateTable.querySelectorAll("td.multi-selected").forEach(td => td.classList.remove("multi-selected"));
-    templateTable.classList.add("multi-mode");
-    updateMultiSelectBtnLabel();
-    showToast("設定したいマスをタップして選んでください");
-    return;
-  }
-  // 選択完了が押された
-  if (multiSelectedCells.size === 0){
-    showToast("マスを1つ以上選択してください");
-    return;
-  }
-  openBulkModal();
-});
+// block: 既存ブロック(編集モード) / null(追加モード)、startHint: 追加モードでタップした開始時刻
+function openBlockModal(weekday, block, startHint){
+  currentTemplateWeekday = weekday;
 
-function openBulkModal(){
-  bulkTeacherSelect.innerHTML = "";
-  const offOpt = document.createElement("option");
-  offOpt.value = "";
-  offOpt.textContent = "休み";
-  bulkTeacherSelect.appendChild(offOpt);
+  blockTeacherSelect.innerHTML = "";
   currentTeachers.forEach(t => {
     const opt = document.createElement("option");
     opt.value = t.displayName;
     opt.textContent = t.displayName;
-    bulkTeacherSelect.appendChild(opt);
-  });
-  bulkModalOverlay.classList.add("show");
-  bulkModal.classList.add("show");
-}
-function closeBulkModal(){
-  bulkModalOverlay.classList.remove("show");
-  bulkModal.classList.remove("show");
-}
-function exitMultiSelectMode(){
-  multiSelectMode = false;
-  multiSelectedCells.clear();
-  templateTable.classList.remove("multi-mode");
-  templateTable.querySelectorAll("td.multi-selected").forEach(td => td.classList.remove("multi-selected"));
-  updateMultiSelectBtnLabel();
-}
-
-cancelBulkBtn.addEventListener("click", closeBulkModal);
-bulkModalOverlay.addEventListener("click", closeBulkModal);
-
-confirmBulkBtn.addEventListener("click", async () => {
-  const teacher = bulkTeacherSelect.value;
-  const cells = Array.from(multiSelectedCells).map(key => {
-    const [weekday, time] = key.split("|");
-    return { weekday, time };
+    blockTeacherSelect.appendChild(opt);
   });
 
-  confirmBulkBtn.disabled = true;
-  confirmBulkBtn.textContent = "設定中…";
+  if (block){
+    editingBlockOldStart = block.start;
+    blockModalTitle.textContent = "担当ブロックを編集";
+    blockStartInput.value = block.start;
+    blockEndInput.value = block.end;
+    blockTeacherSelect.value = block.teacher;
+    deleteBlockBtn.style.display = "block";
+    confirmBlockBtn.textContent = "変更する";
+  } else {
+    editingBlockOldStart = null;
+    blockModalTitle.textContent = "担当ブロックを追加";
+    const start = startHint || "10:00";
+    blockStartInput.value = start;
+    blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60); // デフォルトは1時間後
+    if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
+      blockTeacherSelect.value = lastUsedTeacherDisplayName;
+    }
+    deleteBlockBtn.style.display = "none";
+    confirmBlockBtn.textContent = "追加する";
+  }
+
+  blockModalOverlay.classList.add("show");
+  blockModal.classList.add("show");
+}
+function closeBlockModal(){
+  blockModalOverlay.classList.remove("show");
+  blockModal.classList.remove("show");
+}
+cancelBlockBtn.addEventListener("click", closeBlockModal);
+blockModalOverlay.addEventListener("click", closeBlockModal);
+
+deleteBlockBtn.addEventListener("click", async () => {
+  if (!editingBlockOldStart) return;
+  if (!window.confirm("このブロックを削除しますか？")) return;
+
+  deleteBlockBtn.disabled = true;
   try {
     const res = await fetch(GAS_ENDPOINT, {
       method: "POST",
-      body: JSON.stringify({ action: "staffBulkUpdateTemplate", password: password, cells: cells, teacher: teacher }),
+      body: JSON.stringify({
+        action: "staffDeleteTemplateBlock", password: password,
+        weekday: currentTemplateWeekday, startTime: editingBlockOldStart,
+      }),
     });
     const result = await res.json();
     if (result.success){
-      showToast(`${result.updated}件のマスを設定しました`);
-      closeBulkModal();
-      exitMultiSelectMode();
+      showToast("削除しました");
+      closeBlockModal();
       const data = await fetchOverview(password);
       if (!data.error) renderOverview(data);
     } else {
-      showToast("設定に失敗しました");
+      showToast("削除に失敗しました");
     }
   } catch (err){
     console.error(err);
     showToast("通信に失敗しました");
   } finally {
-    confirmBulkBtn.disabled = false;
-    confirmBulkBtn.textContent = "適用する";
+    deleteBlockBtn.disabled = false;
   }
 });
 
-templateSaveBtn.addEventListener("click", async () => {
-  const selects = Array.from(templateTable.querySelectorAll("select"));
-  const changed = selects.filter(sel => (originalTemplate[sel.dataset.weekday + "|" + sel.dataset.time] || "") !== sel.value);
-  if (!changed.length){
-    showToast("変更はありません");
+confirmBlockBtn.addEventListener("click", async () => {
+  const start = blockStartInput.value;
+  const end = blockEndInput.value;
+  const teacher = blockTeacherSelect.value;
+
+  if (!start || !end || !teacher){
+    showToast("開始・終了時刻と担当講師を入力してください");
     return;
   }
-  templateSaveBtn.disabled = true;
-  templateSaveBtn.textContent = "保存中…";
+  if (start >= end){
+    showToast("終了時刻は開始時刻より後にしてください");
+    return;
+  }
+
+  confirmBlockBtn.disabled = true;
+  confirmBlockBtn.textContent = "保存中…";
   try {
-    for (const sel of changed) {
-      const res = await fetch(GAS_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "staffUpdateTemplate", password: password,
-          weekday: sel.dataset.weekday, time: sel.dataset.time, teacher: sel.value,
-        }),
-      });
-      const result = await res.json();
-      if (result.success) originalTemplate[sel.dataset.weekday + "|" + sel.dataset.time] = sel.value;
+    const action = editingBlockOldStart ? "staffUpdateTemplateBlock" : "staffAddTemplateBlock";
+    const payload = {
+      action: action, password: password,
+      weekday: currentTemplateWeekday, startTime: start, endTime: end, teacher: teacher,
+    };
+    if (editingBlockOldStart) payload.oldStartTime = editingBlockOldStart;
+
+    const res = await fetch(GAS_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
+    const result = await res.json();
+    if (result.success){
+      lastUsedTeacherDisplayName = teacher;
+      showToast(editingBlockOldStart ? "変更しました" : "追加しました");
+      closeBlockModal();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else if (result.reason === "duplicate_start"){
+      showToast("その開始時刻にはすでに別のブロックがあります");
+    } else {
+      showToast("保存に失敗しました");
     }
-    showToast(changed.length + "件のマスを保存しました");
   } catch (err){
     console.error(err);
     showToast("通信に失敗しました");
   } finally {
-    templateSaveBtn.disabled = false;
-    templateSaveBtn.textContent = "変更したマスを保存";
+    confirmBlockBtn.disabled = false;
+    confirmBlockBtn.textContent = editingBlockOldStart ? "変更する" : "追加する";
   }
 });
+
 
 /* ---------- 予約状況 ---------- */
 function renderUpcoming(upcoming, todayStr){
@@ -800,10 +809,16 @@ function renderUpcoming(upcoming, todayStr){
         btn.className = "quick-weekday-btn";
         btn.textContent = wd;
         btn.addEventListener("click", () => {
-          const template = (lastOverviewData && lastOverviewData.template) || { byWeekday: {} };
-          const value = (template.byWeekday[wd] || {})[slot.time] || "";
+          const blocksData = (lastOverviewData && lastOverviewData.blocks) || { byWeekday: {} };
+          const wdBlocks = blocksData.byWeekday[wd] || [];
+          const matched = wdBlocks.find(b => b.start === slot.time);
+          const value = matched ? matched.teacher : "";
           teacherInput.value = value;
-          showToast(`${wd}曜日の内容（${value || "休み"}）を入力欄に反映しました`);
+          if (matched){
+            showToast(`${wd}曜日の内容（${matched.teacher}, 〜${matched.end}）を入力欄に反映しました`);
+          } else {
+            showToast(`${wd}曜日には同じ開始時刻のブロックがありません`);
+          }
         });
         quickRow.appendChild(btn);
       });
@@ -1016,7 +1031,7 @@ function renderOverview(data){
   document.getElementById("basicCapacityText").textContent = data.basicCapacity;
   renderApprovalBanner(data.approvals, data.today);
   renderTeachers(data.teachers || []);
-  renderTemplate(data.template);
+  renderTemplate(data);
   renderUpcoming(data.upcoming || [], data.today);
 }
 
