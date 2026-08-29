@@ -54,16 +54,51 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* ---------- 曜日テンプレート ---------- */
-  .template-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .template-table th, .template-table td { border: 1px solid #EDE6D8; padding: 3px; text-align: center; }
-  .template-table th { background: var(--cream); font-weight: 700; color: var(--ink-soft); }
-  .template-table input {
-    width: 100%; border: none; text-align: center; font-size: 12px; padding: 6px 2px;
-    background: transparent; color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif;
+  /* ---------- 講師管理 ---------- */
+  .teacher-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .teacher-chip {
+    display: flex; align-items: center; gap: 6px; background: var(--cream);
+    border: 1px solid #EDE6D8; border-radius: 999px; padding: 6px 6px 6px 14px;
   }
-  .template-table input:focus { background: var(--orange-soft); outline: none; border-radius: 6px; }
-  .template-scroll { overflow-x: auto; margin-bottom: 12px; }
+  .teacher-chip input {
+    border: none; background: transparent; font-size: 13.5px; font-weight: 700; color: var(--ink);
+    width: 70px; font-family: "Zen Kaku Gothic New", sans-serif;
+  }
+  .teacher-chip input:focus { outline: none; }
+  .teacher-chip button {
+    border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .teacher-chip .save-teacher { background: var(--mint-soft); color: var(--mint); }
+  .teacher-chip .del-teacher { background: var(--danger-soft); color: var(--danger); }
+  .add-teacher-row { display: flex; gap: 8px; }
+  .add-teacher-row input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 13.5px; }
+  .add-teacher-row button {
+    flex-shrink: 0; border: none; background: var(--orange); color: var(--white); font-weight: 700;
+    font-size: 13.5px; padding: 0 18px; border-radius: 10px;
+  }
+
+  /* ---------- 曜日テンプレート ---------- */
+  .template-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+  .template-table th, .template-table td { border-bottom: 1px solid #F0EAE0; padding: 0; text-align: center; }
+  .template-table th {
+    background: var(--cream); font-weight: 700; color: var(--ink-soft); padding: 8px 2px;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .template-table th:first-child { position: sticky; left: 0; z-index: 3; }
+  .template-table td:first-child {
+    position: sticky; left: 0; background: var(--cream); font-weight: 700; color: var(--ink-soft);
+    padding: 8px 6px; z-index: 1; white-space: nowrap;
+  }
+  .template-table tr:nth-child(even) td:not(:first-child) { background: #FCFAF4; }
+  .template-table select {
+    width: 100%; height: 100%; border: none; text-align: center; font-size: 12px; padding: 9px 2px;
+    background: transparent; color: var(--ink-soft); font-family: "Zen Kaku Gothic New", sans-serif;
+    appearance: none; -webkit-appearance: none;
+  }
+  .template-table select.filled { color: var(--orange); font-weight: 700; background: var(--orange-soft); }
+  .template-table select:focus { outline: 2px solid var(--orange); outline-offset: -2px; }
+  .template-scroll { overflow: auto; margin-bottom: 12px; max-height: 60vh; border-radius: 10px; border: 1px solid #F0EAE0; }
   .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
   .save-btn:disabled { background: var(--ink-soft); }
 
@@ -145,8 +180,18 @@
 
     <div class="tab-panel active" id="tab-template">
       <div class="section">
+        <div class="label">講師管理</div>
+        <div class="hint">ここに登録した講師だけが、下の表でプルダウンから選べます。名前を直して保存すると、すでに設定済みの箇所も含めて全て一括で変わります。</div>
+        <div class="teacher-chip-row" id="teacherChipRow"></div>
+        <div class="add-teacher-row">
+          <input type="text" id="newTeacherInput" placeholder="新しい講師名" />
+          <button id="addTeacherBtn">＋ 追加</button>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="label">曜日ごとの基本パターン</div>
-        <div class="hint">各マスに担当講師名を入れると営業、空欄にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください。その編集画面には「日〜土」のボタンがあり、他の曜日の内容をその場で参照できます）。基本定員: <span id="basicCapacityText">-</span>名</div>
+        <div class="hint">プルダウンで担当講師を選ぶと営業、「休み」にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください。その編集画面には「日〜土」のボタンがあり、他の曜日の内容をその場で参照できます）。基本定員: <span id="basicCapacityText">-</span>名</div>
         <div class="template-scroll">
           <table class="template-table" id="templateTable"></table>
         </div>
@@ -275,6 +320,123 @@ warnApproveBtn.addEventListener("click", async () => {
   }
 });
 
+/* ---------- 講師管理 ---------- */
+const teacherChipRow = document.getElementById("teacherChipRow");
+const newTeacherInput = document.getElementById("newTeacherInput");
+const addTeacherBtn = document.getElementById("addTeacherBtn");
+let currentTeachers = [];
+
+function renderTeachers(teachers){
+  currentTeachers = teachers || [];
+  teacherChipRow.innerHTML = "";
+  if (!currentTeachers.length){
+    teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下から追加してください</span>`;
+    return;
+  }
+  currentTeachers.forEach(name => {
+    const chip = document.createElement("div");
+    chip.className = "teacher-chip";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = name;
+    chip.appendChild(input);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "save-teacher";
+    saveBtn.textContent = "✓";
+    saveBtn.title = "この名前で一括変更";
+    saveBtn.addEventListener("click", () => {
+      const newName = input.value.trim();
+      if (!newName || newName === name) return;
+      if (!window.confirm(`「${name}」を「${newName}」に一括で変更します。よろしいですか？`)) return;
+      doRenameTeacher(name, newName);
+    });
+    chip.appendChild(saveBtn);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-teacher";
+    delBtn.textContent = "×";
+    delBtn.title = "名簿から削除";
+    delBtn.addEventListener("click", () => {
+      if (!window.confirm(`「${name}」を名簿から削除しますか？（すでに設定済みのマスはそのまま残ります）`)) return;
+      doDeleteTeacher(name);
+    });
+    chip.appendChild(delBtn);
+
+    teacherChipRow.appendChild(chip);
+  });
+}
+
+async function doRenameTeacher(oldName, newName){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffRenameTeacher", password: password, oldName: oldName, newName: newName }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`「${oldName}」を「${newName}」に変更しました`);
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("変更に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+async function doDeleteTeacher(name){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffDeleteTeacher", password: password, name: name }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`「${name}」を削除しました`);
+      renderTeachers(result.teachers);
+    } else {
+      showToast("削除に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+addTeacherBtn.addEventListener("click", async () => {
+  const name = newTeacherInput.value.trim();
+  if (!name){
+    showToast("講師名を入力してください");
+    return;
+  }
+  addTeacherBtn.disabled = true;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffAddTeacher", password: password, name: name }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`「${name}」を追加しました`);
+      newTeacherInput.value = "";
+      renderTeachers(result.teachers);
+    } else if (result.reason === "duplicate"){
+      showToast("すでに同じ名前の講師がいます");
+    } else {
+      showToast("追加に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    addTeacherBtn.disabled = false;
+  }
+});
+
 /* ---------- 曜日テンプレート ---------- */
 const templateTable = document.getElementById("templateTable");
 const templateSaveBtn = document.getElementById("templateSaveBtn");
@@ -304,13 +466,35 @@ function renderTemplate(template){
       originalTemplate[wd + "|" + h] = teacher;
 
       const td = document.createElement("td");
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = teacher;
-      input.placeholder = "休み";
-      input.dataset.weekday = wd;
-      input.dataset.time = h;
-      td.appendChild(input);
+      const select = document.createElement("select");
+      select.dataset.weekday = wd;
+      select.dataset.time = h;
+
+      const offOpt = document.createElement("option");
+      offOpt.value = "";
+      offOpt.textContent = "休み";
+      select.appendChild(offOpt);
+
+      currentTeachers.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      // 名簿には無いが過去の設定で入っている名前も、消えないよう選択肢に追加しておく
+      if (teacher && currentTeachers.indexOf(teacher) === -1){
+        const opt = document.createElement("option");
+        opt.value = teacher;
+        opt.textContent = teacher + "（名簿になし）";
+        select.appendChild(opt);
+      }
+
+      select.value = teacher;
+      select.className = teacher ? "filled" : "";
+      select.addEventListener("change", () => {
+        select.className = select.value ? "filled" : "";
+      });
+      td.appendChild(select);
       row.appendChild(td);
     });
     templateTable.appendChild(row);
@@ -318,8 +502,8 @@ function renderTemplate(template){
 }
 
 templateSaveBtn.addEventListener("click", async () => {
-  const inputs = Array.from(templateTable.querySelectorAll("input"));
-  const changed = inputs.filter(inp => (originalTemplate[inp.dataset.weekday + "|" + inp.dataset.time] || "") !== inp.value.trim());
+  const selects = Array.from(templateTable.querySelectorAll("select"));
+  const changed = selects.filter(sel => (originalTemplate[sel.dataset.weekday + "|" + sel.dataset.time] || "") !== sel.value);
   if (!changed.length){
     showToast("変更はありません");
     return;
@@ -327,16 +511,16 @@ templateSaveBtn.addEventListener("click", async () => {
   templateSaveBtn.disabled = true;
   templateSaveBtn.textContent = "保存中…";
   try {
-    for (const inp of changed) {
+    for (const sel of changed) {
       const res = await fetch(GAS_ENDPOINT, {
         method: "POST",
         body: JSON.stringify({
           action: "staffUpdateTemplate", password: password,
-          weekday: inp.dataset.weekday, time: inp.dataset.time, teacher: inp.value.trim(),
+          weekday: sel.dataset.weekday, time: sel.dataset.time, teacher: sel.value,
         }),
       });
       const result = await res.json();
-      if (result.success) originalTemplate[inp.dataset.weekday + "|" + inp.dataset.time] = inp.value.trim();
+      if (result.success) originalTemplate[sel.dataset.weekday + "|" + sel.dataset.time] = sel.value;
     }
     showToast(changed.length + "件のマスを保存しました");
   } catch (err){
@@ -632,6 +816,7 @@ function renderOverview(data){
   lastOverviewData = data;
   document.getElementById("basicCapacityText").textContent = data.basicCapacity;
   renderApprovalBanner(data.approvals, data.today);
+  renderTeachers(data.teachers || []);
   renderTemplate(data.template);
   renderUpcoming(data.upcoming || [], data.today);
 }
