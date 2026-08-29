@@ -286,20 +286,20 @@ function renderTemplate(template){
 
   const headRow = document.createElement("tr");
   headRow.appendChild(document.createElement("th"));
-  template.hours.forEach(h => {
+  WEEKDAY_LABELS.forEach(wd => {
     const th = document.createElement("th");
-    th.textContent = h;
+    th.textContent = wd;
     headRow.appendChild(th);
   });
   templateTable.appendChild(headRow);
 
-  WEEKDAY_LABELS.forEach(wd => {
+  template.hours.forEach(h => {
     const row = document.createElement("tr");
-    const wdTh = document.createElement("th");
-    wdTh.textContent = wd;
-    row.appendChild(wdTh);
+    const timeTh = document.createElement("th");
+    timeTh.textContent = h;
+    row.appendChild(timeTh);
 
-    template.hours.forEach(h => {
+    WEEKDAY_LABELS.forEach(wd => {
       const teacher = (template.byWeekday[wd] || {})[h] || "";
       originalTemplate[wd + "|" + h] = teacher;
 
