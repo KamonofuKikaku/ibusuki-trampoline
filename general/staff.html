@@ -86,11 +86,18 @@
   .edit-panel { display: none; background: var(--white); border: 1px dashed #E6DFD3; border-radius: 10px; padding: 10px; margin-top: 6px; }
   .edit-panel.show { display: block; }
   .edit-panel .row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .edit-panel input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; }
+  .edit-panel input, .edit-panel select { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; }
   .edit-panel .actions { display: flex; gap: 8px; }
   .edit-panel button { flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 700; font-size: 12.5px; }
   .edit-panel .save { background: var(--mint); color: var(--white); }
   .edit-panel .close-slot { background: var(--danger-soft); color: var(--danger); }
+  .quick-weekday-label { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
+  .quick-weekday-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+  .quick-weekday-btn {
+    flex: 1; min-width: 30px; border: 1px solid #E6DFD3; background: var(--cream); color: var(--ink);
+    font-weight: 700; font-size: 12.5px; padding: 7px 0; border-radius: 8px;
+  }
+  .quick-weekday-btn:active { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
 
   /* ---------- お月謝 ---------- */
   .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
@@ -139,7 +146,7 @@
     <div class="tab-panel active" id="tab-template">
       <div class="section">
         <div class="label">曜日ごとの基本パターン</div>
-        <div class="hint">各マスに担当講師名を入れると営業、空欄にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください）。基本定員: <span id="basicCapacityText">-</span>名</div>
+        <div class="hint">各マスに担当講師名を入れると営業、空欄にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください。その編集画面には「日〜土」のボタンがあり、他の曜日の内容をその場で参照できます）。基本定員: <span id="basicCapacityText">-</span>名</div>
         <div class="template-scroll">
           <table class="template-table" id="templateTable"></table>
         </div>
@@ -174,6 +181,7 @@ const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah84
 /* ▲▲▲ ここまで ▲▲▲ */
 
 const WEEKDAY_LABELS = ["月","火","水","木","金","土","日"];
+const SUNDAY_FIRST_LABELS = ["日","月","火","水","木","金","土"]; // 個別コマ編集ポップアップのボタン表示順
 
 const loginView = document.getElementById("loginView");
 const mainView = document.getElementById("mainView");
@@ -396,6 +404,28 @@ function renderUpcoming(upcoming, todayStr){
 
       const editPanel = document.createElement("div");
       editPanel.className = "edit-panel";
+
+      const quickRow = document.createElement("div");
+      quickRow.className = "quick-weekday-row";
+      const quickLabel = document.createElement("div");
+      quickLabel.className = "quick-weekday-label";
+      quickLabel.textContent = "他の曜日の内容を見る:";
+      editPanel.appendChild(quickLabel);
+      SUNDAY_FIRST_LABELS.forEach(wd => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "quick-weekday-btn";
+        btn.textContent = wd;
+        btn.addEventListener("click", () => {
+          const template = (lastOverviewData && lastOverviewData.template) || { byWeekday: {} };
+          const value = (template.byWeekday[wd] || {})[slot.time] || "";
+          teacherInput.value = value;
+          showToast(`${wd}曜日の内容（${value || "休み"}）を入力欄に反映しました`);
+        });
+        quickRow.appendChild(btn);
+      });
+      editPanel.appendChild(quickRow);
+
       const teacherInput = document.createElement("input");
       teacherInput.type = "text";
       teacherInput.placeholder = "担当講師";
