@@ -23,6 +23,9 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; }
+  button { transition: transform 0.12s ease, opacity 0.12s ease; cursor: pointer; }
+  button:active:not(:disabled) { transform: scale(0.94); opacity: 0.85; }
+  button:disabled { cursor: default; }
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
 
   header { padding: 20px 20px 8px; text-align: center; }
@@ -84,7 +87,7 @@
   .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
   .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
   .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
-  .modal-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
+  .modal-box input, .modal-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
   .modal-cancel { background: var(--cream); color: var(--ink-soft); }
@@ -111,6 +114,9 @@
   .template-table select.filled { color: var(--orange); font-weight: 700; background: var(--orange-soft); }
   .template-table select:focus { outline: 2px solid var(--orange); outline-offset: -2px; }
   .template-scroll { overflow: auto; margin-bottom: 12px; max-height: 60vh; border-radius: 10px; border: 1px solid #F0EAE0; }
+  .template-table.multi-mode select { pointer-events: none; opacity: 0.5; }
+  .template-table.multi-mode td:not(:first-child) { cursor: pointer; }
+  .template-table td.multi-selected { background: var(--orange-soft) !important; box-shadow: inset 0 0 0 2px var(--orange); }
   .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
   .save-btn:disabled { background: var(--ink-soft); }
 
@@ -200,6 +206,7 @@
       <div class="section">
         <div class="label">曜日ごとの基本パターン</div>
         <div class="hint">基本定員: <span id="basicCapacityText">-</span>名（表の各マスから担当講師・休みを選べます）</div>
+        <button class="save-btn" id="multiSelectBtn" style="background: var(--white); color: var(--orange); border: 2px solid var(--orange); margin-bottom: 10px;">複数選択で設定</button>
         <div class="template-scroll">
           <table class="template-table" id="templateTable"></table>
         </div>
@@ -237,6 +244,16 @@
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
       <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="bulkModalOverlay"></div>
+  <div class="modal-box" id="bulkModal">
+    <div class="modal-title" id="bulkModalTitle">講師を選んでください</div>
+    <select id="bulkTeacherSelect"></select>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelBulkBtn">キャンセル</button>
+      <button class="modal-confirm" id="confirmBulkBtn">適用する</button>
     </div>
   </div>
 </div>
@@ -408,6 +425,7 @@ async function doDeleteTeacher(displayName){
     if (result.success){
       showToast(`「${displayName}」を削除しました`);
       renderTeachers(result.teachers);
+      if (lastOverviewData) renderTemplate(lastOverviewData.template);
     } else {
       showToast("削除に失敗しました");
     }
@@ -483,6 +501,7 @@ confirmAddTeacherBtn.addEventListener("click", async () => {
         showToast(`「${displayName}」を追加しました`);
         closeTeacherModal();
         renderTeachers(result.teachers);
+        if (lastOverviewData) renderTemplate(lastOverviewData.template); // 新しい講師をプルダウンに反映
       } else if (result.reason === "duplicate"){
         showToast("すでに同じ表示名の講師がいます");
       } else {
@@ -526,6 +545,15 @@ function renderTemplate(template){
       originalTemplate[wd + "|" + h] = teacher;
 
       const td = document.createElement("td");
+      td.dataset.weekday = wd;
+      td.dataset.time = h;
+      const cellKey = wd + "|" + h;
+      if (multiSelectedCells.has(cellKey)) td.classList.add("multi-selected");
+      td.addEventListener("click", () => {
+        if (!multiSelectMode) return;
+        toggleMultiSelectCell(cellKey, td);
+      });
+
       const select = document.createElement("select");
       select.dataset.weekday = wd;
       select.dataset.time = h;
@@ -560,6 +588,117 @@ function renderTemplate(template){
     templateTable.appendChild(row);
   });
 }
+
+/* ---------- 複数選択で一括設定 ---------- */
+const multiSelectBtn = document.getElementById("multiSelectBtn");
+const bulkModalOverlay = document.getElementById("bulkModalOverlay");
+const bulkModal = document.getElementById("bulkModal");
+const bulkTeacherSelect = document.getElementById("bulkTeacherSelect");
+const cancelBulkBtn = document.getElementById("cancelBulkBtn");
+const confirmBulkBtn = document.getElementById("confirmBulkBtn");
+
+let multiSelectMode = false;
+let multiSelectedCells = new Set(); // "月|10:00" のようなキーの集合
+
+function toggleMultiSelectCell(cellKey, td){
+  if (multiSelectedCells.has(cellKey)){
+    multiSelectedCells.delete(cellKey);
+    td.classList.remove("multi-selected");
+  } else {
+    multiSelectedCells.add(cellKey);
+    td.classList.add("multi-selected");
+  }
+  updateMultiSelectBtnLabel();
+}
+
+function updateMultiSelectBtnLabel(){
+  if (multiSelectMode){
+    multiSelectBtn.textContent = `選択完了（${multiSelectedCells.size}件選択中）`;
+  } else {
+    multiSelectBtn.textContent = "複数選択で設定";
+  }
+}
+
+multiSelectBtn.addEventListener("click", () => {
+  if (!multiSelectMode){
+    multiSelectMode = true;
+    multiSelectedCells.clear();
+    templateTable.querySelectorAll("td.multi-selected").forEach(td => td.classList.remove("multi-selected"));
+    templateTable.classList.add("multi-mode");
+    updateMultiSelectBtnLabel();
+    showToast("設定したいマスをタップして選んでください");
+    return;
+  }
+  // 選択完了が押された
+  if (multiSelectedCells.size === 0){
+    showToast("マスを1つ以上選択してください");
+    return;
+  }
+  openBulkModal();
+});
+
+function openBulkModal(){
+  bulkTeacherSelect.innerHTML = "";
+  const offOpt = document.createElement("option");
+  offOpt.value = "";
+  offOpt.textContent = "休み";
+  bulkTeacherSelect.appendChild(offOpt);
+  currentTeachers.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.displayName;
+    opt.textContent = t.displayName;
+    bulkTeacherSelect.appendChild(opt);
+  });
+  bulkModalOverlay.classList.add("show");
+  bulkModal.classList.add("show");
+}
+function closeBulkModal(){
+  bulkModalOverlay.classList.remove("show");
+  bulkModal.classList.remove("show");
+}
+function exitMultiSelectMode(){
+  multiSelectMode = false;
+  multiSelectedCells.clear();
+  templateTable.classList.remove("multi-mode");
+  templateTable.querySelectorAll("td.multi-selected").forEach(td => td.classList.remove("multi-selected"));
+  updateMultiSelectBtnLabel();
+}
+
+cancelBulkBtn.addEventListener("click", closeBulkModal);
+bulkModalOverlay.addEventListener("click", closeBulkModal);
+
+confirmBulkBtn.addEventListener("click", async () => {
+  const teacher = bulkTeacherSelect.value;
+  const cells = Array.from(multiSelectedCells).map(key => {
+    const [weekday, time] = key.split("|");
+    return { weekday, time };
+  });
+
+  confirmBulkBtn.disabled = true;
+  confirmBulkBtn.textContent = "設定中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffBulkUpdateTemplate", password: password, cells: cells, teacher: teacher }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`${result.updated}件のマスを設定しました`);
+      closeBulkModal();
+      exitMultiSelectMode();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("設定に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    confirmBulkBtn.disabled = false;
+    confirmBulkBtn.textContent = "適用する";
+  }
+});
 
 templateSaveBtn.addEventListener("click", async () => {
   const selects = Array.from(templateTable.querySelectorAll("select"));
