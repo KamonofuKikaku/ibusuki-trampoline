@@ -71,12 +71,25 @@
   }
   .teacher-chip .save-teacher { background: var(--mint-soft); color: var(--mint); }
   .teacher-chip .del-teacher { background: var(--danger-soft); color: var(--danger); }
-  .add-teacher-row { display: flex; gap: 8px; }
-  .add-teacher-row input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 13.5px; }
-  .add-teacher-row button {
-    flex-shrink: 0; border: none; background: var(--orange); color: var(--white); font-weight: 700;
-    font-size: 13.5px; padding: 0 18px; border-radius: 10px;
+  .add-teacher-row { display: none; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
   }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -46%); width: calc(100% - 64px);
+    max-width: 360px; background: var(--white); border-radius: 18px; padding: 22px 20px; z-index: 41;
+    box-shadow: 0 12px 40px rgba(43,35,32,0.22); opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+  .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
+  .modal-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
+  .modal-cancel { background: var(--cream); color: var(--ink-soft); }
+  .modal-confirm { background: var(--orange); color: var(--white); }
 
   /* ---------- 曜日テンプレート ---------- */
   .template-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
@@ -180,18 +193,14 @@
 
     <div class="tab-panel active" id="tab-template">
       <div class="section">
-        <div class="label">講師管理</div>
-        <div class="hint">ここに登録した講師だけが、下の表でプルダウンから選べます。名前を直して保存すると、すでに設定済みの箇所も含めて全て一括で変わります。</div>
+        <div class="label">講師一覧</div>
         <div class="teacher-chip-row" id="teacherChipRow"></div>
-        <div class="add-teacher-row">
-          <input type="text" id="newTeacherInput" placeholder="新しい講師名" />
-          <button id="addTeacherBtn">＋ 追加</button>
-        </div>
+        <button class="save-btn" id="openAddTeacherBtn" style="background: var(--orange);">＋ 講師を追加</button>
       </div>
 
       <div class="section">
         <div class="label">曜日ごとの基本パターン</div>
-        <div class="hint">プルダウンで担当講師を選ぶと営業、「休み」にすると休みになります。ここでの変更は来月以降の自動生成分に反映されます（すでに生成済みの日は「予約状況」タブから個別に変更してください。その編集画面には「日〜土」のボタンがあり、他の曜日の内容をその場で参照できます）。基本定員: <span id="basicCapacityText">-</span>名</div>
+        <div class="hint">基本定員: <span id="basicCapacityText">-</span>名（表の各マスから担当講師・休みを選べます）</div>
         <div class="template-scroll">
           <table class="template-table" id="templateTable"></table>
         </div>
@@ -218,6 +227,16 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="teacherModalOverlay"></div>
+  <div class="modal-box" id="teacherModal">
+    <div class="modal-title">講師を追加</div>
+    <input type="text" id="newTeacherInput" placeholder="講師名" />
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
+      <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -322,15 +341,19 @@ warnApproveBtn.addEventListener("click", async () => {
 
 /* ---------- 講師管理 ---------- */
 const teacherChipRow = document.getElementById("teacherChipRow");
+const openAddTeacherBtn = document.getElementById("openAddTeacherBtn");
+const teacherModalOverlay = document.getElementById("teacherModalOverlay");
+const teacherModal = document.getElementById("teacherModal");
 const newTeacherInput = document.getElementById("newTeacherInput");
-const addTeacherBtn = document.getElementById("addTeacherBtn");
+const cancelAddTeacherBtn = document.getElementById("cancelAddTeacherBtn");
+const confirmAddTeacherBtn = document.getElementById("confirmAddTeacherBtn");
 let currentTeachers = [];
 
 function renderTeachers(teachers){
   currentTeachers = teachers || [];
   teacherChipRow.innerHTML = "";
   if (!currentTeachers.length){
-    teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下から追加してください</span>`;
+    teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下のボタンから追加してください</span>`;
     return;
   }
   currentTeachers.forEach(name => {
@@ -407,13 +430,31 @@ async function doDeleteTeacher(name){
   }
 }
 
-addTeacherBtn.addEventListener("click", async () => {
+function openTeacherModal(){
+  newTeacherInput.value = "";
+  teacherModalOverlay.classList.add("show");
+  teacherModal.classList.add("show");
+  setTimeout(() => newTeacherInput.focus(), 50);
+}
+function closeTeacherModal(){
+  teacherModalOverlay.classList.remove("show");
+  teacherModal.classList.remove("show");
+}
+
+openAddTeacherBtn.addEventListener("click", openTeacherModal);
+cancelAddTeacherBtn.addEventListener("click", closeTeacherModal);
+teacherModalOverlay.addEventListener("click", closeTeacherModal);
+newTeacherInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") confirmAddTeacherBtn.click();
+});
+
+confirmAddTeacherBtn.addEventListener("click", async () => {
   const name = newTeacherInput.value.trim();
   if (!name){
     showToast("講師名を入力してください");
     return;
   }
-  addTeacherBtn.disabled = true;
+  confirmAddTeacherBtn.disabled = true;
   try {
     const res = await fetch(GAS_ENDPOINT, {
       method: "POST",
@@ -422,7 +463,7 @@ addTeacherBtn.addEventListener("click", async () => {
     const result = await res.json();
     if (result.success){
       showToast(`「${name}」を追加しました`);
-      newTeacherInput.value = "";
+      closeTeacherModal();
       renderTeachers(result.teachers);
     } else if (result.reason === "duplicate"){
       showToast("すでに同じ名前の講師がいます");
@@ -433,7 +474,7 @@ addTeacherBtn.addEventListener("click", async () => {
     console.error(err);
     showToast("通信に失敗しました");
   } finally {
-    addTeacherBtn.disabled = false;
+    confirmAddTeacherBtn.disabled = false;
   }
 });
 
