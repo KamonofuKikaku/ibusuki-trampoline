@@ -94,7 +94,7 @@
   .modal-confirm { background: var(--orange); color: var(--white); }
 
   /* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
-  .cal-wrap { overflow: auto; max-height: 65vh; border: 1px solid #F0EAE0; border-radius: 10px; margin-bottom: 10px; }
+  .cal-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid #F0EAE0; border-radius: 10px; margin-bottom: 10px; }
   .cal-table { border-collapse: collapse; font-size: 11px; }
   .cal-table th, .cal-table td { border: 1px solid #F0EAE0; text-align: center; padding: 0; }
   .cal-table th {
@@ -105,17 +105,20 @@
     position: sticky; left: 0; z-index: 3; background: var(--cream); color: var(--ink-soft);
     font-weight: 700; padding: 3px 6px; white-space: nowrap;
   }
-  .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; }
+  .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; background: var(--white); }
   .cal-empty-cell:active { background: var(--orange-soft); }
+  .cal-closed-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, #EDE6D8, #EDE6D8 4px, #E4DCCB 4px, #E4DCCB 8px); }
   .cal-block-cell {
-    background: var(--orange-soft); color: var(--orange); font-weight: 700; padding: 3px 2px;
+    background: var(--danger); color: var(--white); font-weight: 700; padding: 3px 2px;
     cursor: pointer; vertical-align: middle; line-height: 1.3;
   }
   .cal-block-cell:active { opacity: 0.8; }
-  .cal-block-cell .cb-teacher { font-size: 11.5px; }
-  .cal-block-cell .cb-time { font-size: 9px; color: var(--ink-soft); font-weight: 500; }
+  .cal-block-cell .cb-teacher { font-size: 12.5px; font-weight: 900; }
+  .cal-block-cell .cb-time { font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 500; }
   .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
   .save-btn:disabled { background: var(--ink-soft); }
+  .block-entries-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .block-entries-list .empty-note { font-size: 12px; }
 
   /* ---------- 予約状況 ---------- */
   .date-block { margin-bottom: 14px; }
@@ -245,6 +248,10 @@
   <div class="modal-overlay" id="blockModalOverlay"></div>
   <div class="modal-box" id="blockModal">
     <div class="modal-title" id="blockModalTitle">担当ブロックを追加</div>
+    <div id="blockEntriesSection" style="display:none;">
+      <label class="modal-field-label">予約者</label>
+      <div id="blockEntriesList" class="block-entries-list"></div>
+    </div>
     <label class="modal-field-label">開始時刻</label>
     <input type="time" id="blockStartInput" step="900" />
     <label class="modal-field-label">終了時刻</label>
@@ -611,6 +618,14 @@ function renderCalendar(athleteHours){
   table.innerHTML = "";
   const range = computeCalendarRange_(athleteHours);
 
+  // 各日付ごとの営業時間範囲（無ければ制限なし=常にタップ可能）
+  const dateRanges = currentUpcoming.map(dateItem => {
+    const [y, m, d] = dateItem.date.split("-").map(Number);
+    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
+    const ref = athleteHours[wdJp];
+    return ref ? { start: timeStrToMinutes_(ref.start), end: timeStrToMinutes_(ref.end) } : null;
+  });
+
   // 見出し行：日付
   const headRow = document.createElement("tr");
   headRow.appendChild(document.createElement("th"));
@@ -648,9 +663,15 @@ function renderCalendar(athleteHours){
         row.appendChild(td);
         skipCounts[colIdx] = span - 1;
       } else {
+        const dr = dateRanges[colIdx];
+        const outOfHours = dr && (t < dr.start || t >= dr.end);
         const td = document.createElement("td");
-        td.className = "cal-empty-cell";
-        td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
+        if (outOfHours){
+          td.className = "cal-closed-cell";
+        } else {
+          td.className = "cal-empty-cell";
+          td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
+        }
         row.appendChild(td);
       }
     });
@@ -671,6 +692,9 @@ function openBlockModal(dateStr, slot, startHint){
     blockTeacherSelect.appendChild(opt);
   });
 
+  const blockEntriesSection = document.getElementById("blockEntriesSection");
+  const blockEntriesList = document.getElementById("blockEntriesList");
+
   if (slot){
     editingBlockOldStart = slot.time;
     blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " の予定を編集";
@@ -679,6 +703,27 @@ function openBlockModal(dateStr, slot, startHint){
     blockTeacherSelect.value = slot.teacher;
     deleteBlockBtn.style.display = "block";
     confirmBlockBtn.textContent = "変更する";
+
+    blockEntriesSection.style.display = "block";
+    blockEntriesList.innerHTML = "";
+    const entries = slot.entries || [];
+    if (!entries.length){
+      blockEntriesList.innerHTML = `<span class="empty-note">予約はまだありません</span>`;
+    } else {
+      entries.forEach(entry => {
+        const chip = document.createElement("span");
+        chip.className = "cancel-chip";
+        chip.innerHTML = `<span>${entry.name}</span>`;
+        const x = document.createElement("button");
+        x.textContent = "×";
+        x.addEventListener("click", () => {
+          if (!window.confirm(`${entry.name}さんの予約をキャンセルしますか？`)) return;
+          doCancelFromBlockModal(entry.userId, dateStr, slot.time);
+        });
+        chip.appendChild(x);
+        blockEntriesList.appendChild(chip);
+      });
+    }
   } else {
     editingBlockOldStart = null;
     blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " に追加";
@@ -688,6 +733,7 @@ function openBlockModal(dateStr, slot, startHint){
     if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
       blockTeacherSelect.value = lastUsedTeacherDisplayName;
     }
+    blockEntriesSection.style.display = "none";
     deleteBlockBtn.style.display = "none";
     confirmBlockBtn.textContent = "追加する";
   }
@@ -701,6 +747,27 @@ function closeBlockModal(){
 }
 cancelBlockBtn.addEventListener("click", closeBlockModal);
 blockModalOverlay.addEventListener("click", closeBlockModal);
+
+async function doCancelFromBlockModal(userId, dateStr, timeStr){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("キャンセルしました");
+      closeBlockModal();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("キャンセルできませんでした");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
 
 deleteBlockBtn.addEventListener("click", async () => {
   if (!editingBlockOldStart || !editingBlockDate) return;
