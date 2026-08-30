@@ -714,9 +714,9 @@
       <div class="preset-quick-row" id="modalPresetRow"></div>
 
       <div class="time-wrap">
-        <input type="time" id="modalStart">
+        <input type="time" id="modalStart" step="900">
         <span class="time-tilde">〜</span>
-        <input type="time" id="modalEnd">
+        <input type="time" id="modalEnd" step="900">
       </div>
       <label class="closed-toggle modal-closed-toggle">
         <input type="checkbox" id="modalClosed">休館にする
@@ -1185,10 +1185,23 @@ function closeHoursModal(){
 
 modalCancelBtn.addEventListener("click", closeHoursModal);
 
+// 時刻文字列("HH:MM")を15分刻みに丸める（手入力やプリセット経由で半端な値が来ても揃える保険）
+function snapTo15Min_(timeStr){
+  if (!timeStr) return timeStr;
+  const [h, m] = timeStr.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const total = h * 60 + Math.round(m / 15) * 15;
+  const snappedH = Math.floor(total / 60) % 24;
+  const snappedM = total % 60;
+  return String(snappedH).padStart(2, "0") + ":" + String(snappedM).padStart(2, "0");
+}
+
 modalSaveBtn.addEventListener("click", async () => {
+  const startSnapped = snapTo15Min_(modalStartEl.value);
+  const endSnapped = snapTo15Min_(modalEndEl.value);
   const hoursValue = modalClosedEl.checked
     ? "休館"
-    : (modalStartEl.value && modalEndEl.value ? `${modalStartEl.value}〜${modalEndEl.value}` : "");
+    : (startSnapped && endSnapped ? `${startSnapped}〜${endSnapped}` : "");
 
   modalSaveBtn.disabled = true;
   modalSaveBtn.textContent = "保存中…";
