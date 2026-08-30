@@ -552,8 +552,26 @@ function formatCalDateLabel_(dateStr){
   return `${m}/${d}(${w})`;
 }
 
+const CALENDAR_WINDOW_DAYS = 60; // 今日から何日分の列を常に表示するか
+
 function renderTemplate(data){
-  currentUpcoming = data.upcoming || [];
+  // upcomingは「すでにデータがある日」しか返ってこないので、まず今日から60日分の
+  // 空の日付リストを作り、そこにupcomingの中身をマージする（データが1件も無くても
+  // カレンダーの列自体は常に表示され、最初の1件を追加できるようにするため）
+  const byDate = {};
+  (data.upcoming || []).forEach(item => { byDate[item.date] = item.slots || []; });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const list = [];
+  for (let i = 0; i < CALENDAR_WINDOW_DAYS; i++){
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    list.push({ date: dateStr, slots: byDate[dateStr] || [] });
+  }
+
+  currentUpcoming = list;
   renderCalendar(data.athleteHours || {});
 }
 
@@ -566,7 +584,6 @@ function computeCalendarRange_(athleteHours){
 
   currentUpcoming.forEach(dateItem => {
     const [y, m, d] = dateItem.date.split("-").map(Number);
-    const wd = ["日","月","火","水","木","金","土"][new Date(y, m - 1, d).getDay()];
     const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
     const ref = athleteHours[wdJp];
     if (ref){
@@ -586,20 +603,12 @@ function computeCalendarRange_(athleteHours){
 }
 
 function renderCalendar(athleteHours){
-  calTable.innerHTML = "";
-  if (!currentUpcoming.length){
-    calTable.innerHTML = "";
-    const wrap = document.getElementById("calWrap");
-    wrap.innerHTML = `<div style="padding:16px;text-align:center;color:var(--ink-soft);font-size:12.5px;">まだ予定がありません。下の空き時間をタップして追加してください（今後2ヶ月分を表示します）</div>`;
-    return;
-  } else {
-    const wrap = document.getElementById("calWrap");
-    if (!wrap.querySelector("#calTable")){
-      wrap.innerHTML = `<table class="cal-table" id="calTable"></table>`;
-    }
+  const wrap = document.getElementById("calWrap");
+  if (!wrap.querySelector("#calTable")){
+    wrap.innerHTML = `<table class="cal-table" id="calTable"></table>`;
   }
-
   const table = document.getElementById("calTable");
+  table.innerHTML = "";
   const range = computeCalendarRange_(athleteHours);
 
   // 見出し行：日付
