@@ -143,8 +143,9 @@ async function tryLogin(pw){
     loginView.style.display = "none";
     systemTabs.classList.add("show");
 
-    iframes.athlete.src = `${ATHLETE_PAGE}?pw=${encodeURIComponent(pw)}`;
-    iframes.general.src = `${GENERAL_PAGE}?pw=${encodeURIComponent(pw)}`;
+    const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
+    iframes.athlete.src = `${ATHLETE_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
+    iframes.general.src = `${GENERAL_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
     iframes.athlete.addEventListener("load", () => { loadings.athlete.style.display = "none"; }, { once: true });
     iframes.general.addEventListener("load", () => { loadings.general.style.display = "none"; }, { once: true });
 
