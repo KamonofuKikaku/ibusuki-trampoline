@@ -255,11 +255,12 @@ async function tryLogin(pw){
     systemTabs.classList.add("show");
     wraps.athlete.classList.add("show"); // ログイン成功後に初めて選手用タブを表示する
 
-    // 最初に見えているタブ（選手用）だけ即読み込み。一般用は初めて切り替えた時に読み込む
-    // （両方同時に読み込むと、片方しか見ていなくても待たされるため）
-    // 恐竜は、このiframeが実際に読み込み終わるまで消さない（ここではまだ消さない）
+    // ログイン成功と同時に、選手用・一般用どちらも裏で読み込みを始めておく
+    // （一般用タブに切り替えた時に、また読み込み待ちが発生しないようにするため）
+    // 恐竜は、今見えている選手用タブの読み込みが終わるまで消さない
     currentPassword = pw;
     loadIframe_("athlete");
+    loadIframe_("general");
 
   } catch (err){
     console.error(err);
@@ -283,8 +284,10 @@ function loadIframe_(system){
   iframes[system].src = `${PAGE_BY_SYSTEM[system]}?pw=${encodeURIComponent(currentPassword)}&cb=${cacheBust}`;
   iframes[system].addEventListener("load", () => {
     loadings[system].style.display = "none";
-    // 実際に届いた（ページに到着した）タイミングで、ログイン時の恐竜も消す
-    document.getElementById("loginLoadingOverlay").classList.remove("show");
+    if (system === "athlete"){
+      // ログイン直後に見えているのは選手用タブなので、恐竜はこちらの読み込み完了で消す
+      document.getElementById("loginLoadingOverlay").classList.remove("show");
+    }
   }, { once: true });
 }
 
