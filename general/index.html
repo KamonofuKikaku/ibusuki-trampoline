@@ -88,10 +88,10 @@
     position: relative; display: flex; flex-direction: column;
     align-items: center; gap: 0; min-height: 96px; box-sizing: border-box;
     background: var(--white); border-radius: 14px; box-shadow: 0 3px 10px rgba(43,35,32,0.06);
-    padding: 7px 3px 6px;
+    border: 1px solid #EDE6D8; padding: 7px 3px 6px;
   }
-  .day-cell.empty { visibility: hidden; box-shadow: none; background: transparent; }
-  .day-cell.is-past { box-shadow: none; background: rgba(255,255,255,0.55); }
+  .day-cell.empty { visibility: hidden; box-shadow: none; background: transparent; border-color: transparent; }
+  .day-cell.is-past { visibility: hidden; box-shadow: none; background: transparent; }
   .day-cell.has-selection { background: var(--orange-soft); }
   .day-cell.has-booking { background: var(--booked-soft); }
 
@@ -121,6 +121,7 @@
   .mini-slot.full .ms-count { background: var(--gray-full-text); }
   .mini-slot.booked { background: var(--booked-soft); color: var(--booked); }
   .mini-slot.booked .ms-count { background: var(--booked); }
+  .mini-slot.blank { background: transparent; }
 
   .day-full-badge {
     margin-top: 4px; padding: 1px 4px; border-radius: 6px; background: var(--danger-soft);
@@ -615,18 +616,25 @@ function renderMonth(){
         fullBadge.className = "day-full-badge";
         fullBadge.textContent = "満員";
         cell.appendChild(fullBadge);
-      } else if (st.kind !== "off"){
+      } else {
+        // 空きあり・コマ無しどちらも、常に3枠分の場所を確保する
+        // （コマが無い枠は白＝背景と同化させ、コマがある枠だけ薄緑等で見えるようにする）
         const slots = (availabilityMap[key] || []).slice().sort((a, b) => (a.time < b.time ? -1 : 1));
         const miniWrap = document.createElement("div");
         miniWrap.className = "mini-slots";
-        slots.slice(0, 3).forEach(slot => {
+        for (let i = 0; i < 3; i++){
+          const slot = slots[i];
           const chip = document.createElement("div");
-          const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
-          chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
-          const remainCount = slot.full ? 0 : slot.remain;
-          chip.innerHTML = `<span class="ms-time">${slot.time}</span><span class="ms-count">${remainCount}</span>`;
+          if (slot){
+            const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
+            chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
+            const remainCount = slot.full ? 0 : slot.remain;
+            chip.innerHTML = `<span class="ms-time">${slot.time}</span><span class="ms-count">${remainCount}</span>`;
+          } else {
+            chip.className = "mini-slot blank";
+          }
           miniWrap.appendChild(chip);
-        });
+        }
         cell.appendChild(miniWrap);
       }
     }
