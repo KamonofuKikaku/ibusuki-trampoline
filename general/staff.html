@@ -686,9 +686,9 @@ function renderCalendar(athleteHours){
         skipCounts[colIdx] = span - 1;
       } else {
         const dr = dateRanges[colIdx];
-        const outOfHours = dr && (t < dr.start || t >= dr.end);
+        const inAthleteHours = dr && (t >= dr.start && t < dr.end); // 選手用が使用中の時間帯
         const td = document.createElement("td");
-        if (outOfHours){
+        if (inAthleteHours){
           td.className = "cal-closed-cell";
         } else {
           td.className = "cal-empty-cell";
@@ -835,6 +835,22 @@ confirmBlockBtn.addEventListener("click", async () => {
   if (start >= end){
     showToast("終了時刻は開始時刻より後にしてください");
     return;
+  }
+
+  // 選手用の営業時間（＝選手が使用中の時間）と重なっていないか確認する
+  const athleteHours = (lastOverviewData && lastOverviewData.athleteHours) || {};
+  const [y, m, d] = editingBlockDate.split("-").map(Number);
+  const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
+  const athRange = athleteHours[wdJp];
+  if (athRange){
+    const s = timeStrToMinutes_(start);
+    const e = timeStrToMinutes_(end);
+    const athS = timeStrToMinutes_(athRange.start);
+    const athE = timeStrToMinutes_(athRange.end);
+    if (s !== null && e !== null && athS !== null && athE !== null && s < athE && e > athS){
+      const ok = window.confirm(`選手用のスケジュール（${athRange.start}〜${athRange.end}）と重なっています。このまま保存しますか？`);
+      if (!ok) return;
+    }
   }
 
   confirmBlockBtn.disabled = true;
