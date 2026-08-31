@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>スタッフ管理</title>
+<title>スタッフ管理（一般用）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13,218 +13,1163 @@
     --ink: #2B2320;
     --ink-soft: #7A6F63;
     --orange: #FF6F3C;
+    --orange-soft: #FFE3D6;
     --mint: #2FBF8F;
+    --mint-soft: rgba(47,191,143,0.14);
+    --booked: #4F8FE0;
     --danger: #E0503A;
+    --danger-soft: #FDE4DE;
     --white: #FFFFFF;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; height: 100%; }
-  #shell { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; }
+  button { transition: transform 0.12s ease, opacity 0.12s ease; cursor: pointer; }
+  button:active:not(:disabled) { transform: scale(0.94); opacity: 0.85; }
+  button:disabled { cursor: default; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
 
-  header { padding: 18px 20px 4px; text-align: center; flex-shrink: 0; }
+  header { padding: 20px 20px 8px; text-align: center; }
   header .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
-  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 20px; margin: 6px 0 0; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 22px; margin: 6px 0 0; }
 
-  .login-box {
-    margin: 40px 20px; background: var(--white); border-radius: 16px; padding: 24px 20px;
-    box-shadow: 0 4px 14px rgba(43,35,32,0.08); text-align: center;
-  }
-  .login-box p { font-size: 13px; color: var(--ink-soft); margin: 0 0 4px; }
+  .login-box { margin: 40px 20px; background: var(--white); border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 14px rgba(43,35,32,0.08); text-align: center; }
   .login-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 15px; margin: 14px 0; text-align: center; }
   .login-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 15px; }
   .login-box button:disabled { background: var(--ink-soft); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
-  /* ---------- 選手用／一般用 切り替えヘッダー ---------- */
-  .system-tabs {
-    display: none; gap: 8px; padding: 10px 16px; flex-shrink: 0;
-    background: var(--white); box-shadow: 0 2px 8px rgba(43,35,32,0.06); position: sticky; top: 0; z-index: 10;
+  .warn-banner {
+    margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px;
+    background: var(--danger-soft); color: var(--danger); font-size: 13px; font-weight: 700;
+    display: none; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   }
-  .system-tabs.show { display: flex; }
-  .system-tab-btn {
-    flex: 1; border: none; background: var(--cream); color: var(--ink-soft); font-weight: 700;
-    font-size: 14px; padding: 11px; border-radius: 10px; font-family: "Zen Maru Gothic", sans-serif;
-  }
-  .system-tab-btn.active { background: var(--orange); color: var(--white); }
+  .warn-banner.show { display: flex; }
+  .warn-banner button { border: none; background: var(--danger); color: var(--white); font-weight: 700; font-size: 12.5px; padding: 8px 12px; border-radius: 8px; flex-shrink: 0; }
 
-  .iframe-wrap { flex: 1; display: none; position: relative; }
-  .iframe-wrap.show { display: block; }
-  .iframe-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+  .section { margin: 14px 16px; padding: 18px 18px 20px; background: var(--white); border-radius: 18px; box-shadow: 0 3px 14px rgba(43,35,32,0.07); }
+  .section .label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .hint { color: var(--ink-soft); font-size: 12px; margin-bottom: 10px; }
+  .empty-note { color: var(--ink-soft); font-size: 13px; }
 
-  .iframe-loading {
-    position: absolute; inset: 0; background: var(--cream); display: flex; align-items: center; justify-content: center;
-    font-size: 13px; color: var(--ink-soft); font-weight: 700;
-  }
+  .tabs { display: flex; gap: 6px; padding: 4px 16px; overflow-x: auto; }
+  .tab-btn { flex-shrink: 0; border: none; background: var(--white); color: var(--ink-soft); font-weight: 700; font-size: 13px; padding: 9px 14px; border-radius: 999px; box-shadow: 0 1px 6px rgba(43,35,32,0.05); }
+  .tab-btn.active { background: var(--orange); color: var(--white); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-  /* ---------- login loading overlay (dino) ---------- */
-  .loading-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
-    background: rgba(255, 255, 255, 0.75); z-index: 60; display: flex; align-items: center;
-    justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  /* ---------- 講師管理 ---------- */
+  .teacher-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .teacher-chip {
+    display: flex; align-items: center; gap: 8px; background: var(--cream);
+    border: 1px solid #EDE6D8; border-radius: 14px; padding: 8px 8px 8px 14px;
   }
-  .loading-overlay.show { opacity: 1; pointer-events: auto; }
-  .loading-overlay.show .dino-img, .loading-overlay.show .tramp-mat,
-  .loading-overlay.show .tramp-shadow, .loading-overlay.show .burst { animation-play-state: running; }
+  .teacher-chip .teacher-names { display: flex; flex-direction: column; line-height: 1.3; }
+  .teacher-chip .teacher-display-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .teacher-chip .teacher-full-name { font-size: 10.5px; color: var(--ink-soft); }
+  .teacher-chip button {
+    border: none; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .teacher-chip .edit-teacher { background: var(--mint-soft); color: var(--mint); }
+  .teacher-chip .del-teacher { background: var(--danger-soft); color: var(--danger); }
+  .add-teacher-row { display: none; }
 
-  .loading-mascot { display: flex; flex-direction: column; align-items: center; }
-  .loading-text { margin-top: 2px; font-family: "Zen Maru Gothic", sans-serif; font-size: 13px; font-weight: 700; color: var(--ink); }
-  .dino-scene { position: relative; width: 130px; height: 160px; }
-  .tramp-shadow { position: absolute; left: 50%; bottom: 26px; width: 96px; height: 14px; margin-left: -48px; border-radius: 50%; background: rgba(43, 35, 32, 0.12); }
-  .tramp-mat {
-    position: absolute; left: 50%; bottom: 28px; width: 92px; height: 22px; margin-left: -46px;
-    border-radius: 50%; background: #5C7FA6; border: 3px solid #3E5C7C; transform-origin: center;
-    animation: matSquish 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 2;
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
   }
-  .tramp-leg { position: absolute; bottom: 6px; width: 4px; height: 26px; background: #B99E7A; border-radius: 2px; z-index: 1; }
-  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
-  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
-  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
-  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
-  .dino-img {
-    position: absolute; left: 50%; bottom: 34px; width: 64px; margin-left: -32px; transform-origin: 50% 100%;
-    animation: dinoBounce 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 3;
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -46%); width: calc(100% - 64px);
+    max-width: 360px; background: var(--white); border-radius: 18px; padding: 22px 20px; z-index: 41;
+    box-shadow: 0 12px 40px rgba(43,35,32,0.22); opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
   }
-  .burst {
-    position: absolute; left: 50%; bottom: 40px; width: 5px; height: 32px; border-radius: 3px;
-    background: #FFB648; opacity: 0; animation: burstFlash 0.9s ease-in-out infinite; animation-play-state: paused;
-  }
-  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
-  .burst-c { margin-left: -2.5px; background: #FFE07A; }
-  .burst-r { margin-left: 20px; transform: rotate(24deg); }
+  .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
+  .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
+  .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .modal-box input, .modal-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
+  .modal-cancel { background: var(--cream); color: var(--ink-soft); }
+  .modal-confirm { background: var(--orange); color: var(--white); }
 
-  @keyframes dinoBounce {
-    0%   { transform: translateY(0) scaleY(1); }
-    35%  { transform: translateY(-42px) scaleY(1.03); }
-    62%  { transform: translateY(0) scaleY(0.9); }
-    76%  { transform: translateY(3px) scaleY(0.86); }
-    100% { transform: translateY(0) scaleY(1); }
+  /* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
+  .cal-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid #F0EAE0; border-radius: 10px; margin-bottom: 10px; }
+  .cal-table { border-collapse: collapse; font-size: 11px; }
+  .cal-table th, .cal-table td { border: 1px solid #F0EAE0; text-align: center; padding: 0; }
+  .cal-table th {
+    background: var(--cream); font-weight: 700; color: var(--ink-soft); padding: 6px 8px;
+    position: sticky; top: 0; z-index: 2; white-space: nowrap; font-size: 11.5px;
   }
-  @keyframes matSquish {
-    0%   { transform: scaleX(1) scaleY(1); }
-    58%  { transform: scaleX(1) scaleY(1); }
-    70%  { transform: scaleX(1.12) scaleY(0.55); }
-    84%  { transform: scaleX(1) scaleY(1); }
-    100% { transform: scaleX(1) scaleY(1); }
+  .cal-table th:first-child, .cal-table td:first-child {
+    position: sticky; left: 0; z-index: 3; background: var(--cream); color: var(--ink-soft);
+    font-weight: 700; padding: 3px 6px; white-space: nowrap;
   }
-  @keyframes burstFlash {
-    0%, 54% { opacity: 0; }
-    66%     { opacity: 1; }
-    84%, 100% { opacity: 0; }
+  .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; background: var(--white); }
+  .cal-empty-cell:active { background: var(--orange-soft); }
+  .cal-closed-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, #EDE6D8, #EDE6D8 4px, #E4DCCB 4px, #E4DCCB 8px); }
+  .cal-block-cell {
+    background: var(--danger); color: var(--white); font-weight: 700; padding: 3px 2px;
+    cursor: pointer; vertical-align: middle; line-height: 1.3;
   }
+  .cal-block-cell:active { opacity: 0.8; }
+  .cal-block-cell .cb-teacher { font-size: 12.5px; font-weight: 900; }
+  .cal-block-cell .cb-time { font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 500; }
+  .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
+  .save-btn:disabled { background: var(--ink-soft); }
+  .block-entries-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .block-entries-list .empty-note { font-size: 12px; }
+
+  /* ---------- 予約状況 ---------- */
+  .date-block { margin-bottom: 14px; }
+  .date-block .date-title { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
+  .date-block .date-title.today { color: var(--booked); }
+  .slot-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid rgba(43,35,32,0.06);
+  }
+  .slot-row .slot-main { display: flex; flex-direction: column; gap: 2px; }
+  .slot-row .slot-time { font-weight: 700; font-size: 13.5px; }
+  .slot-row .slot-sub { font-size: 11.5px; color: var(--ink-soft); }
+  .slot-row .slot-names { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  .slot-row .edit-btn { border: none; background: var(--white); color: var(--ink-soft); font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 8px; box-shadow: 0 1px 4px rgba(43,35,32,0.06); flex-shrink: 0; }
+  .cancel-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--mint-soft); color: var(--mint); border-radius: 999px; padding: 3px 4px 3px 9px; font-size: 11.5px; font-weight: 700; margin: 2px 4px 0 0; }
+  .cancel-chip button { border: none; background: rgba(47,191,143,0.2); color: var(--mint); width: 15px; height: 15px; border-radius: 50%; font-size: 10px; line-height: 1; }
+
+  .edit-panel { display: none; background: var(--white); border: 1px dashed #E6DFD3; border-radius: 10px; padding: 10px; margin-top: 6px; }
+  .edit-panel.show { display: block; }
+  .edit-panel .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .edit-panel input, .edit-panel select { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; }
+  .edit-panel .actions { display: flex; gap: 8px; }
+  .edit-panel button { flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 700; font-size: 12.5px; }
+  .edit-panel .save { background: var(--mint); color: var(--white); }
+  .edit-panel .close-slot { background: var(--danger-soft); color: var(--danger); }
+  .quick-weekday-label { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
+  .quick-weekday-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+  .quick-weekday-btn {
+    flex: 1; min-width: 30px; border: 1px solid #E6DFD3; background: var(--cream); color: var(--ink);
+    font-weight: 700; font-size: 12.5px; padding: 7px 0; border-radius: 8px;
+  }
+  .quick-weekday-btn:active { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
+
+  /* ---------- お月謝 ---------- */
+  .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
+  .billing-row .billing-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .card-badge.on { background: var(--mint-soft); color: var(--mint); }
+  .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
+  .billing-dates { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
+  .billing-row input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; margin-bottom: 6px; }
+  .charge-btn { width: 100%; padding: 9px; border-radius: 8px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 13px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); bottom: 30px;
+    background: var(--ink); color: var(--white); padding: 10px 18px; border-radius: 999px; font-size: 13px;
+    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-<div id="shell">
+<div id="app">
   <header>
-    <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
-    <h1>スタッフ管理</h1>
+    <div class="eyebrow">TRAMPOLINE GYM BOOKING — 一般用</div>
+    <h1>スタッフ管理（一般用）</h1>
   </header>
 
   <div id="loginView" class="login-box">
-    <p>選手用・一般用、共通のパスワードでログインします</p>
+    <div>パスワードを入力してください</div>
     <input type="password" id="passwordInput" placeholder="パスワード" />
     <button id="loginBtn">ログイン</button>
     <div class="login-error" id="loginError">パスワードが違います</div>
   </div>
 
-  <div class="system-tabs" id="systemTabs">
-    <button class="system-tab-btn active" data-system="athlete">選手用</button>
-    <button class="system-tab-btn" data-system="general">一般用</button>
-  </div>
+  <div id="mainView" style="display:none;">
+    <div class="warn-banner" id="warnBanner">
+      <span id="warnText"></span>
+      <button id="warnApproveBtn">確認する</button>
+    </div>
 
-  <div class="iframe-wrap show" id="wrap-athlete">
-    <div class="iframe-loading" id="loading-athlete">じゅんびちゅう…</div>
-    <iframe id="iframe-athlete" title="選手用スタッフ管理"></iframe>
-  </div>
-  <div class="iframe-wrap" id="wrap-general">
-    <div class="iframe-loading" id="loading-general">じゅんびちゅう…</div>
-    <iframe id="iframe-general" title="一般用スタッフ管理"></iframe>
-  </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="template">曜日テンプレート</button>
+      <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
+      <button class="tab-btn" data-tab="billing">お月謝</button>
+    </div>
 
-  <div class="loading-overlay" id="loginLoadingOverlay">
-    <div class="loading-mascot">
-      <div class="dino-scene">
-        <div class="tramp-shadow"></div>
-        <div class="burst burst-l"></div>
-        <div class="burst burst-c"></div>
-        <div class="burst burst-r"></div>
-        <div class="tramp-leg tramp-leg-l1"></div>
-        <div class="tramp-leg tramp-leg-l2"></div>
-        <div class="tramp-leg tramp-leg-r1"></div>
-        <div class="tramp-leg tramp-leg-r2"></div>
-        <div class="tramp-mat"></div>
-        <img src="dino.png" class="dino-img" alt="">
+    <div class="tab-panel active" id="tab-template">
+      <div class="section">
+        <div class="label">講師一覧</div>
+        <div class="teacher-chip-row" id="teacherChipRow"></div>
+        <button class="save-btn" id="openAddTeacherBtn" style="background: var(--orange);">＋ 講師を追加</button>
       </div>
-      <div class="loading-text">確認中…</div>
+
+      <div class="section">
+        <div class="label">予定カレンダー</div>
+        <div class="cal-wrap" id="calWrap">
+          <table class="cal-table" id="calTable"></table>
+        </div>
+        <div class="hint">基本定員: <span id="basicCapacityText">-</span>名。空いている時間をタップして追加、既にある予定をタップして編集・削除できます。横にスクロールすると先の日程を見られます。</div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-bookings">
+      <div class="section">
+        <div class="label">予約状況の確認・修正</div>
+        <div class="hint">担当講師や個別定員の変更、休みへの切り替えができます（1週間以内の変更は予約者へLINE通知が届きます）</div>
+        <div id="upcomingList"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-billing">
+      <div class="section">
+        <div class="label">今月の請求</div>
+        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。</div>
+        <button class="save-btn" id="refreshCardBtn" style="background: var(--white); color: var(--ink-soft); box-shadow: 0 1px 6px rgba(43,35,32,0.05); margin-bottom: 10px;">カード登録状況を更新</button>
+        <div id="billingList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="teacherModalOverlay"></div>
+  <div class="modal-box" id="teacherModal">
+    <div class="modal-title" id="teacherModalTitle">講師を追加</div>
+    <label class="modal-field-label">正式名（フルネーム）</label>
+    <input type="text" id="teacherFullNameInput" placeholder="例：山田太郎" />
+    <label class="modal-field-label">表示名（3文字目安・カレンダー等に表示）</label>
+    <input type="text" id="teacherDisplayNameInput" placeholder="例：山田" maxlength="6" />
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
+      <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="blockModalOverlay"></div>
+  <div class="modal-box" id="blockModal">
+    <div class="modal-title" id="blockModalTitle">担当ブロックを追加</div>
+    <div id="blockEntriesSection" style="display:none;">
+      <label class="modal-field-label">予約者</label>
+      <div id="blockEntriesList" class="block-entries-list"></div>
+    </div>
+    <label class="modal-field-label">開始時刻</label>
+    <input type="time" id="blockStartInput" step="900" />
+    <label class="modal-field-label">終了時刻</label>
+    <input type="time" id="blockEndInput" step="900" />
+    <label class="modal-field-label">担当講師</label>
+    <select id="blockTeacherSelect"></select>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="cancelBlockBtn">キャンセル</button>
+      <button class="modal-cancel" id="deleteBlockBtn" style="display:none; background: var(--danger-soft); color: var(--danger);">削除</button>
+      <button class="modal-confirm" id="confirmBlockBtn">追加する</button>
     </div>
   </div>
 </div>
 
+
 <script>
 /* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
-const ATHLETE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
-const GENERAL_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
-// この2つのURLと同じ並びの.htmlファイルを、このstaff.htmlと同じGitHubリポジトリに置く
-const ATHLETE_PAGE = "athlete_staff_inner.html";
-const GENERAL_PAGE = "general/staff.html";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
 /* ▲▲▲ ここまで ▲▲▲ */
 
+const WEEKDAY_LABELS = ["月","火","水","木","金","土","日"];
+const SUNDAY_FIRST_LABELS = ["日","月","火","水","木","金","土"]; // 個別コマ編集ポップアップのボタン表示順
+
 const loginView = document.getElementById("loginView");
+const mainView = document.getElementById("mainView");
 const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
-const systemTabs = document.getElementById("systemTabs");
+const toastEl = document.getElementById("toast");
+const warnBanner = document.getElementById("warnBanner");
+const warnText = document.getElementById("warnText");
+const warnApproveBtn = document.getElementById("warnApproveBtn");
+const upcomingList = document.getElementById("upcomingList");
+const billingList = document.getElementById("billingList");
+const refreshCardBtn = document.getElementById("refreshCardBtn");
 
-const wraps = { athlete: document.getElementById("wrap-athlete"), general: document.getElementById("wrap-general") };
-const loadings = { athlete: document.getElementById("loading-athlete"), general: document.getElementById("loading-general") };
-const iframes = { athlete: document.getElementById("iframe-athlete"), general: document.getElementById("iframe-general") };
+let password = "";
+let lastOverviewData = null;
+let pendingWarnMonth = null;
 
-async function checkPassword_(endpoint, pw){
-  try {
-    const res = await fetch(`${endpoint}?action=staffOverview&password=${encodeURIComponent(pw)}`);
-    const data = await res.json();
-    return !data.error;
-  } catch (err){
-    console.error("password check failed", err);
-    return false;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+async function fetchOverview(pw){
+  const res = await fetch(`${GAS_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(pw)}`);
+  return await res.json();
+}
+
+function formatDateLabel(dateStr, todayStr){
+  const [y,m,d] = dateStr.split("-");
+  const dateObj = new Date(Number(y), Number(m)-1, Number(d));
+  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
+  const label = `${Number(m)}/${Number(d)}(${w})`;
+  return dateStr === todayStr ? label + " 本日" : label;
+}
+
+/* ---------- タブ切り替え ---------- */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---------- 月次承認バナー ---------- */
+function renderApprovalBanner(approvals, todayStr){
+  const [ty, tm] = todayStr.split("-").map(Number);
+  const curMonth = `${ty}-${String(tm).padStart(2,"0")}`;
+  const nextD = new Date(ty, tm, 1); // 翌月1日
+  const nextMonth = `${nextD.getFullYear()}-${String(nextD.getMonth()+1).padStart(2,"0")}`;
+
+  const byMonth = {};
+  (approvals || []).forEach(a => byMonth[a.month] = a);
+
+  const unapproved = [curMonth, nextMonth].filter(m => byMonth[m] && byMonth[m].status === "未承認");
+  if (!unapproved.length){
+    warnBanner.classList.remove("show");
+    pendingWarnMonth = null;
+    return;
   }
+  pendingWarnMonth = unapproved[0];
+  warnText.textContent = `${unapproved.join("・")}分の営業予定がまだ確認されていません`;
+  warnBanner.classList.add("show");
+}
+
+warnApproveBtn.addEventListener("click", async () => {
+  if (!pendingWarnMonth) return;
+  warnApproveBtn.disabled = true;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffApproveMonth", password: password, month: pendingWarnMonth, approver: "スタッフ" }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(pendingWarnMonth + "分を確認済みにしました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("処理に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    warnApproveBtn.disabled = false;
+  }
+});
+
+/* ---------- 講師管理 ---------- */
+const teacherChipRow = document.getElementById("teacherChipRow");
+const openAddTeacherBtn = document.getElementById("openAddTeacherBtn");
+const teacherModalOverlay = document.getElementById("teacherModalOverlay");
+const teacherModal = document.getElementById("teacherModal");
+const teacherModalTitle = document.getElementById("teacherModalTitle");
+const teacherFullNameInput = document.getElementById("teacherFullNameInput");
+const teacherDisplayNameInput = document.getElementById("teacherDisplayNameInput");
+const cancelAddTeacherBtn = document.getElementById("cancelAddTeacherBtn");
+const confirmAddTeacherBtn = document.getElementById("confirmAddTeacherBtn");
+let currentTeachers = []; // [{fullName, displayName}, ...]
+let editingDisplayName = null; // null=新規追加モード、値あり=編集モード（元の表示名）
+
+function renderTeachers(teachers){
+  currentTeachers = teachers || [];
+  teacherChipRow.innerHTML = "";
+  if (!currentTeachers.length){
+    teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下のボタンから追加してください</span>`;
+    return;
+  }
+  currentTeachers.forEach(t => {
+    const chip = document.createElement("div");
+    chip.className = "teacher-chip";
+
+    const names = document.createElement("div");
+    names.className = "teacher-names";
+    const displayEl = document.createElement("div");
+    displayEl.className = "teacher-display-name";
+    displayEl.textContent = t.displayName;
+    names.appendChild(displayEl);
+    const fullEl = document.createElement("div");
+    fullEl.className = "teacher-full-name";
+    fullEl.textContent = t.fullName;
+    names.appendChild(fullEl);
+    chip.appendChild(names);
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "edit-teacher";
+    editBtn.textContent = "✎";
+    editBtn.title = "編集";
+    editBtn.addEventListener("click", () => openTeacherModal(t));
+    chip.appendChild(editBtn);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "del-teacher";
+    delBtn.textContent = "×";
+    delBtn.title = "名簿から削除";
+    delBtn.addEventListener("click", () => {
+      if (!window.confirm(`「${t.displayName}」を名簿から削除しますか？（すでに設定済みのマスはそのまま残ります）`)) return;
+      doDeleteTeacher(t.displayName);
+    });
+    chip.appendChild(delBtn);
+
+    teacherChipRow.appendChild(chip);
+  });
+}
+
+async function doDeleteTeacher(displayName){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffDeleteTeacher", password: password, displayName: displayName }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`「${displayName}」を削除しました`);
+      renderTeachers(result.teachers);
+      if (lastOverviewData) renderTemplate(lastOverviewData);
+    } else {
+      showToast("削除に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+// teacher: null なら新規追加モード、{fullName,displayName} なら編集モード
+function openTeacherModal(teacher){
+  editingDisplayName = teacher ? teacher.displayName : null;
+  teacherModalTitle.textContent = teacher ? "講師情報を編集" : "講師を追加";
+  teacherFullNameInput.value = teacher ? teacher.fullName : "";
+  teacherDisplayNameInput.value = teacher ? teacher.displayName : "";
+  confirmAddTeacherBtn.textContent = teacher ? "変更する" : "追加する";
+  teacherModalOverlay.classList.add("show");
+  teacherModal.classList.add("show");
+  setTimeout(() => teacherFullNameInput.focus(), 50);
+}
+function closeTeacherModal(){
+  teacherModalOverlay.classList.remove("show");
+  teacherModal.classList.remove("show");
+}
+
+openAddTeacherBtn.addEventListener("click", () => openTeacherModal(null));
+cancelAddTeacherBtn.addEventListener("click", closeTeacherModal);
+teacherModalOverlay.addEventListener("click", closeTeacherModal);
+// Enterキーでの送信は行わない（日本語入力の変換確定Enterと誤認識するため、
+// ボタンを押した時だけ登録・変更する）
+
+confirmAddTeacherBtn.addEventListener("click", async () => {
+  const fullName = teacherFullNameInput.value.trim();
+  const displayName = teacherDisplayNameInput.value.trim();
+  if (!fullName || !displayName){
+    showToast("正式名・表示名を両方入力してください");
+    return;
+  }
+
+  confirmAddTeacherBtn.disabled = true;
+  try {
+    if (editingDisplayName){
+      // 編集モード：一括変更
+      if (editingDisplayName !== displayName &&
+          !window.confirm(`表示名を「${editingDisplayName}」から「${displayName}」に変更すると、すでに設定済みの箇所も全て一括で変わります。よろしいですか？`)) {
+        confirmAddTeacherBtn.disabled = false;
+        return;
+      }
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffRenameTeacher", password: password,
+          oldDisplayName: editingDisplayName, newFullName: fullName, newDisplayName: displayName,
+        }),
+      });
+      const result = await res.json();
+      if (result.success){
+        showToast(`「${displayName}」に変更しました`);
+        closeTeacherModal();
+        const data = await fetchOverview(password);
+        if (!data.error) renderOverview(data);
+      } else {
+        showToast("変更に失敗しました");
+      }
+    } else {
+      // 新規追加モード
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({ action: "staffAddTeacher", password: password, fullName: fullName, displayName: displayName }),
+      });
+      const result = await res.json();
+      if (result.success){
+        showToast(`「${displayName}」を追加しました`);
+        closeTeacherModal();
+        renderTeachers(result.teachers);
+        if (lastOverviewData) renderTemplate(lastOverviewData); // 新しい講師をプルダウンに反映
+      } else if (result.reason === "duplicate"){
+        showToast("すでに同じ表示名の講師がいます");
+      } else {
+        showToast("追加に失敗しました");
+      }
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    confirmAddTeacherBtn.disabled = false;
+  }
+});
+
+/* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
+const calTable = document.getElementById("calTable");
+
+const blockModalOverlay = document.getElementById("blockModalOverlay");
+const blockModal = document.getElementById("blockModal");
+const blockModalTitle = document.getElementById("blockModalTitle");
+const blockStartInput = document.getElementById("blockStartInput");
+const blockEndInput = document.getElementById("blockEndInput");
+const blockTeacherSelect = document.getElementById("blockTeacherSelect");
+const cancelBlockBtn = document.getElementById("cancelBlockBtn");
+const deleteBlockBtn = document.getElementById("deleteBlockBtn");
+const confirmBlockBtn = document.getElementById("confirmBlockBtn");
+
+let currentUpcoming = []; // [{date, slots:[{time,endTime,teacher,...}]}, ...]
+let editingBlockDate = null;    // 編集中の日付("2026-08-10")。null=新規追加モード
+let editingBlockOldStart = null; // 編集中ブロックの元の開始時刻。null=新規追加モード
+let lastUsedTeacherDisplayName = "";
+
+// "HH:MM"以外の想定外の値が来ても落ちないよう、パースできなければnullを返す
+function timeStrToMinutes_(t){
+  if (typeof t !== "string") return null;
+  const m2 = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!m2) return null;
+  const h = Number(m2[1]);
+  const m = Number(m2[2]);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+function minutesToTimeStr_(mins){
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+function formatCalDateLabel_(dateStr){
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
+  return `${m}/${d}(${w})`;
+}
+
+const CALENDAR_WINDOW_DAYS = 60; // 今日から何日分の列を常に表示するか
+
+function renderTemplate(data){
+  // upcomingは「すでにデータがある日」しか返ってこないので、まず今日から60日分の
+  // 空の日付リストを作り、そこにupcomingの中身をマージする（データが1件も無くても
+  // カレンダーの列自体は常に表示され、最初の1件を追加できるようにするため）
+  const byDate = {};
+  (data.upcoming || []).forEach(item => { byDate[item.date] = item.slots || []; });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const list = [];
+  for (let i = 0; i < CALENDAR_WINDOW_DAYS; i++){
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    list.push({ date: dateStr, slots: byDate[dateStr] || [] });
+  }
+
+  currentUpcoming = list;
+  renderCalendar(data.athleteHours || {});
+}
+
+// 全ての表示日のうち、一番長い範囲(選手用の営業時間 or 実際のブロック)をベースに、
+// カレンダー全体で共通の縦軸(時間の行)を決める
+function computeCalendarRange_(athleteHours){
+  const DEFAULT_START = timeStrToMinutes_("10:00");
+  const DEFAULT_END = timeStrToMinutes_("21:00");
+  let rangeStart = DEFAULT_START;
+  let rangeEnd = DEFAULT_END;
+  let hasAny = false;
+
+  currentUpcoming.forEach(dateItem => {
+    const [y, m, d] = dateItem.date.split("-").map(Number);
+    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
+    const ref = athleteHours[wdJp];
+    if (ref){
+      const s = timeStrToMinutes_(ref.start);
+      const e = timeStrToMinutes_(ref.end);
+      if (s !== null && e !== null && e > s){
+        rangeStart = Math.min(rangeStart, s);
+        rangeEnd = Math.max(rangeEnd, e);
+        hasAny = true;
+      }
+    }
+    (dateItem.slots || []).forEach(slot => {
+      const s = timeStrToMinutes_(slot.time);
+      const e = timeStrToMinutes_(slot.endTime);
+      if (s !== null && e !== null && e > s){
+        rangeStart = Math.min(rangeStart, s);
+        rangeEnd = Math.max(rangeEnd, e);
+        hasAny = true;
+      }
+    });
+  });
+
+  if (!hasAny || rangeEnd <= rangeStart) return { start: DEFAULT_START, end: DEFAULT_END };
+  return { start: rangeStart, end: rangeEnd };
+}
+
+function renderCalendar(athleteHours){
+  const wrap = document.getElementById("calWrap");
+  if (!wrap.querySelector("#calTable")){
+    wrap.innerHTML = `<table class="cal-table" id="calTable"></table>`;
+  }
+  const table = document.getElementById("calTable");
+  table.innerHTML = "";
+  const range = computeCalendarRange_(athleteHours);
+
+  // 各日付ごとの営業時間範囲（無ければ制限なし=常にタップ可能）
+  const dateRanges = currentUpcoming.map(dateItem => {
+    const [y, m, d] = dateItem.date.split("-").map(Number);
+    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
+    const ref = athleteHours[wdJp];
+    if (!ref) return null;
+    const s = timeStrToMinutes_(ref.start);
+    const e = timeStrToMinutes_(ref.end);
+    return (s !== null && e !== null && e > s) ? { start: s, end: e } : null;
+  });
+
+  // 見出し行：日付（スクロールしても分かるよう、上下両方に置く）
+  function buildDateHeaderRow(){
+    const headRow = document.createElement("tr");
+    headRow.appendChild(document.createElement("th"));
+    currentUpcoming.forEach(dateItem => {
+      const th = document.createElement("th");
+      th.textContent = formatCalDateLabel_(dateItem.date);
+      headRow.appendChild(th);
+    });
+    return headRow;
+  }
+  table.appendChild(buildDateHeaderRow());
+
+  // 各日付列ごとに、あとN行分は前の行のブロックでrowspan済み、をカウントしておく
+  const skipCounts = currentUpcoming.map(() => 0);
+
+  for (let t = range.start; t < range.end; t += 15){
+    const timeStr = minutesToTimeStr_(t);
+    const row = document.createElement("tr");
+
+    const labelTd = document.createElement("td");
+    labelTd.textContent = timeStr;
+    row.appendChild(labelTd);
+
+    currentUpcoming.forEach((dateItem, colIdx) => {
+      if (skipCounts[colIdx] > 0){
+        skipCounts[colIdx]--;
+        return;
+      }
+      const slot = (dateItem.slots || []).find(s => s.time === timeStr);
+      if (slot){
+        const span = Math.max(1, Math.round((timeStrToMinutes_(slot.endTime) - timeStrToMinutes_(slot.time)) / 15));
+        const td = document.createElement("td");
+        td.className = "cal-block-cell";
+        td.rowSpan = span;
+        td.innerHTML = `<div class="cb-teacher">${slot.teacher}</div><div class="cb-time">${slot.time}〜${slot.endTime}</div>`;
+        td.addEventListener("click", () => openBlockModal(dateItem.date, slot));
+        row.appendChild(td);
+        skipCounts[colIdx] = span - 1;
+      } else {
+        const dr = dateRanges[colIdx];
+        const inAthleteHours = dr && (t >= dr.start && t < dr.end); // 選手用が使用中の時間帯
+        const td = document.createElement("td");
+        if (inAthleteHours){
+          td.className = "cal-closed-cell";
+        } else {
+          td.className = "cal-empty-cell";
+          td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
+        }
+        row.appendChild(td);
+      }
+    });
+
+    table.appendChild(row);
+  }
+
+  table.appendChild(buildDateHeaderRow());
+}
+
+// slot: 既存ブロック(編集モード) / null(追加モード)、startHint: 追加モードでタップした開始時刻
+function openBlockModal(dateStr, slot, startHint){
+  editingBlockDate = dateStr;
+
+  blockTeacherSelect.innerHTML = "";
+  currentTeachers.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.displayName;
+    opt.textContent = t.displayName;
+    blockTeacherSelect.appendChild(opt);
+  });
+
+  const blockEntriesSection = document.getElementById("blockEntriesSection");
+  const blockEntriesList = document.getElementById("blockEntriesList");
+
+  if (slot){
+    editingBlockOldStart = slot.time;
+    blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " の予定を編集";
+    blockStartInput.value = slot.time;
+    blockEndInput.value = slot.endTime;
+    blockTeacherSelect.value = slot.teacher;
+    deleteBlockBtn.style.display = "block";
+    confirmBlockBtn.textContent = "変更する";
+
+    blockEntriesSection.style.display = "block";
+    blockEntriesList.innerHTML = "";
+    const entries = slot.entries || [];
+    if (!entries.length){
+      blockEntriesList.innerHTML = `<span class="empty-note">予約はまだありません</span>`;
+    } else {
+      entries.forEach(entry => {
+        const chip = document.createElement("span");
+        chip.className = "cancel-chip";
+        chip.innerHTML = `<span>${entry.name}</span>`;
+        const x = document.createElement("button");
+        x.textContent = "×";
+        x.addEventListener("click", () => {
+          if (!window.confirm(`${entry.name}さんの予約をキャンセルしますか？`)) return;
+          doCancelFromBlockModal(entry.userId, dateStr, slot.time);
+        });
+        chip.appendChild(x);
+        blockEntriesList.appendChild(chip);
+      });
+    }
+  } else {
+    editingBlockOldStart = null;
+    blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " に追加";
+    const start = startHint || "10:00";
+    blockStartInput.value = start;
+    blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60); // デフォルトは1時間後
+    if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
+      blockTeacherSelect.value = lastUsedTeacherDisplayName;
+    }
+    blockEntriesSection.style.display = "none";
+    deleteBlockBtn.style.display = "none";
+    confirmBlockBtn.textContent = "追加する";
+  }
+
+  blockModalOverlay.classList.add("show");
+  blockModal.classList.add("show");
+}
+function closeBlockModal(){
+  blockModalOverlay.classList.remove("show");
+  blockModal.classList.remove("show");
+}
+cancelBlockBtn.addEventListener("click", closeBlockModal);
+blockModalOverlay.addEventListener("click", closeBlockModal);
+
+async function doCancelFromBlockModal(userId, dateStr, timeStr){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("キャンセルしました");
+      closeBlockModal();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("キャンセルできませんでした");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+deleteBlockBtn.addEventListener("click", async () => {
+  if (!editingBlockOldStart || !editingBlockDate) return;
+  if (!window.confirm("この予定を削除しますか？")) return;
+
+  deleteBlockBtn.disabled = true;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffDeleteDateBlock", password: password,
+        date: editingBlockDate, startTime: editingBlockOldStart,
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("削除しました");
+      closeBlockModal();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("削除に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    deleteBlockBtn.disabled = false;
+  }
+});
+
+confirmBlockBtn.addEventListener("click", async () => {
+  const start = blockStartInput.value;
+  const end = blockEndInput.value;
+  const teacher = blockTeacherSelect.value;
+
+  if (!start || !end || !teacher){
+    showToast("開始・終了時刻と担当講師を入力してください");
+    return;
+  }
+  if (start >= end){
+    showToast("終了時刻は開始時刻より後にしてください");
+    return;
+  }
+
+  // 選手用の営業時間（＝選手が使用中の時間）と重なっていないか確認する
+  const athleteHours = (lastOverviewData && lastOverviewData.athleteHours) || {};
+  const [y, m, d] = editingBlockDate.split("-").map(Number);
+  const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
+  const athRange = athleteHours[wdJp];
+  if (athRange){
+    const s = timeStrToMinutes_(start);
+    const e = timeStrToMinutes_(end);
+    const athS = timeStrToMinutes_(athRange.start);
+    const athE = timeStrToMinutes_(athRange.end);
+    if (s !== null && e !== null && athS !== null && athE !== null && s < athE && e > athS){
+      const ok = window.confirm(`選手用のスケジュール（${athRange.start}〜${athRange.end}）と重なっています。このまま保存しますか？`);
+      if (!ok) return;
+    }
+  }
+
+  confirmBlockBtn.disabled = true;
+  confirmBlockBtn.textContent = "保存中…";
+  try {
+    const action = editingBlockOldStart ? "staffUpdateDateBlock" : "staffAddDateBlock";
+    const payload = {
+      action: action, password: password,
+      date: editingBlockDate, startTime: start, endTime: end, teacher: teacher,
+    };
+    if (editingBlockOldStart) payload.oldStartTime = editingBlockOldStart;
+
+    const res = await fetch(GAS_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
+    const result = await res.json();
+    if (result.success){
+      lastUsedTeacherDisplayName = teacher;
+      showToast(editingBlockOldStart ? "変更しました" : "追加しました");
+      closeBlockModal();
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else if (result.reason === "duplicate_start"){
+      showToast("その開始時刻にはすでに別の予定があります");
+    } else {
+      showToast("保存に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    confirmBlockBtn.disabled = false;
+    confirmBlockBtn.textContent = editingBlockOldStart ? "変更する" : "追加する";
+  }
+});
+
+
+
+/* ---------- 予約状況 ---------- */
+function renderUpcoming(upcoming, todayStr){
+  upcomingList.innerHTML = "";
+  if (!upcoming.length){
+    upcomingList.innerHTML = `<span class="empty-note">今後2ヶ月の予約枠はまだありません</span>`;
+    return;
+  }
+
+  upcoming.forEach(dateItem => {
+    const block = document.createElement("div");
+    block.className = "date-block";
+
+    const title = document.createElement("div");
+    title.className = "date-title" + (dateItem.date === todayStr ? " today" : "");
+    title.textContent = formatDateLabel(dateItem.date, todayStr);
+    block.appendChild(title);
+
+    dateItem.slots.forEach(slot => {
+      const row = document.createElement("div");
+      row.className = "slot-row";
+
+      const main = document.createElement("div");
+      main.className = "slot-main";
+      const timeEl = document.createElement("div");
+      timeEl.className = "slot-time";
+      timeEl.textContent = slot.time + "〜（担当: " + (slot.teacher || "休み") + "）";
+      main.appendChild(timeEl);
+      const subEl = document.createElement("div");
+      subEl.className = "slot-sub";
+      subEl.textContent = `定員${slot.capacity} / 予約${slot.booked}人`;
+      main.appendChild(subEl);
+
+      if (slot.entries && slot.entries.length){
+        const namesEl = document.createElement("div");
+        namesEl.className = "slot-names";
+        slot.entries.forEach(entry => {
+          const chip = document.createElement("span");
+          chip.className = "cancel-chip";
+          chip.innerHTML = `<span>${entry.name}</span>`;
+          const x = document.createElement("button");
+          x.textContent = "×";
+          x.addEventListener("click", () => confirmStaffCancel(entry.userId, dateItem.date, slot.time, entry.name));
+          chip.appendChild(x);
+          namesEl.appendChild(chip);
+        });
+        main.appendChild(namesEl);
+      }
+      row.appendChild(main);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-btn";
+      editBtn.textContent = "編集";
+      row.appendChild(editBtn);
+
+      const editPanel = document.createElement("div");
+      editPanel.className = "edit-panel";
+
+      const teacherInput = document.createElement("input");
+      teacherInput.type = "text";
+      teacherInput.placeholder = "担当講師";
+      teacherInput.value = slot.teacher || "";
+      const capacityInput = document.createElement("input");
+      capacityInput.type = "number";
+      capacityInput.placeholder = "個別定員(空欄=基本定員)";
+      const rowWrap = document.createElement("div");
+      rowWrap.className = "row";
+      rowWrap.appendChild(teacherInput);
+      rowWrap.appendChild(capacityInput);
+      editPanel.appendChild(rowWrap);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "save";
+      saveBtn.textContent = "保存";
+      saveBtn.addEventListener("click", () => doUpdateSlot(dateItem.date, slot.time, teacherInput.value.trim(), capacityInput.value));
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "close-slot";
+      closeBtn.textContent = "このコマを休みにする";
+      closeBtn.addEventListener("click", () => {
+        if (!window.confirm(formatDateLabel(dateItem.date, todayStr) + " " + slot.time + "〜 を休みにしますか？既存の予約は自動キャンセルされます。")) return;
+        doUpdateSlot(dateItem.date, slot.time, "", "");
+      });
+      actions.appendChild(saveBtn);
+      actions.appendChild(closeBtn);
+      editPanel.appendChild(actions);
+
+      editBtn.addEventListener("click", () => editPanel.classList.toggle("show"));
+      block.appendChild(row);
+      block.appendChild(editPanel);
+    });
+
+    upcomingList.appendChild(block);
+  });
+}
+
+async function doUpdateSlot(dateStr, timeStr, teacher, capacity){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffUpdateSlot", password: password,
+        date: dateStr, time: timeStr, teacher: teacher,
+        capacity: capacity === "" ? "" : Number(capacity),
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("更新しました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("更新に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+function confirmStaffCancel(userId, dateStr, timeStr, name){
+  const label = formatDateLabel(dateStr, lastOverviewData ? lastOverviewData.today : "") + " " + timeStr + "〜";
+  const ok = window.confirm(`${name}さんの${label}の予約をキャンセルしますか？`);
+  if (!ok) return;
+  doStaffCancel(userId, dateStr, timeStr);
+}
+
+async function doStaffCancel(userId, dateStr, timeStr){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("キャンセルしました");
+      const data = await fetchOverview(password);
+      if (!data.error) renderOverview(data);
+    } else {
+      showToast("キャンセルできませんでした");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
+/* ---------- お月謝 ---------- */
+async function fetchBillingList(){
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=staffBillingList&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    if (data.error) return;
+    renderBilling(data.list || []);
+  } catch (err){
+    console.error(err);
+    showToast("請求一覧の取得に失敗しました");
+  }
+}
+
+function renderBilling(list){
+  billingList.innerHTML = "";
+  if (!list.length){
+    billingList.innerHTML = `<span class="empty-note">対象の利用者がまだいません</span>`;
+    return;
+  }
+
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "billing-row";
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "billing-name";
+    nameRow.innerHTML = `<span>${item.name}</span>`;
+    const badge = document.createElement("span");
+    badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
+    nameRow.appendChild(badge);
+    row.appendChild(nameRow);
+
+    const datesEl = document.createElement("div");
+    datesEl.className = "billing-dates";
+    datesEl.textContent = item.bookingEntries.length
+      ? `今月の予約(${item.bookingCount}回): ${item.bookingEntries.join(", ")}`
+      : "今月の予約はまだありません";
+    row.appendChild(datesEl);
+
+    const amountInput = document.createElement("input");
+    amountInput.type = "number";
+    amountInput.step = "100";
+    amountInput.min = "0";
+    amountInput.placeholder = "金額";
+    amountInput.value = item.amount || "";
+    row.appendChild(amountInput);
+
+    const chargeBtn = document.createElement("button");
+    chargeBtn.className = "charge-btn";
+    chargeBtn.textContent = "請求する";
+    chargeBtn.addEventListener("click", async () => {
+      const amount = Number(amountInput.value);
+      if (!amount || amount <= 0){
+        showToast("金額を入力してください");
+        return;
+      }
+      const ok = window.confirm(`${item.name}さんに${amount.toLocaleString()}円を請求します。よろしいですか？`);
+      if (!ok) return;
+
+      chargeBtn.disabled = true;
+      chargeBtn.textContent = "処理中…";
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffCharge", password: password, userId: item.userId, amount: amount }),
+        });
+        const result = await res.json();
+        if (result.success){
+          showToast(item.name + "さんへの請求処理が完了しました");
+        } else {
+          showToast("請求に失敗しました: " + (result.reason || ""));
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      } finally {
+        chargeBtn.disabled = false;
+        chargeBtn.textContent = "請求する";
+      }
+    });
+    row.appendChild(chargeBtn);
+
+    billingList.appendChild(row);
+  });
+}
+
+refreshCardBtn.addEventListener("click", async () => {
+  refreshCardBtn.disabled = true;
+  refreshCardBtn.textContent = "更新中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "refreshCardStatus", password: password }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`${result.updated}件のカード登録状況を更新しました`);
+      fetchBillingList();
+    } else {
+      showToast("更新に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    refreshCardBtn.disabled = false;
+    refreshCardBtn.textContent = "カード登録状況を更新";
+  }
+});
+
+/* ---------- 全体描画・ログイン ---------- */
+function renderOverview(data){
+  lastOverviewData = data;
+  document.getElementById("basicCapacityText").textContent = data.basicCapacity;
+  renderApprovalBanner(data.approvals, data.today);
+  renderTeachers(data.teachers || []);
+  renderTemplate(data);
+  renderUpcoming(data.upcoming || [], data.today);
 }
 
 async function tryLogin(pw){
   loginBtn.disabled = true;
   loginBtn.textContent = "確認中…";
-  loginError.style.display = "none";
-  const loginLoadingOverlay = document.getElementById("loginLoadingOverlay");
-  loginLoadingOverlay.classList.add("show");
-
   try {
-    const [athleteOk, generalOk] = await Promise.all([
-      checkPassword_(ATHLETE_ENDPOINT, pw),
-      checkPassword_(GENERAL_ENDPOINT, pw),
-    ]);
-
-    if (!athleteOk && !generalOk){
-      loginError.textContent = "パスワードが違います";
+    const data = await fetchOverview(pw);
+    if (data.error){
       loginError.style.display = "block";
       return;
     }
-    if (!athleteOk || !generalOk){
-      // 片方だけ通った場合は、選手用・一般用でパスワードがずれている可能性が高いので知らせる
-      loginError.textContent = (athleteOk ? "一般用" : "選手用") + "側のパスワードが一致していないようです。両方のスクリプトプロパティのSTAFF_PASSWORDをご確認ください。";
-      loginError.style.display = "block";
-      // 通った方だけでも見られるようにはしておく
-    }
-
-    try { sessionStorage.setItem("unifiedStaffPassword", pw); } catch (e) {}
+    password = pw;
+    try { sessionStorage.setItem("staffPasswordGeneral", pw); } catch (e) {}
     loginView.style.display = "none";
-    systemTabs.classList.add("show");
-
-    const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
-    iframes.athlete.src = `${ATHLETE_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
-    iframes.general.src = `${GENERAL_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
-    iframes.athlete.addEventListener("load", () => { loadings.athlete.style.display = "none"; }, { once: true });
-    iframes.general.addEventListener("load", () => { loadings.general.style.display = "none"; }, { once: true });
-
+    mainView.style.display = "block";
+    renderOverview(data);
+    fetchBillingList();
   } catch (err){
     console.error(err);
     loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
@@ -232,11 +1177,11 @@ async function tryLogin(pw){
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = "ログイン";
-    loginLoadingOverlay.classList.remove("show");
   }
 }
 
 loginBtn.addEventListener("click", () => {
+  loginError.style.display = "none";
   const pw = passwordInput.value.trim();
   if (!pw) return;
   tryLogin(pw);
@@ -245,18 +1190,17 @@ passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loginBtn.click();
 });
 
-document.querySelectorAll(".system-tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".system-tab-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === btn.dataset.system));
-  });
-});
-
-// 前回ログイン済みならパスワード入力を省略
+// 統合スタッフ画面(親ページ)からiframeとして開かれた場合は、
+// URLの ?pw=... を使って自動ログインする
 (function start(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromParent = urlParams.get("pw");
+  if (fromParent){
+    tryLogin(fromParent);
+    return;
+  }
   let saved = "";
-  try { saved = sessionStorage.getItem("unifiedStaffPassword") || ""; } catch (e) {}
+  try { saved = sessionStorage.getItem("staffPasswordGeneral") || ""; } catch (e) {}
   if (saved) tryLogin(saved);
 })();
 </script>
