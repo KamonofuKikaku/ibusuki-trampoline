@@ -53,7 +53,65 @@
 
   .iframe-loading {
     position: absolute; inset: 0; background: var(--cream); display: flex; align-items: center; justify-content: center;
-    font-size: 13px; color: var(--ink-soft); font-weight: 700;
+    font-size: 13px; color: var(--ink-soft); font-weight: 700; z-index: 5;
+  }
+  .iframe-loading .dino-img, .iframe-loading .tramp-mat,
+  .iframe-loading .tramp-shadow, .iframe-loading .burst { animation-play-state: running; }
+
+  /* ---------- login loading overlay (dino) ---------- */
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.75); z-index: 60; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .loading-overlay.show { opacity: 1; pointer-events: auto; }
+  .loading-overlay.show .dino-img, .loading-overlay.show .tramp-mat,
+  .loading-overlay.show .tramp-shadow, .loading-overlay.show .burst { animation-play-state: running; }
+
+  .loading-mascot { display: flex; flex-direction: column; align-items: center; }
+  .loading-text { margin-top: 2px; font-family: "Zen Maru Gothic", sans-serif; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dino-scene { position: relative; width: 130px; height: 160px; }
+  .tramp-shadow { position: absolute; left: 50%; bottom: 26px; width: 96px; height: 14px; margin-left: -48px; border-radius: 50%; background: rgba(43, 35, 32, 0.12); }
+  .tramp-mat {
+    position: absolute; left: 50%; bottom: 28px; width: 92px; height: 22px; margin-left: -46px;
+    border-radius: 50%; background: #5C7FA6; border: 3px solid #3E5C7C; transform-origin: center;
+    animation: matSquish 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 2;
+  }
+  .tramp-leg { position: absolute; bottom: 6px; width: 4px; height: 26px; background: #B99E7A; border-radius: 2px; z-index: 1; }
+  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
+  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
+  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
+  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
+  .dino-img {
+    position: absolute; left: 50%; bottom: 34px; width: 64px; margin-left: -32px; transform-origin: 50% 100%;
+    animation: dinoBounce 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 3;
+  }
+  .burst {
+    position: absolute; left: 50%; bottom: 40px; width: 5px; height: 32px; border-radius: 3px;
+    background: #FFB648; opacity: 0; animation: burstFlash 0.9s ease-in-out infinite; animation-play-state: paused;
+  }
+  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
+  .burst-c { margin-left: -2.5px; background: #FFE07A; }
+  .burst-r { margin-left: 20px; transform: rotate(24deg); }
+
+  @keyframes dinoBounce {
+    0%   { transform: translateY(0) scaleY(1); }
+    35%  { transform: translateY(-42px) scaleY(1.03); }
+    62%  { transform: translateY(0) scaleY(0.9); }
+    76%  { transform: translateY(3px) scaleY(0.86); }
+    100% { transform: translateY(0) scaleY(1); }
+  }
+  @keyframes matSquish {
+    0%   { transform: scaleX(1) scaleY(1); }
+    58%  { transform: scaleX(1) scaleY(1); }
+    70%  { transform: scaleX(1.12) scaleY(0.55); }
+    84%  { transform: scaleX(1) scaleY(1); }
+    100% { transform: scaleX(1) scaleY(1); }
+  }
+  @keyframes burstFlash {
+    0%, 54% { opacity: 0; }
+    66%     { opacity: 1; }
+    84%, 100% { opacity: 0; }
   }
 </style>
 </head>
@@ -77,12 +135,62 @@
   </div>
 
   <div class="iframe-wrap show" id="wrap-athlete">
-    <div class="iframe-loading" id="loading-athlete">じゅんびちゅう…</div>
+    <div class="iframe-loading" id="loading-athlete">
+      <div class="loading-mascot">
+        <div class="dino-scene">
+          <div class="tramp-shadow"></div>
+          <div class="burst burst-l"></div>
+          <div class="burst burst-c"></div>
+          <div class="burst burst-r"></div>
+          <div class="tramp-leg tramp-leg-l1"></div>
+          <div class="tramp-leg tramp-leg-l2"></div>
+          <div class="tramp-leg tramp-leg-r1"></div>
+          <div class="tramp-leg tramp-leg-r2"></div>
+          <div class="tramp-mat"></div>
+          <img src="dino.png" class="dino-img" alt="">
+        </div>
+        <div class="loading-text">じゅんびちゅう…</div>
+      </div>
+    </div>
     <iframe id="iframe-athlete" title="選手用スタッフ管理"></iframe>
   </div>
   <div class="iframe-wrap" id="wrap-general">
-    <div class="iframe-loading" id="loading-general">じゅんびちゅう…</div>
+    <div class="iframe-loading" id="loading-general">
+      <div class="loading-mascot">
+        <div class="dino-scene">
+          <div class="tramp-shadow"></div>
+          <div class="burst burst-l"></div>
+          <div class="burst burst-c"></div>
+          <div class="burst burst-r"></div>
+          <div class="tramp-leg tramp-leg-l1"></div>
+          <div class="tramp-leg tramp-leg-l2"></div>
+          <div class="tramp-leg tramp-leg-r1"></div>
+          <div class="tramp-leg tramp-leg-r2"></div>
+          <div class="tramp-mat"></div>
+          <img src="dino.png" class="dino-img" alt="">
+        </div>
+        <div class="loading-text">じゅんびちゅう…</div>
+      </div>
+    </div>
     <iframe id="iframe-general" title="一般用スタッフ管理"></iframe>
+  </div>
+
+  <div class="loading-overlay" id="loginLoadingOverlay">
+    <div class="loading-mascot">
+      <div class="dino-scene">
+        <div class="tramp-shadow"></div>
+        <div class="burst burst-l"></div>
+        <div class="burst burst-c"></div>
+        <div class="burst burst-r"></div>
+        <div class="tramp-leg tramp-leg-l1"></div>
+        <div class="tramp-leg tramp-leg-l2"></div>
+        <div class="tramp-leg tramp-leg-r1"></div>
+        <div class="tramp-leg tramp-leg-r2"></div>
+        <div class="tramp-mat"></div>
+        <img src="dino.png" class="dino-img" alt="">
+      </div>
+      <div class="loading-text">確認中…</div>
+    </div>
   </div>
 </div>
 
@@ -120,6 +228,8 @@ async function tryLogin(pw){
   loginBtn.disabled = true;
   loginBtn.textContent = "確認中…";
   loginError.style.display = "none";
+  const loginLoadingOverlay = document.getElementById("loginLoadingOverlay");
+  loginLoadingOverlay.classList.add("show");
 
   try {
     const [athleteOk, generalOk] = await Promise.all([
@@ -143,11 +253,10 @@ async function tryLogin(pw){
     loginView.style.display = "none";
     systemTabs.classList.add("show");
 
-    const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
-    iframes.athlete.src = `${ATHLETE_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
-    iframes.general.src = `${GENERAL_PAGE}?pw=${encodeURIComponent(pw)}&cb=${cacheBust}`;
-    iframes.athlete.addEventListener("load", () => { loadings.athlete.style.display = "none"; }, { once: true });
-    iframes.general.addEventListener("load", () => { loadings.general.style.display = "none"; }, { once: true });
+    // 最初に見えているタブ（選手用）だけ即読み込み。一般用は初めて切り替えた時に読み込む
+    // （両方同時に読み込むと、片方しか見ていなくても待たされるため）
+    currentPassword = pw;
+    loadIframe_("athlete");
 
   } catch (err){
     console.error(err);
@@ -156,7 +265,20 @@ async function tryLogin(pw){
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = "ログイン";
+    loginLoadingOverlay.classList.remove("show");
   }
+}
+
+let currentPassword = "";
+const loadedIframes = { athlete: false, general: false };
+const PAGE_BY_SYSTEM = { athlete: ATHLETE_PAGE, general: GENERAL_PAGE };
+
+function loadIframe_(system){
+  if (loadedIframes[system] || !currentPassword) return;
+  loadedIframes[system] = true;
+  const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
+  iframes[system].src = `${PAGE_BY_SYSTEM[system]}?pw=${encodeURIComponent(currentPassword)}&cb=${cacheBust}`;
+  iframes[system].addEventListener("load", () => { loadings[system].style.display = "none"; }, { once: true });
 }
 
 loginBtn.addEventListener("click", () => {
@@ -173,6 +295,7 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
     document.querySelectorAll(".system-tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === btn.dataset.system));
+    loadIframe_(btn.dataset.system);
   });
 });
 
