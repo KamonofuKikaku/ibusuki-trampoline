@@ -134,7 +134,7 @@
     <button class="system-tab-btn" data-system="general">一般用</button>
   </div>
 
-  <div class="iframe-wrap show" id="wrap-athlete">
+  <div class="iframe-wrap" id="wrap-athlete">
     <div class="iframe-loading" id="loading-athlete">
       <div class="loading-mascot">
         <div class="dino-scene">
@@ -252,6 +252,7 @@ async function tryLogin(pw){
     try { sessionStorage.setItem("unifiedStaffPassword", pw); } catch (e) {}
     loginView.style.display = "none";
     systemTabs.classList.add("show");
+    wraps.athlete.classList.add("show"); // ログイン成功後に初めて選手用タブを表示する
 
     // 最初に見えているタブ（選手用）だけ即読み込み。一般用は初めて切り替えた時に読み込む
     // （両方同時に読み込むと、片方しか見ていなくても待たされるため）
