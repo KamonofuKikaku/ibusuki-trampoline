@@ -908,8 +908,8 @@ deleteBlockBtn.addEventListener("click", async () => {
     if (result.success){
       showToast("削除しました");
       closeBlockModal();
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
+      patchLocalSlot_(editingBlockDate, editingBlockOldStart, null); // 削除も手元のデータから即座に反映
+      renderTemplate(lastOverviewData);
     } else {
       showToast("削除に失敗しました");
     }
@@ -920,6 +920,23 @@ deleteBlockBtn.addEventListener("click", async () => {
     deleteBlockBtn.disabled = false;
   }
 });
+
+// サーバーに保存できたコマの内容を、手元のデータ(lastOverviewData)にもその場で反映する
+// （保存のたびに全データを読み直すと遅いので、見た目だけ即座に更新する）
+function patchLocalSlot_(dateStr, oldStart, newSlot){
+  if (!lastOverviewData) return;
+  if (!lastOverviewData.upcoming) lastOverviewData.upcoming = [];
+  let dateEntry = lastOverviewData.upcoming.find(d => d.date === dateStr);
+  if (!dateEntry){
+    dateEntry = { date: dateStr, slots: [] };
+    lastOverviewData.upcoming.push(dateEntry);
+  }
+  if (oldStart){
+    const idx = dateEntry.slots.findIndex(s => s.time === oldStart);
+    if (idx !== -1) dateEntry.slots.splice(idx, 1);
+  }
+  if (newSlot) dateEntry.slots.push(newSlot);
+}
 
 confirmBlockBtn.addEventListener("click", async () => {
   const start = blockStartInput.value;
@@ -971,8 +988,21 @@ confirmBlockBtn.addEventListener("click", async () => {
       lastUsedTeacherDisplayName = teacher;
       showToast(editingBlockOldStart ? "変更しました" : "追加しました");
       closeBlockModal();
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
+
+      // 保存前に持っていた予約人数・予約者一覧があれば引き継ぎ、無ければ新規(0件)として扱う
+      let existingBooked = 0, existingEntries = [];
+      if (editingBlockOldStart && lastOverviewData && lastOverviewData.upcoming){
+        const dateEntry = lastOverviewData.upcoming.find(d => d.date === editingBlockDate);
+        const oldSlot = dateEntry && dateEntry.slots.find(s => s.time === editingBlockOldStart);
+        if (oldSlot){ existingBooked = oldSlot.booked || 0; existingEntries = oldSlot.entries || []; }
+      }
+      const effectiveCapacity = capacityValue === "" ? (lastOverviewData.basicCapacity || 6) : Number(capacityValue);
+      const remain = effectiveCapacity - existingBooked;
+      patchLocalSlot_(editingBlockDate, editingBlockOldStart, {
+        time: start, endTime: end, teacher: teacher, capacity: effectiveCapacity,
+        booked: existingBooked, remain: remain, full: remain <= 0, entries: existingEntries,
+      });
+      renderTemplate(lastOverviewData); // 手元のデータだけで即座に再描画(通信を待たない)
       if (wasAdd) openPresetSavePrompt(start, end, teacher, capacityValue);
     } else if (result.reason === "duplicate_start"){
       showToast("その開始時刻にはすでに別の予定があります");
