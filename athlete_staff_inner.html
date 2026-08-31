@@ -1625,6 +1625,7 @@ async function tryLogin(pw){
     mainView.style.display = "block";
     renderOverview(data);
     fetchBillingList();
+    try { window.parent.postMessage({ type: "innerPageReady", system: "athlete" }, "*"); } catch (e) {}
   } catch (err){
     console.error(err);
     loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
