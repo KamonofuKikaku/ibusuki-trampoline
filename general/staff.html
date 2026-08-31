@@ -599,10 +599,8 @@ function computeCalendarRange_(athleteHours){
   let hasAny = false;
 
   currentUpcoming.forEach(dateItem => {
-    const [y, m, d] = dateItem.date.split("-").map(Number);
-    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
-    const ref = athleteHours[wdJp];
-    if (ref){
+    const ref = athleteHours[dateItem.date];
+    if (ref && !ref.closed){
       const s = timeStrToMinutes_(ref.start);
       const e = timeStrToMinutes_(ref.end);
       if (s !== null && e !== null && e > s){
@@ -637,9 +635,7 @@ function renderCalendar(athleteHours){
 
   // 各日付ごとの営業時間範囲（無ければ制限なし=常にタップ可能）
   const dateRanges = currentUpcoming.map(dateItem => {
-    const [y, m, d] = dateItem.date.split("-").map(Number);
-    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
-    const ref = athleteHours[wdJp];
+    const ref = athleteHours[dateItem.date];
     if (!ref || ref.closed) return null;
     const s = timeStrToMinutes_(ref.start);
     const e = timeStrToMinutes_(ref.end);
@@ -648,9 +644,7 @@ function renderCalendar(athleteHours){
 
   // 各日付ごとに、選手用が「休館」の日かどうか(＝施設自体が休みの日)
   const dateClosed = currentUpcoming.map(dateItem => {
-    const [y, m, d] = dateItem.date.split("-").map(Number);
-    const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
-    const ref = athleteHours[wdJp];
+    const ref = athleteHours[dateItem.date];
     return !!(ref && ref.closed);
   });
 
@@ -857,12 +851,13 @@ confirmBlockBtn.addEventListener("click", async () => {
     return;
   }
 
-  // 選手用の営業時間（＝選手が使用中の時間）と重なっていないか確認する
+  // 選手用の営業時間（＝選手が使用中の時間、または休館日）と重なっていないか確認する
   const athleteHours = (lastOverviewData && lastOverviewData.athleteHours) || {};
-  const [y, m, d] = editingBlockDate.split("-").map(Number);
-  const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
-  const athRange = athleteHours[wdJp];
-  if (athRange){
+  const athRange = athleteHours[editingBlockDate];
+  if (athRange && athRange.closed){
+    const ok = window.confirm("選手用の休館日になっています。このまま保存しますか？");
+    if (!ok) return;
+  } else if (athRange){
     const s = timeStrToMinutes_(start);
     const e = timeStrToMinutes_(end);
     const athS = timeStrToMinutes_(athRange.start);
