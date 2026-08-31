@@ -105,12 +105,22 @@
 
   .mini-slots { display: flex; flex-direction: column; gap: 2px; width: 100%; margin-top: 3px; padding: 0 2px; }
   .mini-slot {
-    font-size: 8.5px; font-weight: 700; line-height: 1.5; border-radius: 5px; padding: 0 0 1px;
-    text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 8.5px; font-weight: 700; line-height: 1.5; border-radius: 6px; padding: 1px 2px 1px 5px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .mini-slot .ms-time { overflow: hidden; text-overflow: ellipsis; }
+  .mini-slot .ms-count {
+    flex-shrink: 0; width: 13px; height: 13px; border-radius: 50%; margin-left: 3px;
+    font-size: 7.5px; font-weight: 900; color: var(--white);
+    display: flex; align-items: center; justify-content: center;
   }
   .mini-slot.avail { background: var(--mint-soft); color: var(--mint); }
+  .mini-slot.avail .ms-count { background: var(--mint); }
   .mini-slot.full { background: var(--gray-full); color: var(--gray-full-text); }
+  .mini-slot.full .ms-count { background: var(--gray-full-text); }
   .mini-slot.booked { background: var(--booked-soft); color: var(--booked); }
+  .mini-slot.booked .ms-count { background: var(--booked); }
 
   .day-full-badge {
     margin-top: 3px; padding: 1px 4px; border-radius: 6px; background: var(--danger-soft);
@@ -486,13 +496,6 @@ function dayStatus(key){
   };
 }
 
-// 空き枠数を丸数字(①②③...)で表示するための変換
-const CIRCLED_NUMS = ["⓪","①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
-function circleNum_(n){
-  if (n >= 0 && n < CIRCLED_NUMS.length) return CIRCLED_NUMS[n];
-  return "(" + n + ")";
-}
-
 // 指定した年月に、今日以降で1件でも空きコマがある日が含まれているか
 function monthHasAvailability_(year, month){
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -644,7 +647,8 @@ function renderMonth(){
           const chip = document.createElement("div");
           const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
           chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
-          chip.textContent = slot.time + " " + circleNum_(slot.full ? 0 : slot.remain);
+          const remainCount = slot.full ? 0 : slot.remain;
+          chip.innerHTML = `<span class="ms-time">${slot.time}</span><span class="ms-count">${remainCount}</span>`;
           miniWrap.appendChild(chip);
         });
         cell.appendChild(miniWrap);
