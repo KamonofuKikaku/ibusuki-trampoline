@@ -90,10 +90,11 @@
 
   .day-cell {
     position: relative; display: flex; flex-direction: column;
-    align-items: center; justify-content: flex-start; gap: 0; padding-top: 2px; padding-bottom: 4px;
-    min-height: 94px;
+    align-items: center; justify-content: flex-start; gap: 0; padding: 4px 3px 5px;
+    min-height: 94px; border-radius: 12px; border: 1.5px solid var(--mint-soft);
+    box-sizing: border-box;
   }
-  .day-cell.empty { visibility: hidden; }
+  .day-cell.empty { visibility: hidden; border-color: transparent; }
 
   .day-btn {
     position: relative; width: 74%; aspect-ratio: 1 / 1; border: none; margin: 0 auto;
