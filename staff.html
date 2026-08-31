@@ -240,6 +240,7 @@ async function tryLogin(pw){
     if (!athleteOk && !generalOk){
       loginError.textContent = "パスワードが違います";
       loginError.style.display = "block";
+      loginLoadingOverlay.classList.remove("show"); // ログイン失敗時はここで消す
       return;
     }
     if (!athleteOk || !generalOk){
@@ -256,6 +257,7 @@ async function tryLogin(pw){
 
     // 最初に見えているタブ（選手用）だけ即読み込み。一般用は初めて切り替えた時に読み込む
     // （両方同時に読み込むと、片方しか見ていなくても待たされるため）
+    // 恐竜は、このiframeが実際に読み込み終わるまで消さない（ここではまだ消さない）
     currentPassword = pw;
     loadIframe_("athlete");
 
@@ -263,10 +265,10 @@ async function tryLogin(pw){
     console.error(err);
     loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
     loginError.style.display = "block";
+    loginLoadingOverlay.classList.remove("show"); // 通信失敗時もここで消す
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = "ログイン";
-    loginLoadingOverlay.classList.remove("show");
   }
 }
 
@@ -279,7 +281,11 @@ function loadIframe_(system){
   loadedIframes[system] = true;
   const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
   iframes[system].src = `${PAGE_BY_SYSTEM[system]}?pw=${encodeURIComponent(currentPassword)}&cb=${cacheBust}`;
-  iframes[system].addEventListener("load", () => { loadings[system].style.display = "none"; }, { once: true });
+  iframes[system].addEventListener("load", () => {
+    loadings[system].style.display = "none";
+    // 実際に届いた（ページに到着した）タイミングで、ログイン時の恐竜も消す
+    document.getElementById("loginLoadingOverlay").classList.remove("show");
+  }, { once: true });
 }
 
 loginBtn.addEventListener("click", () => {
