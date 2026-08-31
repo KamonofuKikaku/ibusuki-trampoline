@@ -117,7 +117,7 @@
   }
   .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; background: var(--white); }
   .cal-empty-cell:active { background: var(--orange-soft); }
-  .cal-closed-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, #EDE6D8, #EDE6D8 4px, #E4DCCB 4px, #E4DCCB 8px); }
+  .cal-closed-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, #EDE6D8, #EDE6D8 4px, #E4DCCB 4px, #E4DCCB 8px); cursor: pointer; }
   .cal-holiday-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, var(--danger-soft), var(--danger-soft) 4px, #F7C9BF 4px, #F7C9BF 8px); }
   .cal-block-cell {
     background: var(--mint); color: var(--white); font-weight: 700; padding: 3px 2px;
@@ -729,12 +729,8 @@ function renderCalendar(athleteHours){
         const dr = dateRanges[colIdx];
         const inAthleteHours = dr && (t >= dr.start && t < dr.end); // 選手用が使用中の時間帯
         const td = document.createElement("td");
-        if (inAthleteHours){
-          td.className = "cal-closed-cell";
-        } else {
-          td.className = "cal-empty-cell";
-          td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
-        }
+        td.className = inAthleteHours ? "cal-closed-cell" : "cal-empty-cell";
+        td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
         row.appendChild(td);
       }
     });
