@@ -543,8 +543,14 @@ let editingBlockDate = null;    // 編集中の日付("2026-08-10")。null=新�
 let editingBlockOldStart = null; // 編集中ブロックの元の開始時刻。null=新規追加モード
 let lastUsedTeacherDisplayName = "";
 
+// "HH:MM"以外の想定外の値が来ても落ちないよう、パースできなければnullを返す
 function timeStrToMinutes_(t){
-  const [h, m] = t.split(":").map(Number);
+  if (typeof t !== "string") return null;
+  const m2 = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!m2) return null;
+  const h = Number(m2[1]);
+  const m = Number(m2[2]);
+  if (isNaN(h) || isNaN(m)) return null;
   return h * 60 + m;
 }
 function minutesToTimeStr_(mins){
@@ -585,8 +591,10 @@ function renderTemplate(data){
 // 全ての表示日のうち、一番長い範囲(選手用の営業時間 or 実際のブロック)をベースに、
 // カレンダー全体で共通の縦軸(時間の行)を決める
 function computeCalendarRange_(athleteHours){
-  let rangeStart = timeStrToMinutes_("10:00");
-  let rangeEnd = timeStrToMinutes_("21:00");
+  const DEFAULT_START = timeStrToMinutes_("10:00");
+  const DEFAULT_END = timeStrToMinutes_("21:00");
+  let rangeStart = DEFAULT_START;
+  let rangeEnd = DEFAULT_END;
   let hasAny = false;
 
   currentUpcoming.forEach(dateItem => {
@@ -594,18 +602,26 @@ function computeCalendarRange_(athleteHours){
     const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
     const ref = athleteHours[wdJp];
     if (ref){
-      rangeStart = Math.min(rangeStart, timeStrToMinutes_(ref.start));
-      rangeEnd = Math.max(rangeEnd, timeStrToMinutes_(ref.end));
-      hasAny = true;
+      const s = timeStrToMinutes_(ref.start);
+      const e = timeStrToMinutes_(ref.end);
+      if (s !== null && e !== null && e > s){
+        rangeStart = Math.min(rangeStart, s);
+        rangeEnd = Math.max(rangeEnd, e);
+        hasAny = true;
+      }
     }
     (dateItem.slots || []).forEach(slot => {
-      rangeStart = Math.min(rangeStart, timeStrToMinutes_(slot.time));
-      rangeEnd = Math.max(rangeEnd, timeStrToMinutes_(slot.endTime));
-      hasAny = true;
+      const s = timeStrToMinutes_(slot.time);
+      const e = timeStrToMinutes_(slot.endTime);
+      if (s !== null && e !== null && e > s){
+        rangeStart = Math.min(rangeStart, s);
+        rangeEnd = Math.max(rangeEnd, e);
+        hasAny = true;
+      }
     });
   });
 
-  if (!hasAny) return { start: timeStrToMinutes_("10:00"), end: timeStrToMinutes_("21:00") };
+  if (!hasAny || rangeEnd <= rangeStart) return { start: DEFAULT_START, end: DEFAULT_END };
   return { start: rangeStart, end: rangeEnd };
 }
 
@@ -623,18 +639,24 @@ function renderCalendar(athleteHours){
     const [y, m, d] = dateItem.date.split("-").map(Number);
     const wdJp = ["月","火","水","木","金","土","日"][( new Date(y, m - 1, d).getDay() + 6) % 7];
     const ref = athleteHours[wdJp];
-    return ref ? { start: timeStrToMinutes_(ref.start), end: timeStrToMinutes_(ref.end) } : null;
+    if (!ref) return null;
+    const s = timeStrToMinutes_(ref.start);
+    const e = timeStrToMinutes_(ref.end);
+    return (s !== null && e !== null && e > s) ? { start: s, end: e } : null;
   });
 
-  // 見出し行：日付
-  const headRow = document.createElement("tr");
-  headRow.appendChild(document.createElement("th"));
-  currentUpcoming.forEach(dateItem => {
-    const th = document.createElement("th");
-    th.textContent = formatCalDateLabel_(dateItem.date);
-    headRow.appendChild(th);
-  });
-  table.appendChild(headRow);
+  // 見出し行：日付（スクロールしても分かるよう、上下両方に置く）
+  function buildDateHeaderRow(){
+    const headRow = document.createElement("tr");
+    headRow.appendChild(document.createElement("th"));
+    currentUpcoming.forEach(dateItem => {
+      const th = document.createElement("th");
+      th.textContent = formatCalDateLabel_(dateItem.date);
+      headRow.appendChild(th);
+    });
+    return headRow;
+  }
+  table.appendChild(buildDateHeaderRow());
 
   // 各日付列ごとに、あとN行分は前の行のブロックでrowspan済み、をカウントしておく
   const skipCounts = currentUpcoming.map(() => 0);
@@ -678,6 +700,8 @@ function renderCalendar(athleteHours){
 
     table.appendChild(row);
   }
+
+  table.appendChild(buildDateHeaderRow());
 }
 
 // slot: 既存ブロック(編集モード) / null(追加モード)、startHint: 追加モードでタップした開始時刻
