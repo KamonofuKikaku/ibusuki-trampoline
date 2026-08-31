@@ -70,7 +70,8 @@
   .legend .dot.ok { background: var(--mint); }
   .legend .dot.low { background: var(--orange); }
   .legend .dot.full { background: var(--danger); }
-  .legend .dot.off { background: var(--danger); }
+  .legend .dot.off { background: var(--gray-full-text); }
+  .legend .dot.holiday { background: var(--danger); }
   .legend .dot.mint { background: var(--booked); }
 
   /* ---------- calendar grid ---------- */
@@ -128,6 +129,8 @@
   .day-btn.full .avail-ring { background: var(--danger-soft); opacity: 1; }
   .day-btn.off .day-num { color: var(--gray-full-text); }
   .day-btn.off .avail-ring { background: var(--gray-full); opacity: 0.5; }
+  .day-btn.holiday .day-num { color: var(--danger); }
+  .day-btn.holiday .avail-ring { background: var(--danger-soft); opacity: 0.7; }
 
   .day-btn.has-booking .stamp path { fill: var(--booked); }
   .day-btn.has-booking.has-selection .stamp path { fill: var(--orange); } /* 予約済み+選択中が混在する日 */
@@ -302,7 +305,8 @@
   <div class="legend">
     <span><span class="dot ok"></span>空きあり</span>
     <span><span class="dot full"></span>満員</span>
-    <span><span class="dot off"></span>定休</span>
+    <span><span class="dot off"></span>コマなし</span>
+    <span><span class="dot holiday"></span>休館</span>
     <span><span class="dot mint"></span>予約済み</span>
   </div>
 
@@ -381,6 +385,7 @@ let liffProfile = null;        // { userId, displayName }
 let availabilityMap = {};      // { "2026-08-10": [{time,teacher,capacity,remain,full}] }
 let bookedMap = {};             // { "2026-08-10": Set(["16:00", ...]) } すでに予約済みのコマ
 let selectedMap = {};           // { "2026-08-10": Set(["17:00", ...]) } まだ送信していない選択中のコマ
+let closedDateSet = new Set();  // 選手用が「休館」の日付("2026-08-10"形式)の集合
 let openSheetDate = null;       // 現在シートを開いている日付("2026-08-10")
 
 async function initLiff(){
@@ -424,7 +429,11 @@ async function fetchAvailability(){
     const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=availability`);
     availabilityMap = {};
     (data.dates || []).forEach(d => { availabilityMap[d.date] = d.slots || []; });
-    try { localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap)); } catch (e) {}
+    closedDateSet = new Set(data.closedDates || []);
+    try {
+      localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap));
+      localStorage.setItem("cachedClosedDates", JSON.stringify(Array.from(closedDateSet)));
+    } catch (e) {}
   } catch (err){
     console.error("availability fetch failed", err);
     showToast("空き状況の取得に失敗しました");
@@ -457,6 +466,9 @@ function dayStatus(key){
   const hasBooking = !!(bookedMap[key] && bookedMap[key].size > 0);
   const hasSelection = !!(selectedMap[key] && selectedMap[key].size > 0);
 
+  if (closedDateSet.has(key)){
+    return { kind: "holiday", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
+  }
   if (!slots || slots.length === 0){
     return { kind: "off", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
   }
@@ -541,7 +553,7 @@ function renderMonth(){
     const cell = document.createElement("div");
     cell.className = "day-cell";
     if (isPast) cell.classList.add("is-past");
-    if (st.kind === "off") cell.classList.add("is-off");
+    if (st.kind === "off" || st.kind === "holiday") cell.classList.add("is-off");
 
     const btn = document.createElement("button");
     btn.className = "day-btn";
@@ -549,6 +561,7 @@ function renderMonth(){
     if (isPast) btn.classList.add("past");
     if (st.kind === "full") btn.classList.add("full");
     if (st.kind === "off") btn.classList.add("off");
+    if (st.kind === "holiday") btn.classList.add("holiday");
     if (st.hasBooking) btn.classList.add("has-booking");
     if (st.hasSelection) btn.classList.add("has-selection");
 
@@ -566,17 +579,22 @@ function renderMonth(){
     num.textContent = day;
     btn.appendChild(num);
 
-    if (!isPast && st.kind !== "off"){
+    if (!isPast && st.kind !== "off" && st.kind !== "holiday"){
       btn.addEventListener("click", () => openSlotSheet(key));
-    } else if (!isPast && st.kind === "off" && st.hasBooking){
-      // 通常は定休だが、代講都合等で既存の予約が残っているような例外ケースの保険
+    } else if (!isPast && (st.kind === "off" || st.kind === "holiday") && st.hasBooking){
+      // 通常はコマ無し/休館だが、代講都合等で既存の予約が残っているような例外ケースの保険
       btn.addEventListener("click", () => openSlotSheet(key));
     }
 
     cell.appendChild(btn);
 
     if (!isPast){
-      if (st.kind === "full"){
+      if (st.kind === "holiday"){
+        const holidayBadge = document.createElement("div");
+        holidayBadge.className = "day-full-badge";
+        holidayBadge.textContent = "休館";
+        cell.appendChild(holidayBadge);
+      } else if (st.kind === "full"){
         const fullBadge = document.createElement("div");
         fullBadge.className = "day-full-badge";
         fullBadge.textContent = "満員";
@@ -876,6 +894,10 @@ submitBtn.addEventListener("click", async () => {
   try {
     const cachedAvail = localStorage.getItem("cachedAvailability");
     if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
+  } catch (e) {}
+  try {
+    const cachedClosed = localStorage.getItem("cachedClosedDates");
+    if (cachedClosed) closedDateSet = new Set(JSON.parse(cachedClosed));
   } catch (e) {}
 
   renderMonth();
