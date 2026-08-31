@@ -87,6 +87,16 @@
   .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
   .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
   .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .preset-button-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .preset-btn {
+    flex: 1; min-width: 42px; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 900; font-size: 14px; padding: 8px 0; border-radius: 10px; position: relative;
+  }
+  .preset-btn .preset-del {
+    position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--danger); color: var(--white); font-size: 9px; line-height: 1; border: none;
+    display: flex; align-items: center; justify-content: center;
+  }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
   .modal-actions { display: flex; gap: 10px; }
   .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
@@ -253,16 +263,32 @@
       <label class="modal-field-label">予約者</label>
       <div id="blockEntriesList" class="block-entries-list"></div>
     </div>
+    <div id="presetButtonsSection" style="display:none;">
+      <label class="modal-field-label">よく使う内容から選ぶ</label>
+      <div class="preset-button-row" id="presetButtonRow"></div>
+    </div>
     <label class="modal-field-label">開始時刻</label>
     <input type="time" id="blockStartInput" step="900" />
     <label class="modal-field-label">終了時刻</label>
     <input type="time" id="blockEndInput" step="900" />
     <label class="modal-field-label">担当講師</label>
     <select id="blockTeacherSelect"></select>
+    <label class="modal-field-label">定員（空欄=基本定員）</label>
+    <input type="number" id="blockCapacityInput" min="1" placeholder="例：6" />
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelBlockBtn">キャンセル</button>
       <button class="modal-cancel" id="deleteBlockBtn" style="display:none; background: var(--danger-soft); color: var(--danger);">削除</button>
       <button class="modal-confirm" id="confirmBlockBtn">追加する</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="presetSaveModalOverlay"></div>
+  <div class="modal-box" id="presetSaveModal">
+    <div class="modal-title">この内容を登録しますか？</div>
+    <div class="modal-field-label" style="margin-bottom:14px;">よく使う内容として登録しておくと、次回から「よく使う内容から選ぶ」でワンタップで呼び出せます（最大5件）。</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="skipPresetSaveBtn">登録しない</button>
+      <button class="modal-confirm" id="confirmPresetSaveBtn">登録する</button>
     </div>
   </div>
 </div>
@@ -535,6 +561,7 @@ const blockModalTitle = document.getElementById("blockModalTitle");
 const blockStartInput = document.getElementById("blockStartInput");
 const blockEndInput = document.getElementById("blockEndInput");
 const blockTeacherSelect = document.getElementById("blockTeacherSelect");
+const blockCapacityInput = document.getElementById("blockCapacityInput");
 const cancelBlockBtn = document.getElementById("cancelBlockBtn");
 const deleteBlockBtn = document.getElementById("deleteBlockBtn");
 const confirmBlockBtn = document.getElementById("confirmBlockBtn");
@@ -719,6 +746,63 @@ function renderCalendar(athleteHours){
 }
 
 // slot: 既存ブロック(編集モード) / null(追加モード)、startHint: 追加モードでタップした開始時刻
+function renderPresetButtons(){
+  const presets = (lastOverviewData && lastOverviewData.blockPresets) || [];
+  const section = document.getElementById("presetButtonsSection");
+  const row = document.getElementById("presetButtonRow");
+  row.innerHTML = "";
+  if (!presets.length){
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "block";
+  presets.forEach(preset => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "preset-btn";
+    btn.textContent = preset.label;
+    btn.addEventListener("click", () => {
+      blockStartInput.value = preset.start;
+      blockEndInput.value = preset.end;
+      if (currentTeachers.some(t => t.displayName === preset.teacher)) blockTeacherSelect.value = preset.teacher;
+      blockCapacityInput.value = preset.capacity === "" || preset.capacity === undefined ? "" : preset.capacity;
+    });
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "preset-del";
+    del.textContent = "×";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!window.confirm(`プリセット「${preset.label}」を削除しますか？`)) return;
+      doDeleteBlockPreset(preset.label);
+    });
+    btn.appendChild(del);
+
+    row.appendChild(btn);
+  });
+}
+
+async function doDeleteBlockPreset(label){
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffDeleteBlockPreset", password: password, label: label }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`プリセット「${label}」を削除しました`);
+      if (lastOverviewData) lastOverviewData.blockPresets = result.presets;
+      renderPresetButtons();
+    } else {
+      showToast("削除に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+}
+
 function openBlockModal(dateStr, slot, startHint){
   editingBlockDate = dateStr;
 
@@ -730,6 +814,8 @@ function openBlockModal(dateStr, slot, startHint){
     blockTeacherSelect.appendChild(opt);
   });
 
+  renderPresetButtons();
+
   const blockEntriesSection = document.getElementById("blockEntriesSection");
   const blockEntriesList = document.getElementById("blockEntriesList");
 
@@ -739,6 +825,7 @@ function openBlockModal(dateStr, slot, startHint){
     blockStartInput.value = slot.time;
     blockEndInput.value = slot.endTime;
     blockTeacherSelect.value = slot.teacher;
+    blockCapacityInput.value = (slot.capacity === undefined || slot.capacity === "") ? "" : slot.capacity;
     deleteBlockBtn.style.display = "block";
     confirmBlockBtn.textContent = "変更する";
 
@@ -768,6 +855,7 @@ function openBlockModal(dateStr, slot, startHint){
     const start = startHint || "10:00";
     blockStartInput.value = start;
     blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60); // デフォルトは1時間後
+    blockCapacityInput.value = "";
     if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
       blockTeacherSelect.value = lastUsedTeacherDisplayName;
     }
@@ -870,11 +958,14 @@ confirmBlockBtn.addEventListener("click", async () => {
 
   confirmBlockBtn.disabled = true;
   confirmBlockBtn.textContent = "保存中…";
+  const wasAdd = !editingBlockOldStart; // 保存後にプリセット登録を聞くかどうかの判定に使う
+  const capacityValue = blockCapacityInput.value.trim();
   try {
     const action = editingBlockOldStart ? "staffUpdateDateBlock" : "staffAddDateBlock";
     const payload = {
       action: action, password: password,
       date: editingBlockDate, startTime: start, endTime: end, teacher: teacher,
+      capacity: capacityValue === "" ? "" : Number(capacityValue),
     };
     if (editingBlockOldStart) payload.oldStartTime = editingBlockOldStart;
 
@@ -886,6 +977,7 @@ confirmBlockBtn.addEventListener("click", async () => {
       closeBlockModal();
       const data = await fetchOverview(password);
       if (!data.error) renderOverview(data);
+      if (wasAdd) openPresetSavePrompt(start, end, teacher, capacityValue);
     } else if (result.reason === "duplicate_start"){
       showToast("その開始時刻にはすでに別の予定があります");
     } else {
@@ -897,6 +989,56 @@ confirmBlockBtn.addEventListener("click", async () => {
   } finally {
     confirmBlockBtn.disabled = false;
     confirmBlockBtn.textContent = editingBlockOldStart ? "変更する" : "追加する";
+  }
+});
+
+/* ---------- 担当ブロックのプリセット登録プロンプト ---------- */
+const presetSaveModalOverlay = document.getElementById("presetSaveModalOverlay");
+const presetSaveModal = document.getElementById("presetSaveModal");
+const skipPresetSaveBtn = document.getElementById("skipPresetSaveBtn");
+const confirmPresetSaveBtn = document.getElementById("confirmPresetSaveBtn");
+let pendingPresetBlock = null;
+
+function openPresetSavePrompt(start, end, teacher, capacityValue){
+  pendingPresetBlock = { start, end, teacher, capacity: capacityValue === "" ? "" : Number(capacityValue) };
+  presetSaveModalOverlay.classList.add("show");
+  presetSaveModal.classList.add("show");
+}
+function closePresetSavePrompt(){
+  presetSaveModalOverlay.classList.remove("show");
+  presetSaveModal.classList.remove("show");
+  pendingPresetBlock = null;
+}
+skipPresetSaveBtn.addEventListener("click", closePresetSavePrompt);
+presetSaveModalOverlay.addEventListener("click", closePresetSavePrompt);
+
+confirmPresetSaveBtn.addEventListener("click", async () => {
+  if (!pendingPresetBlock) { closePresetSavePrompt(); return; }
+  confirmPresetSaveBtn.disabled = true;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffSaveBlockPreset", password: password,
+        startTime: pendingPresetBlock.start, endTime: pendingPresetBlock.end,
+        teacher: pendingPresetBlock.teacher, capacity: pendingPresetBlock.capacity,
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast(`プリセット「${result.presets[result.presets.length - 1].label}」として登録しました`);
+      if (lastOverviewData) lastOverviewData.blockPresets = result.presets;
+    } else if (result.reason === "max_reached"){
+      showToast("プリセットは最大5件までです。不要なものを削除してから登録してください");
+    } else {
+      showToast("登録に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    confirmPresetSaveBtn.disabled = false;
+    closePresetSavePrompt();
   }
 });
 
