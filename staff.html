@@ -135,7 +135,7 @@
   </div>
 
   <div class="iframe-wrap" id="wrap-athlete">
-    <div class="iframe-loading" id="loading-athlete">
+    <div class="iframe-loading" id="loading-athlete" style="display:none;">
       <div class="loading-mascot">
         <div class="dino-scene">
           <div class="tramp-shadow"></div>
@@ -155,7 +155,7 @@
     <iframe id="iframe-athlete" title="選手用スタッフ管理"></iframe>
   </div>
   <div class="iframe-wrap" id="wrap-general">
-    <div class="iframe-loading" id="loading-general">
+    <div class="iframe-loading" id="loading-general" style="display:none;">
       <div class="loading-mascot">
         <div class="dino-scene">
           <div class="tramp-shadow"></div>
@@ -277,7 +277,11 @@ let currentPassword = "";
 const loadedIframes = { athlete: false, general: false };
 const PAGE_BY_SYSTEM = { athlete: ATHLETE_PAGE, general: GENERAL_PAGE };
 
+const pageReady = { athlete: false, general: false };
+
 function markPageReady_(system){
+  if (pageReady[system]) return;
+  pageReady[system] = true;
   loadings[system].style.display = "none";
   if (system === "athlete"){
     // ログイン直後に見えているのは選手用タブなので、恐竜はこちらの準備完了で消す
@@ -303,7 +307,7 @@ function loadIframe_(system){
   // 少し長めに待ってからでも最終的には消えるようにしておく
   iframes[system].addEventListener("load", () => {
     setTimeout(() => {
-      if (loadings[system].style.display !== "none") markPageReady_(system);
+      if (!pageReady[system]) markPageReady_(system);
     }, 8000);
   }, { once: true });
 }
@@ -326,9 +330,10 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
     loadIframe_(target);
 
     // すでに読み込み済みのタブに切り替える場合も、一瞬だけ恐竜を出しておく
-    // （切り替え直後の一瞬のちらつきが気にならないようにするため）
+    // （切り替え直後の一瞬のちらつきが気にならないようにするため。
+    //   まだ本当に読み込み中の場合はここでは何もせず、本来の合図を待つ）
     const loadingEl = loadings[target];
-    if (loadingEl.style.display === "none"){
+    if (pageReady[target]){
       loadingEl.style.display = "flex";
       setTimeout(() => { loadingEl.style.display = "none"; }, 350);
     }
