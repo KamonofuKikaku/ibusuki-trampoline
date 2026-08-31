@@ -277,17 +277,34 @@ let currentPassword = "";
 const loadedIframes = { athlete: false, general: false };
 const PAGE_BY_SYSTEM = { athlete: ATHLETE_PAGE, general: GENERAL_PAGE };
 
+function markPageReady_(system){
+  loadings[system].style.display = "none";
+  if (system === "athlete"){
+    // ログイン直後に見えているのは選手用タブなので、恐竜はこちらの準備完了で消す
+    document.getElementById("loginLoadingOverlay").classList.remove("show");
+  }
+}
+
+// 中のページ（athlete_staff_inner.html / general/staff.html）が、実際に
+// データ取得・描画まで終わった時に postMessage で知らせてくるので、それを待つ
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "innerPageReady") return;
+  if (!loadings[data.system]) return;
+  markPageReady_(data.system);
+});
+
 function loadIframe_(system){
   if (loadedIframes[system] || !currentPassword) return;
   loadedIframes[system] = true;
   const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
   iframes[system].src = `${PAGE_BY_SYSTEM[system]}?pw=${encodeURIComponent(currentPassword)}&cb=${cacheBust}`;
+  // postMessageが何らかの理由で届かなかった時の保険として、
+  // 少し長めに待ってからでも最終的には消えるようにしておく
   iframes[system].addEventListener("load", () => {
-    loadings[system].style.display = "none";
-    if (system === "athlete"){
-      // ログイン直後に見えているのは選手用タブなので、恐竜はこちらの読み込み完了で消す
-      document.getElementById("loginLoadingOverlay").classList.remove("show");
-    }
+    setTimeout(() => {
+      if (loadings[system].style.display !== "none") markPageReady_(system);
+    }, 8000);
   }, { once: true });
 }
 
