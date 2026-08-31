@@ -304,8 +304,17 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".system-tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === btn.dataset.system));
-    loadIframe_(btn.dataset.system);
+    const target = btn.dataset.system;
+    Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === target));
+    loadIframe_(target);
+
+    // すでに読み込み済みのタブに切り替える場合も、一瞬だけ恐竜を出しておく
+    // （切り替え直後の一瞬のちらつきが気にならないようにするため）
+    const loadingEl = loadings[target];
+    if (loadingEl.style.display === "none"){
+      loadingEl.style.display = "flex";
+      setTimeout(() => { loadingEl.style.display = "none"; }, 350);
+    }
   });
 });
 
