@@ -54,7 +54,11 @@
   header p.sub { font-size: 14px; color: var(--ink-soft); margin: 6px 0 0; }
 
   /* ---------- month nav ---------- */
-  .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 4px; }
+  .calendar-card {
+    margin: 8px 16px 0; background: var(--white); border-radius: 20px; padding: 4px 4px 10px;
+    box-shadow: 0 4px 16px rgba(43,35,32,0.07);
+  }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 4px; }
   .month-nav .month-label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 19px; }
   .month-nav button {
     width: 38px; height: 38px; border-radius: 50%; border: none;
@@ -87,6 +91,7 @@
   .day-cell {
     position: relative; display: flex; flex-direction: column;
     align-items: center; justify-content: flex-start; gap: 0; padding-top: 2px; padding-bottom: 4px;
+    min-height: 94px;
   }
   .day-cell.empty { visibility: hidden; }
 
@@ -296,25 +301,26 @@
     <p class="sub">日付をタップすると時間が選べます</p>
   </header>
 
-  <div class="month-nav">
-    <button id="prevMonth" aria-label="前の月">‹</button>
-    <div class="month-label" id="monthLabel">2026年8月</div>
-    <button id="nextMonth" aria-label="次の月">›</button>
-  </div>
+  <div class="calendar-card">
+    <div class="month-nav">
+      <button id="prevMonth" aria-label="前の月">‹</button>
+      <div class="month-label" id="monthLabel">2026年8月</div>
+      <button id="nextMonth" aria-label="次の月">›</button>
+    </div>
 
-  <div class="legend">
-    <span><span class="dot ok"></span>空きあり</span>
-    <span><span class="dot full"></span>満員</span>
-    <span><span class="dot off"></span>コマなし</span>
-    <span><span class="dot holiday"></span>休館</span>
-    <span><span class="dot mint"></span>予約済み</span>
-  </div>
+    <div class="legend">
+      <span><span class="dot ok"></span>空きあり</span>
+      <span><span class="dot full"></span>満員</span>
+      <span><span class="dot holiday"></span>休館</span>
+      <span><span class="dot mint"></span>予約済み</span>
+    </div>
 
-  <div class="weekdays">
-    <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
-  </div>
+    <div class="weekdays">
+      <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+    </div>
 
-  <div class="grid" id="grid"></div>
+    <div class="grid" id="grid"></div>
+  </div>
 
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中のコマ</div>
@@ -480,6 +486,37 @@ function dayStatus(key){
   };
 }
 
+// 空き枠数を丸数字(①②③...)で表示するための変換
+const CIRCLED_NUMS = ["⓪","①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
+function circleNum_(n){
+  if (n >= 0 && n < CIRCLED_NUMS.length) return CIRCLED_NUMS[n];
+  return "(" + n + ")";
+}
+
+// 指定した年月に、今日以降で1件でも空きコマがある日が含まれているか
+function monthHasAvailability_(year, month){
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++){
+    const d = new Date(year, month, day);
+    d.setHours(0, 0, 0, 0);
+    if (d < TODAY) continue;
+    const slots = availabilityMap[fmt(d)];
+    if (slots && slots.length > 0) return true;
+  }
+  return false;
+}
+
+// 今の月に空きコマが1件も無ければ、空きコマがある直近の月まで自動で進める
+function jumpToFirstAvailableMonth_(){
+  let y = viewYear, m = viewMonth;
+  for (let i = 0; i <= MAX_MONTH_OFFSET; i++){
+    if (monthHasAvailability_(y, m)) { viewYear = y; viewMonth = m; return; }
+    m++;
+    if (m > 11){ m = 0; y++; }
+  }
+  // 向こう3ヶ月どこにも空きが無ければ、そのまま今の月を表示する
+}
+
 function fmt(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
@@ -607,7 +644,7 @@ function renderMonth(){
           const chip = document.createElement("div");
           const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
           chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
-          chip.textContent = slot.time;
+          chip.textContent = slot.time + " " + circleNum_(slot.full ? 0 : slot.remain);
           miniWrap.appendChild(chip);
         });
         cell.appendChild(miniWrap);
@@ -908,6 +945,7 @@ submitBtn.addEventListener("click", async () => {
   const liffPromise = initLiff();
 
   await availabilityPromise;
+  jumpToFirstAvailableMonth_();
   renderMonth();
 
   await liffPromise;
