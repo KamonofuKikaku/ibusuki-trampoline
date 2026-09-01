@@ -80,7 +80,7 @@
   .legend .dot.mint { background: var(--booked); }
 
   /* ---------- calendar grid ---------- */
-  .calendar-card { background: var(--cream); border-radius: 16px; padding: 10px 8px 10px; border: 1px solid rgba(43,35,32,0.06); }
+  .calendar-card { background: var(--cream); border-radius: 16px; padding: 10px 4px 10px; border: 1px solid rgba(43,35,32,0.06); }
 
   .weekdays {
     display: grid; grid-template-columns: repeat(7, 1fr);
@@ -90,7 +90,7 @@
   .weekdays .sun { color: var(--orange); }
   .weekdays .sat { color: #4F8FE0; }
 
-  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; padding: 0 2px; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 0; }
 
   .day-cell {
     position: relative; display: flex; flex-direction: column;
@@ -140,13 +140,13 @@
   .mini-slots { display: flex; flex-direction: column; gap: 2px; width: 100%; min-width: 0; margin-top: 2px; padding: 0 3px 3px; box-sizing: border-box; }
   .mini-slot {
     display: flex; align-items: center; justify-content: space-between;
-    font-size: 8.5px; font-weight: 700; line-height: 1.5; border-radius: 6px; padding: 1px 2px 1px 5px;
+    font-size: 8px; font-weight: 700; line-height: 1.5; border-radius: 5px; padding: 1px 1px 1px 3px;
     white-space: nowrap; overflow: hidden;
   }
   .mini-slot .ms-time { overflow: hidden; text-overflow: ellipsis; }
   .mini-slot .ms-count {
-    flex-shrink: 0; width: 13px; height: 13px; border-radius: 50%; margin-left: 3px;
-    font-size: 7.5px; font-weight: 900; color: var(--white);
+    flex-shrink: 0; width: 11px; height: 11px; border-radius: 50%; margin-left: 2px;
+    font-size: 6.5px; font-weight: 900; color: var(--white);
     display: flex; align-items: center; justify-content: center;
   }
   .mini-slot.avail { background: var(--mint-soft); color: var(--mint); }
