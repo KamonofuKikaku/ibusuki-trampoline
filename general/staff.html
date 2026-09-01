@@ -174,6 +174,13 @@
   .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .card-badge.on { background: var(--mint-soft); color: var(--mint); }
   .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
+  .cash-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+  .cash-row input[type="checkbox"] { width: auto; margin: 0; }
+  .cash-paid-month { font-size: 11px; color: var(--ink-soft); }
+  .cash-paid-btn {
+    border: none; background: var(--mint-soft); color: var(--mint); font-weight: 700; font-size: 11px;
+    padding: 4px 9px; border-radius: 999px; margin-left: auto;
+  }
   .billing-dates { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
   .billing-row input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; margin-bottom: 6px; }
   .charge-btn { width: 100%; padding: 9px; border-radius: 8px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 13px; }
@@ -1396,6 +1403,78 @@ function renderBilling(list){
       : "今月の予約はまだありません";
     row.appendChild(datesEl);
 
+    // 現金決済チェック + 支払い済み月表示（カードで言う「カード登録済み」に相当）
+    const cashRow = document.createElement("div");
+    cashRow.className = "cash-row";
+    const cashCheckbox = document.createElement("input");
+    cashCheckbox.type = "checkbox";
+    cashCheckbox.checked = item.cashPayment;
+    const cashLabel = document.createElement("span");
+    cashLabel.textContent = "現金決済";
+    cashRow.appendChild(cashCheckbox);
+    cashRow.appendChild(cashLabel);
+
+    const paidMonthEl = document.createElement("span");
+    paidMonthEl.className = "cash-paid-month";
+    paidMonthEl.textContent = item.cashPaidMonth ? `最終支払い確認: ${item.cashPaidMonth}` : "支払い確認なし";
+    cashRow.appendChild(paidMonthEl);
+
+    const markPaidBtn = document.createElement("button");
+    markPaidBtn.className = "cash-paid-btn";
+    markPaidBtn.textContent = "今月分を確認済みにする";
+    markPaidBtn.style.display = item.cashPayment ? "inline-block" : "none";
+    markPaidBtn.addEventListener("click", async () => {
+      markPaidBtn.disabled = true;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffMarkCashPaid", password: password, userId: item.userId }),
+        });
+        const result = await res.json();
+        if (result.success){
+          paidMonthEl.textContent = `最終支払い確認: ${result.month}`;
+          showToast(item.name + "さんの今月分を確認済みにしました");
+        } else {
+          showToast("更新に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      } finally {
+        markPaidBtn.disabled = false;
+      }
+    });
+    cashRow.appendChild(markPaidBtn);
+
+    cashCheckbox.addEventListener("change", async () => {
+      const checked = cashCheckbox.checked;
+      markPaidBtn.style.display = checked ? "inline-block" : "none";
+      cashCheckbox.disabled = true;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffSetCashPayment", password: password, userId: item.userId, cashPayment: checked }),
+        });
+        const result = await res.json();
+        if (result.success){
+          item.cashPayment = checked;
+          showToast(checked ? "現金決済に設定しました" : "現金決済を解除しました");
+        } else {
+          cashCheckbox.checked = !checked; // 失敗したので元に戻す
+          markPaidBtn.style.display = !checked ? "inline-block" : "none";
+          showToast("更新に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        cashCheckbox.checked = !checked;
+        markPaidBtn.style.display = !checked ? "inline-block" : "none";
+        showToast("通信に失敗しました");
+      } finally {
+        cashCheckbox.disabled = false;
+      }
+    });
+    row.appendChild(cashRow);
+
     const amountInput = document.createElement("input");
     amountInput.type = "number";
     amountInput.step = "100";
@@ -1413,28 +1492,46 @@ function renderBilling(list){
         showToast("金額を入力してください");
         return;
       }
+
+      if (item.cashPayment){
+        const proceed = window.confirm(
+          `${item.name}さんは現金決済のため除外されています。\nお間違えないですか？\n\n「OK」で進む／「キャンセル」で中止`
+        );
+        if (!proceed) return;
+        await runCharge(true);
+        return;
+      }
+
       const ok = window.confirm(`${item.name}さんに${amount.toLocaleString()}円を請求します。よろしいですか？`);
       if (!ok) return;
+      await runCharge(false);
 
-      chargeBtn.disabled = true;
-      chargeBtn.textContent = "処理中…";
-      try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({ action: "staffCharge", password: password, userId: item.userId, amount: amount }),
-        });
-        const result = await res.json();
-        if (result.success){
-          showToast(item.name + "さんへの請求処理が完了しました");
-        } else {
-          showToast("請求に失敗しました: " + (result.reason || ""));
+      async function runCharge(forceSquare){
+        chargeBtn.disabled = true;
+        chargeBtn.textContent = "処理中…";
+        try {
+          const res = await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "staffCharge", password: password, userId: item.userId, amount: amount,
+              forceSquare: forceSquare,
+            }),
+          });
+          const result = await res.json();
+          if (result.success){
+            showToast(item.name + "さんへの請求処理が完了しました");
+          } else if (result.reason === "cash_payment"){
+            showToast(item.name + "さんは現金決済のため請求をスキップしました");
+          } else {
+            showToast("請求に失敗しました: " + (result.reason || ""));
+          }
+        } catch (err){
+          console.error(err);
+          showToast("通信に失敗しました");
+        } finally {
+          chargeBtn.disabled = false;
+          chargeBtn.textContent = "請求する";
         }
-      } catch (err){
-        console.error(err);
-        showToast("通信に失敗しました");
-      } finally {
-        chargeBtn.disabled = false;
-        chargeBtn.textContent = "請求する";
       }
     });
     row.appendChild(chargeBtn);
