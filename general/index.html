@@ -692,11 +692,7 @@ function renderMonth(){
     num.textContent = day;
     btn.appendChild(num);
 
-    if (!isPast && st.kind !== "off" && st.kind !== "holiday"){
-      cell.addEventListener("click", () => openSlotSheet(key));
-      cell.style.cursor = "pointer";
-    } else if (!isPast && (st.kind === "off" || st.kind === "holiday") && st.hasBooking){
-      // 通常はコマ無し/休館だが、代講都合等で既存の予約が残っているような例外ケースの保険
+    if (!isPast){
       cell.addEventListener("click", () => openSlotSheet(key));
       cell.style.cursor = "pointer";
     }
@@ -775,14 +771,35 @@ function parseKey_(key){
 }
 
 function renderSlotList(key){
-  const slots = (availabilityMap[key] || []).filter(s => !s.isEvent); // 予約不可の予定はここには出さない
+  const allSlots = availabilityMap[key] || [];
+  const eventSlots = allSlots.filter(s => s.isEvent);
+  const slots = allSlots.filter(s => !s.isEvent).slice().sort((a, b) => (a.time < b.time ? -1 : 1)); // 予約不可の予定は除き、時間順に並べる
   slotList.innerHTML = "";
 
-  if (slots.length === 0){
+  if (closedDateSet.has(key)){
     const empty = document.createElement("div");
     empty.className = "sheet-empty";
-    empty.textContent = "この日は定休日です";
+    empty.textContent = "この日は休館日です";
     slotList.appendChild(empty);
+    return;
+  }
+
+  if (eventSlots.length > 0){
+    eventSlots.slice().sort((a, b) => (a.time < b.time ? -1 : 1)).forEach(ev => {
+      const row = document.createElement("div");
+      row.className = "sheet-empty";
+      row.textContent = `${ev.time}〜${ev.endTime} ${ev.title}`;
+      slotList.appendChild(row);
+    });
+  }
+
+  if (slots.length === 0){
+    if (eventSlots.length === 0){
+      const empty = document.createElement("div");
+      empty.className = "sheet-empty";
+      empty.textContent = "この日は定休日です";
+      slotList.appendChild(empty);
+    }
     return;
   }
 
