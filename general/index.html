@@ -821,6 +821,7 @@ async function doCancel(key, time){
       renderSlotList(key);
       renderMonth();
       showToast("キャンセルできませんでした。もう一度お試しください");
+      if (data.debug) showDebugError_("キャンセル失敗の詳細: " + data.debug);
     }
   } catch (err){
     console.error("cancel failed", err);
