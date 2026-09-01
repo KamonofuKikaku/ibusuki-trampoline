@@ -489,7 +489,7 @@ function dayStatus(key){
   if (closedDateSet.has(key)){
     return { kind: "holiday", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
   }
-  const bookableSlots = (slots || []).filter(s => !s.isEvent); // 予約不可の予定は空き状況の判定には数えない
+  const bookableSlots = (Array.isArray(slots) ? slots : []).filter(s => !s.isEvent); // 予約不可の予定は空き状況の判定には数えない
   if (bookableSlots.length === 0){
     return { kind: "off", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
   }
@@ -972,8 +972,20 @@ window.addEventListener("unhandledrejection", (e) => {
   } catch (e) {}
   try {
     const cachedAvail = localStorage.getItem("cachedAvailability");
-    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
-  } catch (e) {}
+    if (cachedAvail){
+      const parsed = JSON.parse(cachedAvail);
+      // 古いバージョン(配列ではない形)のキャッシュが残っていることがあるので、
+      // 形式が正しい(すべて配列)場合だけ使う。おかしければ丸ごと捨てて安全な状態にする
+      const isValid = parsed && Object.values(parsed).every(v => Array.isArray(v));
+      if (isValid) {
+        availabilityMap = parsed;
+      } else {
+        localStorage.removeItem("cachedAvailability");
+      }
+    }
+  } catch (e) {
+    try { localStorage.removeItem("cachedAvailability"); } catch (e2) {}
+  }
   try {
     const cachedClosed = localStorage.getItem("cachedClosedDates");
     if (cachedClosed) closedDateSet = new Set(JSON.parse(cachedClosed));
