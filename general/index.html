@@ -632,10 +632,12 @@ function renderMonth(){
     btn.appendChild(num);
 
     if (!isPast && st.kind !== "off" && st.kind !== "holiday"){
-      btn.addEventListener("click", () => openSlotSheet(key));
+      cell.addEventListener("click", () => openSlotSheet(key));
+      cell.style.cursor = "pointer";
     } else if (!isPast && (st.kind === "off" || st.kind === "holiday") && st.hasBooking){
       // 通常はコマ無し/休館だが、代講都合等で既存の予約が残っているような例外ケースの保険
-      btn.addEventListener("click", () => openSlotSheet(key));
+      cell.addEventListener("click", () => openSlotSheet(key));
+      cell.style.cursor = "pointer";
     }
 
     cell.appendChild(btn);
