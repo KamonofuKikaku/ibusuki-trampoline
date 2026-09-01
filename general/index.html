@@ -156,6 +156,8 @@
   .mini-slot.booked { background: var(--booked-soft); color: var(--booked); }
   .mini-slot.booked .ms-count { background: var(--booked); }
   .mini-slot.blank { background: transparent; }
+  .mini-slot.event { background: var(--gray-full); color: var(--ink-soft); justify-content: center; }
+  .mini-slot.event .ms-time { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .day-full-badge {
     margin: -2px 3px 3px; padding: 1px 4px; border-radius: 6px; background: var(--danger-soft);
@@ -487,14 +489,15 @@ function dayStatus(key){
   if (closedDateSet.has(key)){
     return { kind: "holiday", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
   }
-  if (!slots || slots.length === 0){
+  const bookableSlots = (slots || []).filter(s => !s.isEvent); // 予約不可の予定は空き状況の判定には数えない
+  if (bookableSlots.length === 0){
     return { kind: "off", hasBooking, hasSelection, remainTotal: 0, slotCount: 0 };
   }
-  const remainTotal = slots.reduce((sum, s) => sum + (s.full ? 0 : s.remain), 0);
-  const allFull = slots.every(s => s.full);
+  const remainTotal = bookableSlots.reduce((sum, s) => sum + (s.full ? 0 : s.remain), 0);
+  const allFull = bookableSlots.every(s => s.full);
   return {
     kind: allFull ? "full" : (remainTotal <= 2 ? "low" : "ok"),
-    hasBooking, hasSelection, remainTotal, slotCount: slots.length,
+    hasBooking, hasSelection, remainTotal, slotCount: bookableSlots.length,
   };
 }
 
@@ -654,7 +657,10 @@ function renderMonth(){
         for (let i = 0; i < 3; i++){
           const slot = slots[i];
           const chip = document.createElement("div");
-          if (slot){
+          if (slot && slot.isEvent){
+            chip.className = "mini-slot event";
+            chip.innerHTML = `<span class="ms-time">${slot.title}</span>`;
+          } else if (slot){
             const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
             chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
             const remainCount = slot.full ? 0 : slot.remain;
@@ -703,7 +709,7 @@ function parseKey_(key){
 }
 
 function renderSlotList(key){
-  const slots = availabilityMap[key] || [];
+  const slots = (availabilityMap[key] || []).filter(s => !s.isEvent); // 予約不可の予定はここには出さない
   slotList.innerHTML = "";
 
   if (slots.length === 0){
@@ -937,6 +943,25 @@ submitBtn.addEventListener("click", async () => {
   }
 });
 
+// 実機での原因調査用：捕まえきれないエラーが起きたら、画面に直接表示する
+// （開発者ツールが無くても、起きたエラーの内容がそのまま読める）
+function showDebugError_(msg){
+  let el = document.getElementById("debugErrorBanner");
+  if (!el){
+    el = document.createElement("div");
+    el.id = "debugErrorBanner";
+    el.style.cssText = "position:fixed;top:0;left:0;right:0;background:#E0503A;color:#fff;font-size:12px;padding:10px 14px;z-index:999;white-space:pre-wrap;word-break:break-all;";
+    document.body.appendChild(el);
+  }
+  el.textContent = "エラー: " + msg;
+}
+window.addEventListener("error", (e) => {
+  showDebugError_((e.message || "不明なエラー") + " (" + (e.filename || "") + ":" + (e.lineno || "") + ")");
+});
+window.addEventListener("unhandledrejection", (e) => {
+  showDebugError_("Promiseエラー: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+});
+
 (async function start(){
   try {
     const cachedBooked = localStorage.getItem("cachedBookedMap");
@@ -954,23 +979,37 @@ submitBtn.addEventListener("click", async () => {
     if (cachedClosed) closedDateSet = new Set(JSON.parse(cachedClosed));
   } catch (e) {}
 
-  renderMonth();
-  renderSelection();
-  showLoadingOverlay();
+  try {
+    renderMonth();
+    renderSelection();
+    showLoadingOverlay();
 
-  const availabilityPromise = fetchAvailability();
-  const liffPromise = initLiff();
+    // 万が一どこかで止まっても、10秒後には強制的にローディングを消して
+    // 下のカレンダー自体は見える状態にしておく（原因調査中の保険）
+    const forceHideTimer = setTimeout(() => {
+      hideLoadingOverlay();
+      showDebugError_("読み込みが10秒以上かかっています(LIFFまたは通信が止まっている可能性)");
+    }, 10000);
 
-  await availabilityPromise;
-  jumpToFirstAvailableMonth_();
-  renderMonth();
+    const availabilityPromise = fetchAvailability();
+    const liffPromise = initLiff();
 
-  await liffPromise;
-  await fetchMyBookings();
-  renderMonth();
-  renderSelection();
+    await availabilityPromise;
+    jumpToFirstAvailableMonth_();
+    renderMonth();
 
-  hideLoadingOverlay();
+    await liffPromise;
+    await fetchMyBookings();
+    renderMonth();
+    renderSelection();
+
+    clearTimeout(forceHideTimer);
+    hideLoadingOverlay();
+  } catch (err){
+    console.error("start() failed", err);
+    showDebugError_("start()内で失敗: " + (err && err.message ? err.message : String(err)));
+    hideLoadingOverlay();
+  }
 })();
 </script>
 </body>
