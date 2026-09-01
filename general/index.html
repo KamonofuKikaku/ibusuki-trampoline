@@ -664,7 +664,7 @@ function renderMonth(){
             const isBooked = bookedMap[key] && bookedMap[key].has(slot.time);
             chip.className = "mini-slot " + (isBooked ? "booked" : (slot.full ? "full" : "avail"));
             const remainCount = slot.full ? 0 : slot.remain;
-            chip.innerHTML = `<span class="ms-time">${slot.time}</span><span class="ms-count">${remainCount}</span>`;
+            chip.innerHTML = `<span class="ms-time">${slot.time.replace(":", "")}</span><span class="ms-count">${remainCount}</span>`;
           } else {
             chip.className = "mini-slot blank";
           }
