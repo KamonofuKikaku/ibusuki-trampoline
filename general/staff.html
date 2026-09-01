@@ -214,7 +214,7 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="template">曜日テンプレート</button>
+      <button class="tab-btn active" data-tab="template">カレンダー</button>
       <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
       <button class="tab-btn" data-tab="billing">お月謝</button>
     </div>
@@ -1234,6 +1234,7 @@ function renderUpcoming(upcoming, todayStr){
     block.appendChild(title);
 
     dateItem.slots.forEach(slot => {
+      const isEventSlot = !slot.teacher && slot.title;
       const row = document.createElement("div");
       row.className = "slot-row";
 
@@ -1241,11 +1242,13 @@ function renderUpcoming(upcoming, todayStr){
       main.className = "slot-main";
       const timeEl = document.createElement("div");
       timeEl.className = "slot-time";
-      timeEl.textContent = slot.time + "〜（担当: " + (slot.teacher || "休み") + "）";
+      timeEl.textContent = isEventSlot
+        ? (slot.time + "〜 " + slot.title + "（予約不可の予定）")
+        : (slot.time + "〜（担当: " + (slot.teacher || "休み") + "）");
       main.appendChild(timeEl);
       const subEl = document.createElement("div");
       subEl.className = "slot-sub";
-      subEl.textContent = `定員${slot.capacity} / 予約${slot.booked}人`;
+      subEl.textContent = isEventSlot ? "コマとしてカウントされません" : `定員${slot.capacity} / 予約${slot.booked}人`;
       main.appendChild(subEl);
 
       if (slot.entries && slot.entries.length){
@@ -1264,6 +1267,18 @@ function renderUpcoming(upcoming, todayStr){
         main.appendChild(namesEl);
       }
       row.appendChild(main);
+
+      if (isEventSlot){
+        // 予約不可の予定は、このタブの旧仕様の編集フォームでは扱えない(タイトルを保持できない)ので、
+        // ここでは編集不可にし、カレンダータブでの編集・削除に誘導する
+        const noteEl = document.createElement("div");
+        noteEl.className = "slot-sub";
+        noteEl.style.marginLeft = "auto";
+        noteEl.textContent = "編集・削除は「カレンダー」タブから";
+        row.appendChild(noteEl);
+        block.appendChild(row);
+        return;
+      }
 
       const editBtn = document.createElement("button");
       editBtn.className = "edit-btn";
