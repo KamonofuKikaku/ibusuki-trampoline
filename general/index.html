@@ -96,7 +96,7 @@
     position: relative; display: flex; flex-direction: column;
     align-items: center; justify-content: flex-start; gap: 0; padding: 2px 0 4px;
     background: var(--white); border: 1px solid rgba(43,35,32,0.08); border-radius: 10px;
-    min-height: 46px;
+    min-height: 46px; min-width: 0; overflow: hidden;
   }
   .day-cell.empty { visibility: hidden; border: none; background: transparent; }
   .day-cell.is-past { visibility: hidden; }
@@ -137,7 +137,7 @@
   .day-btn:active:not(.past):not(.full):not(.holiday) { transform: scale(0.94); }
 
   /* ---------- 各コマの時間・空き数（選手用には無い、一般用だけの追加要素） ---------- */
-  .mini-slots { display: flex; flex-direction: column; gap: 2px; width: 100%; margin-top: 2px; padding: 0 3px 3px; }
+  .mini-slots { display: flex; flex-direction: column; gap: 2px; width: 100%; min-width: 0; margin-top: 2px; padding: 0 3px 3px; box-sizing: border-box; }
   .mini-slot {
     display: flex; align-items: center; justify-content: space-between;
     font-size: 8.5px; font-weight: 700; line-height: 1.5; border-radius: 6px; padding: 1px 2px 1px 5px;
