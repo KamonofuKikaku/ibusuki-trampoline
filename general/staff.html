@@ -128,6 +128,8 @@
   .cal-block-cell:active { opacity: 0.8; }
   .cal-block-cell .cb-teacher { font-size: 12.5px; font-weight: 900; }
   .cal-block-cell .cb-time { font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 500; }
+  .cal-block-cell.is-event { background: var(--ink-soft); }
+  .cal-block-cell.is-event .cb-time { color: rgba(255,255,255,0.75); }
   .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
   .save-btn:disabled { background: var(--ink-soft); }
   .block-entries-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
@@ -269,14 +271,24 @@
       <label class="modal-field-label">よく使う内容から選ぶ</label>
       <div class="preset-button-row" id="presetButtonRow"></div>
     </div>
+    <label class="modal-checkbox-row" id="isEventRow">
+      <input type="checkbox" id="isEventInput" />
+      <span>予約不可の予定にする（コマとしてカウントしない）</span>
+    </label>
     <label class="modal-field-label">開始時刻</label>
     <input type="time" id="blockStartInput" step="900" />
     <label class="modal-field-label">終了時刻</label>
     <input type="time" id="blockEndInput" step="900" />
-    <label class="modal-field-label">担当講師</label>
-    <select id="blockTeacherSelect"></select>
-    <label class="modal-field-label">定員（空欄=基本定員）</label>
-    <input type="number" id="blockCapacityInput" min="1" placeholder="例：6" />
+    <div id="bookableFieldsSection">
+      <label class="modal-field-label">担当講師</label>
+      <select id="blockTeacherSelect"></select>
+      <label class="modal-field-label">定員（空欄=基本定員）</label>
+      <input type="number" id="blockCapacityInput" min="1" placeholder="例：6" />
+    </div>
+    <div id="eventFieldsSection" style="display:none;">
+      <label class="modal-field-label">タイトル</label>
+      <input type="text" id="eventTitleInput" placeholder="例：貸切・清掃・イベント準備 など" />
+    </div>
     <label class="modal-checkbox-row" id="repeatWeeklyRow">
       <input type="checkbox" id="repeatWeeklyInput" />
       <span>毎週繰り返す</span>
@@ -579,6 +591,23 @@ const blockEndInput = document.getElementById("blockEndInput");
 const blockTeacherSelect = document.getElementById("blockTeacherSelect");
 const blockCapacityInput = document.getElementById("blockCapacityInput");
 const repeatWeeklyInput = document.getElementById("repeatWeeklyInput");
+const isEventInput = document.getElementById("isEventInput");
+const eventTitleInput = document.getElementById("eventTitleInput");
+const bookableFieldsSection = document.getElementById("bookableFieldsSection");
+const eventFieldsSection = document.getElementById("eventFieldsSection");
+
+function updateEventModeVisibility(){
+  const isEvent = isEventInput.checked;
+  bookableFieldsSection.style.display = isEvent ? "none" : "block";
+  eventFieldsSection.style.display = isEvent ? "block" : "none";
+  const presetSection = document.getElementById("presetButtonsSection");
+  if (isEvent){
+    presetSection.style.display = "none";
+  } else {
+    presetSection.style.display = document.getElementById("presetButtonRow").children.length ? "block" : "none";
+  }
+}
+isEventInput.addEventListener("change", updateEventModeVisibility);
 const cancelBlockBtn = document.getElementById("cancelBlockBtn");
 const deleteBlockBtn = document.getElementById("deleteBlockBtn");
 const confirmBlockBtn = document.getElementById("confirmBlockBtn");
@@ -731,11 +760,13 @@ function renderCalendar(athleteHours){
       }
       const slot = (dateItem.slots || []).find(s => s.time === timeStr);
       if (slot){
+        const isEventSlot = !slot.teacher && slot.title;
         const span = Math.max(1, Math.round((timeStrToMinutes_(slot.endTime) - timeStrToMinutes_(slot.time)) / 15));
         const td = document.createElement("td");
-        td.className = "cal-block-cell";
+        td.className = "cal-block-cell" + (isEventSlot ? " is-event" : "");
         td.rowSpan = span;
-        td.innerHTML = `<div class="cb-teacher">${slot.teacher}</div><div class="cb-time">${slot.time}〜${slot.endTime}</div>`;
+        const label = isEventSlot ? slot.title : slot.teacher;
+        td.innerHTML = `<div class="cb-teacher">${label}</div><div class="cb-time">${slot.time}〜${slot.endTime}</div>`;
         td.addEventListener("click", () => openQuickActionModal(dateItem.date, slot));
         row.appendChild(td);
         skipCounts[colIdx] = span - 1;
@@ -828,7 +859,9 @@ let quickActionContext = null; // { dateStr, slot }
 
 function openQuickActionModal(dateStr, slot){
   quickActionContext = { dateStr, slot };
-  quickActionTitle.textContent = `${formatCalDateLabel_(dateStr)} ${slot.time}〜${slot.endTime}（担当: ${slot.teacher}）`;
+  const isEventSlot = !slot.teacher && slot.title;
+  const detail = isEventSlot ? `（${slot.title}）` : `（担当: ${slot.teacher}）`;
+  quickActionTitle.textContent = `${formatCalDateLabel_(dateStr)} ${slot.time}〜${slot.endTime}${detail}`;
   quickActionModalOverlay.classList.add("show");
   quickActionModal.classList.add("show");
 }
@@ -902,6 +935,9 @@ function openBlockModal(dateStr, slot, startHint){
     confirmBlockBtn.textContent = "変更する";
     document.getElementById("repeatWeeklyRow").style.display = "flex";
     repeatWeeklyInput.checked = false;
+    const isEventSlot = !slot.teacher && slot.title;
+    isEventInput.checked = isEventSlot;
+    eventTitleInput.value = isEventSlot ? slot.title : "";
 
     blockEntriesSection.style.display = "block";
     blockEntriesList.innerHTML = "";
@@ -938,8 +974,11 @@ function openBlockModal(dateStr, slot, startHint){
     confirmBlockBtn.textContent = "追加する";
     document.getElementById("repeatWeeklyRow").style.display = "flex";
     repeatWeeklyInput.checked = false;
+    isEventInput.checked = false;
+    eventTitleInput.value = "";
   }
 
+  updateEventModeVisibility();
   blockModalOverlay.classList.add("show");
   blockModal.classList.add("show");
 }
@@ -1021,10 +1060,12 @@ function patchLocalSlot_(dateStr, oldStart, newSlot){
 confirmBlockBtn.addEventListener("click", async () => {
   const start = blockStartInput.value;
   const end = blockEndInput.value;
-  const teacher = blockTeacherSelect.value;
+  const isEvent = isEventInput.checked;
+  const teacher = isEvent ? "" : blockTeacherSelect.value;
+  const eventTitle = isEvent ? eventTitleInput.value.trim() : "";
 
-  if (!start || !end || !teacher){
-    showToast("開始・終了時刻と担当講師を入力してください");
+  if (!start || !end || (!isEvent && !teacher) || (isEvent && !eventTitle)){
+    showToast(isEvent ? "開始・終了時刻とタイトルを入力してください" : "開始・終了時刻と担当講師を入力してください");
     return;
   }
   if (start >= end){
@@ -1065,6 +1106,7 @@ confirmBlockBtn.addEventListener("click", async () => {
       action: action, password: password,
       date: editingBlockDate, startTime: start, endTime: end, teacher: teacher,
       capacity: capacityValue === "" ? "" : Number(capacityValue),
+      isEvent: isEvent, title: eventTitle,
     };
     if (editingBlockOldStart){
       payload.oldStartTime = editingBlockOldStart;
@@ -1074,7 +1116,7 @@ confirmBlockBtn.addEventListener("click", async () => {
     const res = await fetch(GAS_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
     const result = await res.json();
     if (result.success){
-      lastUsedTeacherDisplayName = teacher;
+      if (!isEvent) lastUsedTeacherDisplayName = teacher;
       closeBlockModal();
 
       if (repeatWeekly){
@@ -1091,15 +1133,15 @@ confirmBlockBtn.addEventListener("click", async () => {
           const oldSlot = dateEntry && dateEntry.slots.find(s => s.time === editingBlockOldStart);
           if (oldSlot){ existingBooked = oldSlot.booked || 0; existingEntries = oldSlot.entries || []; }
         }
-        const effectiveCapacity = capacityValue === "" ? (lastOverviewData.basicCapacity || 6) : Number(capacityValue);
+        const effectiveCapacity = isEvent ? 0 : (capacityValue === "" ? (lastOverviewData.basicCapacity || 6) : Number(capacityValue));
         const remain = effectiveCapacity - existingBooked;
         patchLocalSlot_(editingBlockDate, editingBlockOldStart, {
-          time: start, endTime: end, teacher: teacher, capacity: effectiveCapacity,
+          time: start, endTime: end, teacher: teacher, capacity: effectiveCapacity, title: eventTitle,
           booked: existingBooked, remain: remain, full: remain <= 0, entries: existingEntries,
         });
         renderTemplate(lastOverviewData); // 手元のデータだけで即座に再描画(通信を待たない)
       }
-      if (wasAdd) openPresetSavePrompt(start, end, teacher, capacityValue);
+      if (wasAdd && !isEvent) openPresetSavePrompt(start, end, teacher, capacityValue); // イベントはプリセット登録の対象外
     } else if (result.reason === "duplicate_start"){
       showToast("その開始時刻にはすでに別の予定があります");
     } else {
