@@ -197,6 +197,36 @@
   .cta-btn:disabled { background: var(--gray-full); box-shadow: none; color: var(--gray-full-text); }
   .cta-btn:active:not(:disabled) { transform: scale(0.98); }
 
+  /* ---------- 名前登録 ---------- */
+  .registered-name {
+    font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 14px; color: var(--ink); margin-top: 6px;
+  }
+  .edit-name-link {
+    display: block; margin: 2px auto 4px; border: none; background: transparent;
+    color: var(--ink-soft); font-size: 11.5px; text-decoration: underline; padding: 4px; text-align: center; width: 100%;
+  }
+  .register-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 70;
+    align-items: center; justify-content: center;
+  }
+  .register-overlay.show { display: flex; }
+  .register-card {
+    width: calc(100% - 48px); max-width: 340px; background: var(--white); border-radius: 20px;
+    padding: 24px 20px; box-shadow: 0 12px 32px rgba(0,0,0,0.25); text-align: center;
+  }
+  .register-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 17px; margin-bottom: 8px; }
+  .register-hint { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 16px; }
+  .register-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #E6DFD3;
+    font-size: 15px; margin-bottom: 14px; text-align: center; box-sizing: border-box;
+  }
+  .register-btn {
+    width: 100%; border: none; padding: 13px; border-radius: 12px;
+    font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 15px; color: var(--white);
+    background: linear-gradient(135deg, var(--orange), #FF9466);
+  }
+  .register-btn:disabled { opacity: 0.6; }
+
   /* ---------- toast ---------- */
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); bottom: 100px;
@@ -317,9 +347,12 @@
 
   <header>
     <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <div class="registered-name" id="registeredNameDisplay" style="display:none;"></div>
     <h1>コマを選んでください</h1>
     <p class="sub">日付をタップすると時間が選べます</p>
   </header>
+
+  <button class="edit-name-link" id="editNameBtn">登録した名前を変更する</button>
 
   <div class="calendar-section">
     <div class="month-nav">
@@ -366,6 +399,15 @@
     <div class="slot-list" id="slotList"></div>
   </div>
 
+  <div class="register-overlay" id="registerOverlay">
+    <div class="register-card">
+      <div class="register-title">お名前を教えてください</div>
+      <div class="register-hint">予約の管理に使用します。<br>フルネームでご入力ください。</div>
+      <input type="text" id="registerNameInput" class="register-input" placeholder="例：山田太郎">
+      <button class="register-btn" id="registerSaveBtn">登録する</button>
+    </div>
+  </div>
+
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-mascot">
       <div class="dino-scene">
@@ -402,6 +444,7 @@ const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah84
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
 let liffProfile = null;        // { userId, displayName }
+let currentRegisteredName = ""; // 登録済みの本名(未登録なら空文字)
 let availabilityMap = {};      // { "2026-08-10": [{time,teacher,capacity,remain,full}] }
 let bookedMap = {};             // { "2026-08-10": Set(["16:00", ...]) } すでに予約済みのコマ
 let selectedMap = {};           // { "2026-08-10": Set(["17:00", ...]) } まだ送信していない選択中のコマ
@@ -474,9 +517,32 @@ async function fetchMyBookings(){
       Object.keys(bookedMap).forEach(k => plain[k] = Array.from(bookedMap[k]));
       localStorage.setItem("cachedBookedMap", JSON.stringify(plain));
     } catch (e) {}
+
+    // 登録状況もここで一緒に受け取る(別通信を省いて表示を早くするため)
+    currentRegisteredName = data.name || "";
+    updateRegisteredNameDisplay();
+    if (data.registered) {
+      // 既に登録済みだと分かったので、開いていたフォームを自動で閉じる
+      document.getElementById("registerOverlay").classList.remove("show");
+      try {
+        localStorage.setItem("cachedRegistered", "true");
+        localStorage.setItem("cachedRegisteredName", currentRegisteredName);
+      } catch (e) {}
+    }
+    // 未登録の場合は、アプリ起動時から既に開いているフォームをそのまま使ってもらう
   } catch (err){
     console.error("myBookings fetch failed", err);
     showToast("予約情報の取得に失敗しました");
+  }
+}
+
+function updateRegisteredNameDisplay(){
+  const el = document.getElementById("registeredNameDisplay");
+  if (currentRegisteredName){
+    el.textContent = currentRegisteredName + "さん";
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
   }
 }
 
@@ -885,6 +951,57 @@ nextBtn.addEventListener("click", () => {
   renderMonth();
 });
 
+document.getElementById("editNameBtn").addEventListener("click", () => {
+  document.getElementById("registerNameInput").value = currentRegisteredName;
+  document.getElementById("registerOverlay").classList.add("show");
+});
+
+document.getElementById("registerSaveBtn").addEventListener("click", async () => {
+  const input = document.getElementById("registerNameInput");
+  const name = input.value.trim();
+  if (!name){
+    showToast("お名前を入力してください");
+    return;
+  }
+  if (!liffProfile){
+    showToast("読み込み中です。少し待ってから再度お試しください");
+    return;
+  }
+  const btn = document.getElementById("registerSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "登録中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "registerName",
+        userId: liffProfile.userId,
+        displayName: liffProfile.displayName,
+        name: name,
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      currentRegisteredName = name;
+      updateRegisteredNameDisplay();
+      document.getElementById("registerOverlay").classList.remove("show");
+      try {
+        localStorage.setItem("cachedRegistered", "true");
+        localStorage.setItem("cachedRegisteredName", name);
+      } catch (e) {}
+      showToast("登録しました。よろしくお願いします！");
+    } else {
+      showToast("登録に失敗しました。もう一度お試しください");
+    }
+  } catch (err){
+    console.error("registerName failed", err);
+    showToast("通信に失敗しました");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "登録する";
+  }
+});
+
 submitBtn.addEventListener("click", async () => {
   const entries = [];
   Object.keys(selectedMap).forEach(key => {
@@ -907,7 +1024,7 @@ submitBtn.addEventListener("click", async () => {
       body: JSON.stringify({
         action: "book",
         userId: liffProfile.userId,
-        displayName: liffProfile.displayName,
+        displayName: currentRegisteredName || liffProfile.displayName,
         entries: entries,
       }),
     }, 2, 15000);
@@ -964,6 +1081,21 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 (async function start(){
+  // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
+  // 記録が無い場合(初めて・未登録の可能性)だけ、念のため先にフォームを開いておく
+  let cachedRegistered = false;
+  try {
+    cachedRegistered = localStorage.getItem("cachedRegistered") === "true";
+    const cachedName = localStorage.getItem("cachedRegisteredName");
+    if (cachedRegistered && cachedName) {
+      currentRegisteredName = cachedName;
+      updateRegisteredNameDisplay();
+    }
+  } catch (e) {}
+  if (!cachedRegistered) {
+    document.getElementById("registerOverlay").classList.add("show");
+  }
+
   try {
     const cachedBooked = localStorage.getItem("cachedBookedMap");
     if (cachedBooked){
