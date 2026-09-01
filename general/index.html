@@ -384,17 +384,9 @@
 </div>
 
 <script>
-// LINEアプリ内ブラウザは古いキャッシュを強く保持することがあるため、
-// このページ自体を毎回「別のURL」として強制的に開き直させ、キャッシュを回避する
-// （LIFF独自のクエリパラメータ(liff.stateなど)は壊さないよう、既存のパラメータは残したまま追加する）
-(function bustCache_(){
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has("_cb")){
-    params.set("_cb", Date.now().toString());
-    const newUrl = window.location.pathname + "?" + params.toString() + window.location.hash;
-    window.location.replace(newUrl);
-  }
-})();
+// キャッシュ対策は、LIFFのエンドポイントURLに付けている「?v=数字」で行う運用に統一。
+// 以前ここにあった自己リダイレクト方式は、LIFFのログイン用リダイレクトと衝突し、
+// 無限に再読み込みを繰り返してしまう不具合の原因になっていたため撤去した。
 
 /* =========================================================
    ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
