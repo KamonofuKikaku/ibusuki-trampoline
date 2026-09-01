@@ -96,13 +96,14 @@
     position: relative; display: flex; flex-direction: column;
     align-items: center; justify-content: flex-start; gap: 0; padding: 2px 0 4px;
     background: var(--white); border: 1px solid rgba(43,35,32,0.08); border-radius: 10px;
+    min-height: 46px;
   }
   .day-cell.empty { visibility: hidden; border: none; background: transparent; }
   .day-cell.is-past { visibility: hidden; }
 
   .day-btn {
-    position: relative; width: 100%; aspect-ratio: 1 / 1; border: none; background: transparent;
-    display: flex; align-items: center; justify-content: center;
+    position: relative; width: 100%; height: 46px; border: none; background: transparent;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     font-family: "Zen Kaku Gothic New", sans-serif; cursor: pointer;
   }
 
@@ -129,7 +130,6 @@
   .day-btn.full .day-num { color: var(--gray-full-text); }
   .day-btn.full .avail-ring { background: var(--gray-full); opacity: 0.5; }
   .day-btn.off .day-num { color: var(--gray-full-text); }
-  .day-btn.off .avail-ring { background: var(--gray-full); opacity: 0.5; }
   .day-btn.holiday { pointer-events: none; }
   .day-btn.holiday .day-num { color: var(--danger); }
   .day-btn.holiday .avail-ring { background: var(--danger-soft); opacity: 0.7; }
