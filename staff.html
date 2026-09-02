@@ -67,6 +67,7 @@
   }
   .survey-section-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 15px; margin-bottom: 10px; }
   .survey-field-label { display: block; font-size: 12px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .survey-required { color: var(--danger); font-weight: 700; }
   .survey-panel input[type="text"], .survey-panel input[type="date"], .survey-panel textarea {
     width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #E6DFD3;
     font-size: 13.5px; box-sizing: border-box; font-family: inherit;
@@ -258,14 +259,14 @@
     <div class="survey-section">
       <div class="survey-section-title">新しいアンケートを作成</div>
 
-      <label class="survey-field-label">配信先</label>
+      <label class="survey-field-label">配信先 <span class="survey-required">*</span></label>
       <div class="survey-target-row">
         <label class="survey-checkbox"><input type="checkbox" id="targetAthlete" checked /> 選手用</label>
         <label class="survey-checkbox"><input type="checkbox" id="targetGeneral" checked /> 一般用</label>
       </div>
 
-      <label class="survey-field-label">件名</label>
-      <input type="text" id="surveySubjectInput" placeholder="例：施設についてのアンケート" />
+      <label class="survey-field-label">件名 <span class="survey-required">*</span></label>
+      <input type="text" id="surveySubjectInput" placeholder="例：施設についてのアンケート" required />
 
       <label class="survey-field-label">内容（任意）</label>
       <textarea id="surveyContentInput" rows="3" placeholder="アンケートの説明があれば入力してください"></textarea>
@@ -273,10 +274,10 @@
       <label class="survey-field-label">公開日（空欄=作成後すぐ公開）</label>
       <input type="date" id="surveyPublishDateInput" />
 
-      <label class="survey-field-label">締切日</label>
+      <label class="survey-field-label">締切日 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
       <input type="date" id="surveyDeadlineInput" />
 
-      <label class="survey-field-label">質問</label>
+      <label class="survey-field-label">質問 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
       <div id="surveyQuestionsBuilder"></div>
       <button class="survey-add-question-btn" id="addQuestionBtn">＋ 質問を追加</button>
 
@@ -497,7 +498,8 @@ function addQuestionCard_(prefill){
 
   const questionInput = document.createElement("input");
   questionInput.type = "text";
-  questionInput.placeholder = "質問文を入力";
+  questionInput.placeholder = "質問文を入力（必須）";
+  questionInput.required = true;
   if (prefill && prefill.question) questionInput.value = prefill.question;
   card.appendChild(questionInput);
 
@@ -623,6 +625,10 @@ async function saveSurvey_(isDraft){
     alert("配信先を1つ以上選んでください");
     return;
   }
+  if (publishDate && deadline && publishDate > deadline){
+    alert("公開日は締切日より前の日付にしてください");
+    return;
+  }
   const cards = Array.from(document.getElementById("surveyQuestionsBuilder").children);
   const questions = cards.map(c => c._collect()).filter(Boolean);
 
@@ -680,6 +686,20 @@ async function saveSurvey_(isDraft){
   }
   loadSurveyLists_();
 }
+
+function checkSurveyDateOrder_(){
+  const publishDate = document.getElementById("surveyPublishDateInput").value;
+  const deadline = document.getElementById("surveyDeadlineInput").value;
+  const deadlineInput = document.getElementById("surveyDeadlineInput");
+  if (publishDate && deadline && publishDate > deadline){
+    deadlineInput.style.borderColor = "var(--danger)";
+    showToastSurvey_("締切日は公開日より後にしてください");
+  } else {
+    deadlineInput.style.borderColor = "";
+  }
+}
+document.getElementById("surveyPublishDateInput").addEventListener("change", checkSurveyDateOrder_);
+document.getElementById("surveyDeadlineInput").addEventListener("change", checkSurveyDateOrder_);
 
 document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSurvey_(true));
 document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
