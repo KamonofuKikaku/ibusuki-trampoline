@@ -87,17 +87,20 @@
   .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
   .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
   .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
-  .modal-checkbox-row { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; color: var(--ink); margin-bottom: 14px; }
+  .modal-checkbox-row { display: flex; justify-content: center; margin-bottom: 14px; }
+  .modal-checkbox-row .ccb-inner { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); white-space: nowrap; }
   .modal-checkbox-row input { width: auto; margin: 0; flex-shrink: 0; }
-  .modal-checkbox-row span { flex: 0 0 auto; white-space: nowrap; text-align: left; }
-  .preset-button-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .preset-button-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
   .preset-btn {
-    flex: 1; min-width: 42px; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
-    font-weight: 900; font-size: 14px; padding: 8px 0; border-radius: 10px; position: relative;
+    width: 100%; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 13px; padding: 8px 30px 8px 12px; border-radius: 10px; position: relative;
+    text-align: left; display: flex; align-items: center; gap: 8px;
   }
+  .preset-btn .preset-label { font-weight: 900; flex-shrink: 0; }
+  .preset-btn .preset-detail { font-weight: 500; font-size: 11.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .preset-btn .preset-del {
-    position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--danger); color: var(--white); font-size: 9px; line-height: 1; border: none;
+    position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: var(--white); font-size: 10px; line-height: 1; border: none;
     display: flex; align-items: center; justify-content: center;
   }
   .modal-box input, .modal-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
@@ -108,15 +111,15 @@
 
   /* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
   .cal-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid #F0EAE0; border-radius: 10px; margin-bottom: 10px; }
-  .cal-table { border-collapse: collapse; font-size: 11px; }
-  .cal-table th, .cal-table td { border: 1px solid #F0EAE0; text-align: center; padding: 0; }
+  .cal-table { border-collapse: separate; border-spacing: 0; font-size: 11px; }
+  .cal-table th, .cal-table td { border: none; border-right: 1px solid #F0EAE0; border-bottom: 1px solid #F0EAE0; text-align: center; padding: 0; }
   .cal-table th {
     background: var(--cream); font-weight: 700; color: var(--ink-soft); padding: 6px 8px;
     position: sticky; top: 0; z-index: 2; white-space: nowrap; font-size: 11.5px;
   }
   .cal-table th:first-child, .cal-table td:first-child {
     position: sticky; left: 0; z-index: 3; background: var(--cream); color: var(--ink-soft);
-    font-weight: 700; padding: 3px 6px; white-space: nowrap;
+    font-weight: 700; padding: 3px 6px; white-space: nowrap; border-right: 1px solid #E4DCCB;
   }
   .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; background: var(--white); }
   .cal-empty-cell:active { background: var(--orange-soft); }
@@ -280,8 +283,10 @@
       <div class="preset-button-row" id="presetButtonRow"></div>
     </div>
     <label class="modal-checkbox-row" id="isEventRow">
-      <input type="checkbox" id="isEventInput" />
-      <span>予約不可のコマ</span>
+      <span class="ccb-inner">
+        <input type="checkbox" id="isEventInput" />
+        <span>予約不可のコマ</span>
+      </span>
     </label>
     <label class="modal-field-label">開始時刻</label>
     <input type="time" id="blockStartInput" step="900" />
@@ -298,8 +303,10 @@
       <input type="text" id="eventTitleInput" placeholder="例：貸切・清掃・イベント準備 など" />
     </div>
     <label class="modal-checkbox-row" id="repeatWeeklyRow">
-      <input type="checkbox" id="repeatWeeklyInput" />
-      <span>毎週繰り返す</span>
+      <span class="ccb-inner">
+        <input type="checkbox" id="repeatWeeklyInput" />
+        <span>毎週繰り返す</span>
+      </span>
     </label>
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelBlockBtn">キャンセル</button>
@@ -311,7 +318,7 @@
   <div class="modal-overlay" id="presetSaveModalOverlay"></div>
   <div class="modal-box" id="presetSaveModal">
     <div class="modal-title">この内容を登録しますか？</div>
-    <div class="modal-field-label" style="margin-bottom:14px;">よく使う内容として登録しておくと、次回から「よく使う内容から選ぶ」でワンタップで呼び出せます（最大5件）。</div>
+    <div class="modal-field-label" style="margin-bottom:14px;">よく使う内容として登録しておくと、次回から「よく使う内容から選ぶ」でワンタップで呼び出せます（最大3件）。</div>
     <div class="modal-actions">
       <button class="modal-cancel" id="skipPresetSaveBtn">登録しない</button>
       <button class="modal-confirm" id="confirmPresetSaveBtn">登録する</button>
@@ -813,7 +820,17 @@ function renderPresetButtons(){
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "preset-btn";
-    btn.textContent = preset.label;
+
+    const labelEl = document.createElement("span");
+    labelEl.className = "preset-label";
+    labelEl.textContent = preset.label;
+    btn.appendChild(labelEl);
+
+    const detailEl = document.createElement("span");
+    detailEl.className = "preset-detail";
+    detailEl.textContent = `${preset.start}〜${preset.end} ${preset.teacher || ""}`;
+    btn.appendChild(detailEl);
+
     btn.addEventListener("click", () => {
       blockStartInput.value = preset.start;
       blockEndInput.value = preset.end;
@@ -1201,7 +1218,7 @@ confirmPresetSaveBtn.addEventListener("click", async () => {
       showToast(`プリセット「${result.presets[result.presets.length - 1].label}」として登録しました`);
       if (lastOverviewData) lastOverviewData.blockPresets = result.presets;
     } else if (result.reason === "max_reached"){
-      showToast("プリセットは最大5件までです。不要なものを削除してから登録してください");
+      showToast("プリセットは最大3件までです。不要なものを削除してから登録してください");
     } else {
       showToast("登録に失敗しました");
     }
@@ -1243,13 +1260,15 @@ function renderUpcoming(upcoming, todayStr){
       const timeEl = document.createElement("div");
       timeEl.className = "slot-time";
       timeEl.textContent = isEventSlot
-        ? (slot.time + "〜 " + slot.title + "（予約不可の予定）")
+        ? (slot.time + "〜 " + slot.title)
         : (slot.time + "〜（担当: " + (slot.teacher || "休み") + "）");
       main.appendChild(timeEl);
-      const subEl = document.createElement("div");
-      subEl.className = "slot-sub";
-      subEl.textContent = isEventSlot ? "コマとしてカウントされません" : `定員${slot.capacity} / 予約${slot.booked}人`;
-      main.appendChild(subEl);
+      if (!isEventSlot){
+        const subEl = document.createElement("div");
+        subEl.className = "slot-sub";
+        subEl.textContent = `定員${slot.capacity} / 予約${slot.booked}人`;
+        main.appendChild(subEl);
+      }
 
       if (slot.entries && slot.entries.length){
         const namesEl = document.createElement("div");
@@ -1270,12 +1289,7 @@ function renderUpcoming(upcoming, todayStr){
 
       if (isEventSlot){
         // 予約不可の予定は、このタブの旧仕様の編集フォームでは扱えない(タイトルを保持できない)ので、
-        // ここでは編集不可にし、カレンダータブでの編集・削除に誘導する
-        const noteEl = document.createElement("div");
-        noteEl.className = "slot-sub";
-        noteEl.style.marginLeft = "auto";
-        noteEl.textContent = "編集・削除は「カレンダー」タブから";
-        row.appendChild(noteEl);
+        // ここでは編集不可にする(編集はカレンダータブから)
         block.appendChild(row);
         return;
       }
