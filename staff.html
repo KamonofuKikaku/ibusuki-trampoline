@@ -626,8 +626,12 @@ async function saveSurvey_(isDraft){
     return;
   }
   if (publishDate && deadline && publishDate > deadline){
-    alert("公開日は締切日より前の日付にしてください");
-    return;
+    if (isDraft){
+      if (!confirm("公開日が締切日より後になっています。エラーがありますが、このまま一時保存しますか？")) return;
+    } else {
+      alert("公開日は締切日より前の日付にしてください");
+      return;
+    }
   }
   const cards = Array.from(document.getElementById("surveyQuestionsBuilder").children);
   const questions = cards.map(c => c._collect()).filter(Boolean);
@@ -692,14 +696,18 @@ function checkSurveyDateOrder_(){
   const deadline = document.getElementById("surveyDeadlineInput").value;
   const deadlineInput = document.getElementById("surveyDeadlineInput");
   if (publishDate && deadline && publishDate > deadline){
-    deadlineInput.style.borderColor = "var(--danger)";
+    deadlineInput.style.border = "2px solid var(--danger)";
+    deadlineInput.style.background = "#FDE4DE";
     showToastSurvey_("締切日は公開日より後にしてください");
   } else {
-    deadlineInput.style.borderColor = "";
+    deadlineInput.style.border = "";
+    deadlineInput.style.background = "";
   }
 }
-document.getElementById("surveyPublishDateInput").addEventListener("change", checkSurveyDateOrder_);
-document.getElementById("surveyDeadlineInput").addEventListener("change", checkSurveyDateOrder_);
+["change", "input", "blur"].forEach(evt => {
+  document.getElementById("surveyPublishDateInput").addEventListener(evt, checkSurveyDateOrder_);
+  document.getElementById("surveyDeadlineInput").addEventListener(evt, checkSurveyDateOrder_);
+});
 
 document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSurvey_(true));
 document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
