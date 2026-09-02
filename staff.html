@@ -58,6 +58,77 @@
   .iframe-loading .dino-img, .iframe-loading .tramp-mat,
   .iframe-loading .tramp-shadow, .iframe-loading .burst { animation-play-state: running; }
 
+  /* ---------- アンケート管理パネル ---------- */
+  .survey-panel { display: none; flex: 1; overflow-y: auto; padding: 14px 16px 40px; }
+  .survey-panel.show { display: block; }
+  .survey-section {
+    background: var(--white); border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 3px 10px rgba(43,35,32,0.06);
+  }
+  .survey-section-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 15px; margin-bottom: 10px; }
+  .survey-field-label { display: block; font-size: 12px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .survey-panel input[type="text"], .survey-panel input[type="date"], .survey-panel textarea {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #E6DFD3;
+    font-size: 13.5px; box-sizing: border-box; font-family: inherit;
+  }
+  .survey-target-row { display: flex; gap: 14px; }
+  .survey-checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .survey-checkbox input { width: auto; margin: 0; }
+
+  .survey-question-card { background: var(--cream); border-radius: 10px; padding: 10px; margin-top: 10px; position: relative; }
+  .survey-question-card .sq-remove {
+    position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%;
+    border: none; background: var(--danger); color: var(--white); font-size: 11px;
+  }
+  .survey-question-card select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; margin-bottom: 6px; font-size: 13px; }
+  .survey-question-card input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; margin-bottom: 6px; font-size: 13px; box-sizing: border-box; }
+  .sq-options-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .sq-options-row input { flex: 1; margin-bottom: 0; }
+  .sq-add-option-btn { border: none; background: var(--cream-deep, #EFE9DC); color: var(--ink-soft); font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+  .sq-minmax-row { display: flex; gap: 8px; }
+  .sq-minmax-row input { margin-bottom: 0; }
+
+  .survey-add-question-btn {
+    width: 100%; margin-top: 10px; border: 2px dashed #E6DFD3; background: transparent; color: var(--ink-soft);
+    font-weight: 700; font-size: 13px; padding: 10px; border-radius: 10px;
+  }
+  .survey-create-btn {
+    width: 100%; margin-top: 16px; border: none; background: var(--orange); color: var(--white);
+    font-weight: 700; font-size: 14.5px; padding: 13px; border-radius: 12px; font-family: "Zen Maru Gothic", sans-serif;
+  }
+  .survey-create-btn:disabled { background: var(--ink-soft); }
+
+  .survey-list-item {
+    background: var(--cream); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+  }
+  .survey-list-item .sli-subject { font-weight: 700; font-size: 13.5px; margin-bottom: 3px; }
+  .survey-list-item .sli-meta { font-size: 11.5px; color: var(--ink-soft); }
+  .sli-copy-btn {
+    margin-top: 8px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .survey-list-empty { font-size: 12.5px; color: var(--ink-soft); }
+
+  .modal-overlay-survey {
+    display: none; position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 80;
+  }
+  .modal-overlay-survey.show { display: block; }
+  .survey-results-box {
+    display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: calc(100% - 48px); max-width: 400px; max-height: 80vh; overflow-y: auto;
+    background: var(--white); border-radius: 16px; padding: 20px; z-index: 81; box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+  }
+  .survey-results-box.show { display: block; }
+  .survey-results-close {
+    position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: var(--cream); color: var(--ink-soft); font-size: 15px;
+  }
+  .sr-tally-row { margin-bottom: 14px; }
+  .sr-tally-row .sr-q { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+  .sr-tally-opt { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: var(--ink-soft); }
+  .sr-response-item { border-top: 1px solid #F0EAE0; padding: 8px 0; font-size: 12px; }
+  .sr-response-item .sr-name { font-weight: 700; color: var(--ink); }
+
   /* ---------- login loading overlay (dino) ---------- */
   .loading-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
@@ -127,6 +198,7 @@
   <div class="system-tabs" id="systemTabs">
     <button class="system-tab-btn active" data-system="athlete">選手用</button>
     <button class="system-tab-btn" data-system="general">一般用</button>
+    <button class="system-tab-btn" data-system="survey">アンケート</button>
   </div>
 
   <div class="iframe-wrap" id="wrap-athlete">
@@ -168,6 +240,49 @@
       </div>
     </div>
     <iframe id="iframe-general" title="一般用スタッフ管理"></iframe>
+  </div>
+
+  <div class="survey-panel" id="wrap-survey">
+    <div class="survey-section">
+      <div class="survey-section-title">新しいアンケートを作成</div>
+
+      <label class="survey-field-label">配信先</label>
+      <div class="survey-target-row">
+        <label class="survey-checkbox"><input type="checkbox" id="targetAthlete" checked /> 選手用</label>
+        <label class="survey-checkbox"><input type="checkbox" id="targetGeneral" checked /> 一般用</label>
+      </div>
+
+      <label class="survey-field-label">件名</label>
+      <input type="text" id="surveySubjectInput" placeholder="例：施設についてのアンケート" />
+
+      <label class="survey-field-label">内容（任意）</label>
+      <textarea id="surveyContentInput" rows="3" placeholder="アンケートの説明があれば入力してください"></textarea>
+
+      <label class="survey-field-label">締切日</label>
+      <input type="date" id="surveyDeadlineInput" />
+
+      <label class="survey-field-label">質問</label>
+      <div id="surveyQuestionsBuilder"></div>
+      <button class="survey-add-question-btn" id="addQuestionBtn">＋ 質問を追加</button>
+
+      <button class="survey-create-btn" id="createSurveyBtn">アンケートを作成する</button>
+    </div>
+
+    <div class="survey-section">
+      <div class="survey-section-title">選手用のアンケート</div>
+      <div id="athleteSurveyList" class="survey-list"></div>
+    </div>
+
+    <div class="survey-section">
+      <div class="survey-section-title">一般用のアンケート</div>
+      <div id="generalSurveyList" class="survey-list"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay-survey" id="surveyResultsOverlay"></div>
+  <div class="survey-results-box" id="surveyResultsBox">
+    <button class="survey-results-close" id="surveyResultsCloseBtn">×</button>
+    <div id="surveyResultsContent"></div>
   </div>
 
   <div class="loading-overlay" id="loginLoadingOverlay">
@@ -321,6 +436,15 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
     document.querySelectorAll(".system-tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     const target = btn.dataset.system;
+
+    const surveyPanel = document.getElementById("wrap-survey");
+    if (target === "survey"){
+      Object.keys(wraps).forEach(key => wraps[key].classList.remove("show"));
+      surveyPanel.classList.add("show");
+      loadSurveyLists_();
+      return;
+    }
+    surveyPanel.classList.remove("show");
     Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === target));
     loadIframe_(target);
 
@@ -333,6 +457,291 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
       setTimeout(() => { loadingEl.style.display = "none"; }, 350);
     }
   });
+});
+
+/* ---------- アンケート管理 ---------- */
+const ENDPOINT_BY_SYSTEM = { athlete: ATHLETE_ENDPOINT, general: GENERAL_ENDPOINT };
+const SYSTEM_LABEL = { athlete: "選手用", general: "一般用" };
+
+function addQuestionCard_(prefill){
+  const builder = document.getElementById("surveyQuestionsBuilder");
+  const card = document.createElement("div");
+  card.className = "survey-question-card";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "sq-remove";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => card.remove());
+  card.appendChild(removeBtn);
+
+  const typeSelect = document.createElement("select");
+  typeSelect.innerHTML = `<option value="radio">選択肢（ラジオボタン）</option><option value="number">数の選択</option>`;
+  if (prefill && prefill.type) typeSelect.value = prefill.type;
+  card.appendChild(typeSelect);
+
+  const questionInput = document.createElement("input");
+  questionInput.type = "text";
+  questionInput.placeholder = "質問文を入力";
+  if (prefill && prefill.question) questionInput.value = prefill.question;
+  card.appendChild(questionInput);
+
+  const radioFields = document.createElement("div");
+  radioFields.className = "sq-radio-fields";
+  const optionsWrap = document.createElement("div");
+  radioFields.appendChild(optionsWrap);
+  function addOptionRow_(value){
+    const row = document.createElement("div");
+    row.className = "sq-options-row";
+    const optInput = document.createElement("input");
+    optInput.type = "text";
+    optInput.placeholder = "選択肢";
+    if (value) optInput.value = value;
+    row.appendChild(optInput);
+    const rm = document.createElement("button");
+    rm.className = "sq-add-option-btn";
+    rm.textContent = "×";
+    rm.addEventListener("click", () => row.remove());
+    row.appendChild(rm);
+    optionsWrap.appendChild(row);
+  }
+  if (prefill && prefill.type === "radio" && prefill.options && prefill.options.length){
+    prefill.options.forEach(opt => addOptionRow_(opt));
+  } else {
+    addOptionRow_(); addOptionRow_();
+  }
+  const addOptBtn = document.createElement("button");
+  addOptBtn.className = "sq-add-option-btn";
+  addOptBtn.textContent = "＋ 選択肢を追加";
+  addOptBtn.addEventListener("click", () => addOptionRow_());
+  radioFields.appendChild(addOptBtn);
+  card.appendChild(radioFields);
+
+  const numberFields = document.createElement("div");
+  numberFields.className = "sq-minmax-row";
+  const minInput = document.createElement("input");
+  minInput.type = "number"; minInput.placeholder = "最小(例:1)"; minInput.value = (prefill && prefill.min) || "1";
+  const maxInput = document.createElement("input");
+  maxInput.type = "number"; maxInput.placeholder = "最大(例:5)"; maxInput.value = (prefill && prefill.max) || "5";
+  numberFields.appendChild(minInput);
+  numberFields.appendChild(maxInput);
+  card.appendChild(numberFields);
+
+  const isNumber = prefill && prefill.type === "number";
+  radioFields.style.display = isNumber ? "none" : "block";
+  numberFields.style.display = isNumber ? "flex" : "none";
+
+  typeSelect.addEventListener("change", () => {
+    radioFields.style.display = typeSelect.value === "radio" ? "block" : "none";
+    numberFields.style.display = typeSelect.value === "number" ? "flex" : "none";
+  });
+
+  card._collect = () => {
+    const question = questionInput.value.trim();
+    if (!question) return null;
+    if (typeSelect.value === "radio"){
+      const options = Array.from(optionsWrap.querySelectorAll("input")).map(i => i.value.trim()).filter(Boolean);
+      if (options.length < 2) return null;
+      return { type: "radio", question: question, options: options };
+    }
+    return { type: "number", question: question, min: Number(minInput.value) || 1, max: Number(maxInput.value) || 5 };
+  };
+
+  builder.appendChild(card);
+}
+document.getElementById("addQuestionBtn").addEventListener("click", addQuestionCard_);
+addQuestionCard_(); // 最初から1問分用意しておく
+
+document.getElementById("createSurveyBtn").addEventListener("click", async () => {
+  const subject = document.getElementById("surveySubjectInput").value.trim();
+  const content = document.getElementById("surveyContentInput").value.trim();
+  const deadline = document.getElementById("surveyDeadlineInput").value;
+  const targets = [];
+  if (document.getElementById("targetAthlete").checked) targets.push("athlete");
+  if (document.getElementById("targetGeneral").checked) targets.push("general");
+
+  if (!subject || !deadline || targets.length === 0){
+    alert("件名・締切日・配信先は必須です");
+    return;
+  }
+  const cards = Array.from(document.getElementById("surveyQuestionsBuilder").children);
+  const questions = cards.map(c => c._collect()).filter(Boolean);
+  if (questions.length === 0){
+    alert("質問を1つ以上、正しく入力してください（選択肢は2つ以上）");
+    return;
+  }
+
+  const btn = document.getElementById("createSurveyBtn");
+  btn.disabled = true;
+  btn.textContent = "作成中…";
+
+  const results = [];
+  for (const sys of targets){
+    try {
+      const res = await fetch(ENDPOINT_BY_SYSTEM[sys], {
+        method: "POST",
+        body: JSON.stringify({ action: "staffCreateSurvey", password: currentPassword, subject, content, deadline, questions }),
+      });
+      const data = await res.json();
+      results.push({ sys, ok: !!data.success });
+    } catch (err){
+      console.error(err);
+      results.push({ sys, ok: false });
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = "アンケートを作成する";
+
+  const failed = results.filter(r => !r.ok).map(r => SYSTEM_LABEL[r.sys]);
+  if (failed.length){
+    alert(failed.join("・") + "への作成に失敗しました（対応していない可能性があります）");
+  } else {
+    alert("作成しました");
+  }
+  document.getElementById("surveySubjectInput").value = "";
+  document.getElementById("surveyContentInput").value = "";
+  document.getElementById("surveyDeadlineInput").value = "";
+  document.getElementById("surveyQuestionsBuilder").innerHTML = "";
+  addQuestionCard_();
+  loadSurveyLists_();
+});
+
+async function loadSurveyLists_(){
+  await Promise.all([loadSurveyListForSystem_("athlete"), loadSurveyListForSystem_("general")]);
+}
+
+// 過去のアンケートの内容を、新規作成フォームにコピーする
+async function copySurveyToForm_(sys, surveyId){
+  try {
+    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const data = await res.json();
+    if (!data.success){
+      alert("コピー元の読み込みに失敗しました");
+      return;
+    }
+    const survey = data.survey;
+
+    document.getElementById("surveySubjectInput").value = survey.subject;
+    document.getElementById("surveyContentInput").value = survey.content || "";
+    document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
+    document.getElementById("targetAthlete").checked = sys === "athlete";
+    document.getElementById("targetGeneral").checked = sys === "general";
+
+    const builder = document.getElementById("surveyQuestionsBuilder");
+    builder.innerHTML = "";
+    (survey.questions || []).forEach(q => addQuestionCard_(q));
+    if (!survey.questions || !survey.questions.length) addQuestionCard_();
+
+    document.querySelector(".survey-panel").scrollTo({ top: 0, behavior: "smooth" });
+    showToastSurvey_("内容をコピーしました。締切日を設定して作成してください");
+  } catch (err){
+    console.error(err);
+    alert("通信に失敗しました");
+  }
+}
+
+// staff.html独自の簡易トースト（既存のshowToastは無いので、ここで最小限用意する）
+function showToastSurvey_(msg){
+  let el = document.getElementById("surveyToast");
+  if (!el){
+    el = document.createElement("div");
+    el.id = "surveyToast";
+    el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;z-index:90;opacity:0;transition:opacity 0.25s ease;";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = "1";
+  clearTimeout(showToastSurvey_._t);
+  showToastSurvey_._t = setTimeout(() => { el.style.opacity = "0"; }, 2200);
+}
+
+async function loadSurveyListForSystem_(sys){
+  const listEl = document.getElementById(sys === "athlete" ? "athleteSurveyList" : "generalSurveyList");
+  listEl.innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
+  try {
+    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyList&password=${encodeURIComponent(currentPassword)}`);
+    const data = await res.json();
+    const list = data.list || [];
+    if (!list.length){
+      listEl.innerHTML = `<div class="survey-list-empty">アンケートはまだありません</div>`;
+      return;
+    }
+    listEl.innerHTML = "";
+    list.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "survey-list-item";
+      el.innerHTML = `<div class="sli-subject">${item.subject}</div>
+        <div class="sli-meta">締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"}</div>`;
+      el.addEventListener("click", () => openSurveyResults_(sys, item.id));
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "sli-copy-btn";
+      copyBtn.textContent = "コピーして作成";
+      copyBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // 親の「結果を見る」クリックを発火させない
+        copySurveyToForm_(sys, item.id);
+      });
+      el.appendChild(copyBtn);
+
+      listEl.appendChild(el);
+    });
+  } catch (err){
+    console.error(err);
+    listEl.innerHTML = `<div class="survey-list-empty">読み込みに失敗しました（未対応の可能性があります）</div>`;
+  }
+}
+
+async function openSurveyResults_(sys, surveyId){
+  const overlay = document.getElementById("surveyResultsOverlay");
+  const box = document.getElementById("surveyResultsBox");
+  const content = document.getElementById("surveyResultsContent");
+  content.innerHTML = "読み込み中…";
+  overlay.classList.add("show");
+  box.classList.add("show");
+
+  try {
+    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const data = await res.json();
+    if (!data.success){
+      content.innerHTML = "結果を取得できませんでした";
+      return;
+    }
+    let html = `<div class="survey-section-title">${data.survey.subject}</div>`;
+    html += `<div class="sli-meta" style="margin-bottom:14px;">${SYSTEM_LABEL[sys]}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件</div>`;
+
+    data.tally.forEach(t => {
+      html += `<div class="sr-tally-row"><div class="sr-q">${t.question}</div>`;
+      if (t.type === "radio"){
+        Object.keys(t.counts).forEach(opt => {
+          html += `<div class="sr-tally-opt"><span>${opt}</span><span>${t.counts[opt]}件</span></div>`;
+        });
+      } else if (t.type === "number"){
+        html += `<div class="sr-tally-opt"><span>平均</span><span>${t.average !== null ? t.average.toFixed(1) : "-"}（${t.count}件）</span></div>`;
+      }
+      html += `</div>`;
+    });
+
+    html += `<div class="survey-field-label">個別の回答</div>`;
+    data.responses.forEach(r => {
+      html += `<div class="sr-response-item"><span class="sr-name">${r.name}</span>（${r.respondedAt}）<br>`;
+      html += r.answers.map(a => `${a.question}: ${a.answer}`).join(" / ");
+      html += `</div>`;
+    });
+
+    content.innerHTML = html;
+  } catch (err){
+    console.error(err);
+    content.innerHTML = "通信に失敗しました";
+  }
+}
+
+document.getElementById("surveyResultsCloseBtn").addEventListener("click", () => {
+  document.getElementById("surveyResultsOverlay").classList.remove("show");
+  document.getElementById("surveyResultsBox").classList.remove("show");
+});
+document.getElementById("surveyResultsOverlay").addEventListener("click", () => {
+  document.getElementById("surveyResultsOverlay").classList.remove("show");
+  document.getElementById("surveyResultsBox").classList.remove("show");
 });
 
 // 前回ログイン済みならパスワード入力を省略
