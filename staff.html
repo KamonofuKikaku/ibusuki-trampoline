@@ -96,8 +96,12 @@
     width: 100%; margin-top: 10px; border: 2px dashed #E6DFD3; background: transparent; color: var(--ink-soft);
     font-weight: 700; font-size: 13px; padding: 10px; border-radius: 10px;
   }
+  .survey-draft-btn {
+    width: 100%; margin-top: 16px; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 13.5px; padding: 12px; border-radius: 12px; font-family: "Zen Maru Gothic", sans-serif;
+  }
   .survey-create-btn {
-    width: 100%; margin-top: 16px; border: none; background: var(--orange); color: var(--white);
+    width: 100%; margin-top: 8px; border: none; background: var(--orange); color: var(--white);
     font-weight: 700; font-size: 14.5px; padding: 13px; border-radius: 12px; font-family: "Zen Maru Gothic", sans-serif;
   }
   .survey-create-btn:disabled { background: var(--ink-soft); }
@@ -105,8 +109,12 @@
   .survey-list-item {
     background: var(--cream); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
   }
-  .survey-list-item .sli-subject { font-weight: 700; font-size: 13.5px; margin-bottom: 3px; }
+  .survey-list-item .sli-subject { font-weight: 700; font-size: 13.5px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
   .survey-list-item .sli-meta { font-size: 11.5px; color: var(--ink-soft); }
+  .sli-draft-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; color: var(--orange);
+    background: var(--orange-soft, #FFE3D6); padding: 1px 7px; border-radius: 999px;
+  }
   .sli-copy-btn {
     margin-top: 8px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
     font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
@@ -262,6 +270,9 @@
       <label class="survey-field-label">内容（任意）</label>
       <textarea id="surveyContentInput" rows="3" placeholder="アンケートの説明があれば入力してください"></textarea>
 
+      <label class="survey-field-label">公開日（空欄=作成後すぐ公開）</label>
+      <input type="date" id="surveyPublishDateInput" />
+
       <label class="survey-field-label">締切日</label>
       <input type="date" id="surveyDeadlineInput" />
 
@@ -269,6 +280,7 @@
       <div id="surveyQuestionsBuilder"></div>
       <button class="survey-add-question-btn" id="addQuestionBtn">＋ 質問を追加</button>
 
+      <button class="survey-draft-btn" id="draftSurveyBtn">一時保存する</button>
       <button class="survey-create-btn" id="createSurveyBtn">アンケートを作成する</button>
     </div>
 
@@ -578,37 +590,73 @@ function addQuestionCard_(prefill){
 document.getElementById("addQuestionBtn").addEventListener("click", addQuestionCard_);
 addQuestionCard_(); // 最初から1問分用意しておく
 
-document.getElementById("createSurveyBtn").addEventListener("click", async () => {
+// 編集中のアンケートのID（システムごと。新規作成中は空文字）
+// 一時保存を繰り返した時に、同じ下書きを上書きするために使う
+let currentSurveyIds = { athlete: "", general: "" };
+
+function resetSurveyForm_(){
+  currentSurveyIds = { athlete: "", general: "" };
+  document.getElementById("surveySubjectInput").value = "";
+  document.getElementById("surveyContentInput").value = "";
+  document.getElementById("surveyPublishDateInput").value = "";
+  document.getElementById("surveyDeadlineInput").value = "";
+  document.getElementById("targetAthlete").checked = true;
+  document.getElementById("targetGeneral").checked = true;
+  document.getElementById("surveyQuestionsBuilder").innerHTML = "";
+  addQuestionCard_();
+}
+
+async function saveSurvey_(isDraft){
   const subject = document.getElementById("surveySubjectInput").value.trim();
   const content = document.getElementById("surveyContentInput").value.trim();
+  const publishDate = document.getElementById("surveyPublishDateInput").value;
   const deadline = document.getElementById("surveyDeadlineInput").value;
   const targets = [];
   if (document.getElementById("targetAthlete").checked) targets.push("athlete");
   if (document.getElementById("targetGeneral").checked) targets.push("general");
 
-  if (!subject || !deadline || targets.length === 0){
-    alert("件名・締切日・配信先は必須です");
+  if (!subject){
+    alert("件名は必須です");
+    return;
+  }
+  if (targets.length === 0){
+    alert("配信先を1つ以上選んでください");
     return;
   }
   const cards = Array.from(document.getElementById("surveyQuestionsBuilder").children);
   const questions = cards.map(c => c._collect()).filter(Boolean);
-  if (questions.length === 0){
-    alert("質問を1つ以上、正しく入力してください（選択肢は2つ以上）");
-    return;
+
+  if (!isDraft){
+    if (!deadline){
+      alert("締切日は必須です（一時保存なら空欄でも大丈夫です）");
+      return;
+    }
+    if (questions.length === 0){
+      alert("質問を1つ以上、正しく入力してください（選択肢は2つ以上）");
+      return;
+    }
   }
 
-  const btn = document.getElementById("createSurveyBtn");
-  btn.disabled = true;
-  btn.textContent = "作成中…";
+  const draftBtn = document.getElementById("draftSurveyBtn");
+  const createBtn = document.getElementById("createSurveyBtn");
+  const activeBtn = isDraft ? draftBtn : createBtn;
+  draftBtn.disabled = true;
+  createBtn.disabled = true;
+  activeBtn.textContent = isDraft ? "一時保存中…" : "作成中…";
 
   const results = [];
   for (const sys of targets){
     try {
       const res = await fetch(ENDPOINT_BY_SYSTEM[sys], {
         method: "POST",
-        body: JSON.stringify({ action: "staffCreateSurvey", password: currentPassword, subject, content, deadline, questions }),
+        body: JSON.stringify({
+          action: "staffSaveSurvey", password: currentPassword,
+          id: currentSurveyIds[sys] || undefined,
+          subject, content, publishDate, deadline, questions, isDraft,
+        }),
       });
       const data = await res.json();
+      if (data.success) currentSurveyIds[sys] = data.id;
       results.push({ sys, ok: !!data.success });
     } catch (err){
       console.error(err);
@@ -616,25 +664,68 @@ document.getElementById("createSurveyBtn").addEventListener("click", async () =>
     }
   }
 
-  btn.disabled = false;
-  btn.textContent = "アンケートを作成する";
+  draftBtn.disabled = false;
+  createBtn.disabled = false;
+  draftBtn.textContent = "一時保存する";
+  createBtn.textContent = "アンケートを作成する";
 
   const failed = results.filter(r => !r.ok).map(r => SYSTEM_LABEL[r.sys]);
   if (failed.length){
-    alert(failed.join("・") + "への作成に失敗しました（対応していない可能性があります）");
+    alert(failed.join("・") + "への保存に失敗しました（対応していない可能性があります）");
+  } else if (isDraft){
+    showToastSurvey_("一時保存しました");
   } else {
     alert("作成しました");
+    resetSurveyForm_();
   }
-  document.getElementById("surveySubjectInput").value = "";
-  document.getElementById("surveyContentInput").value = "";
-  document.getElementById("surveyDeadlineInput").value = "";
-  document.getElementById("surveyQuestionsBuilder").innerHTML = "";
-  addQuestionCard_();
   loadSurveyLists_();
-});
+}
+
+document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSurvey_(true));
+document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
 
 async function loadSurveyLists_(){
-  await Promise.all([loadSurveyListForSystem_("athlete"), loadSurveyListForSystem_("general")]);
+  const [athleteList, generalList] = await Promise.all([
+    loadSurveyListForSystem_("athlete"), loadSurveyListForSystem_("general"),
+  ]);
+
+  // 下書きがあれば、まだ何も編集していない状態の時だけ、再開するか確認する
+  const alreadyEditing = !!(currentSurveyIds.athlete || currentSurveyIds.general);
+  if (alreadyEditing) return;
+
+  const draftCandidates = [
+    ...athleteList.filter(i => i.status === "draft").map(i => ({ sys: "athlete", item: i })),
+    ...generalList.filter(i => i.status === "draft").map(i => ({ sys: "general", item: i })),
+  ];
+  if (draftCandidates.length === 0) return;
+
+  // 一番新しく作られた下書きを優先して案内する
+  draftCandidates.sort((a, b) => (b.item.createdDate || "").localeCompare(a.item.createdDate || ""));
+  const top = draftCandidates[0];
+  if (confirm(`下書き「${top.item.subject}」があります。再開しますか？`)){
+    resumeSurveyDraft_(top.sys, top.item);
+  }
+}
+
+// 下書きの内容を、新規作成フォームに読み込む
+function resumeSurveyDraft_(sys, item){
+  currentSurveyIds = { athlete: "", general: "" };
+  currentSurveyIds[sys] = item.id;
+
+  document.getElementById("surveySubjectInput").value = item.subject || "";
+  document.getElementById("surveyContentInput").value = item.content || "";
+  document.getElementById("surveyPublishDateInput").value = item.publishDate || "";
+  document.getElementById("surveyDeadlineInput").value = item.deadline || "";
+  document.getElementById("targetAthlete").checked = sys === "athlete";
+  document.getElementById("targetGeneral").checked = sys === "general";
+
+  const builder = document.getElementById("surveyQuestionsBuilder");
+  builder.innerHTML = "";
+  (item.questions || []).forEach(q => addQuestionCard_(q));
+  if (!item.questions || !item.questions.length) addQuestionCard_();
+
+  document.querySelector(".survey-panel").scrollTo({ top: 0, behavior: "smooth" });
+  showToastSurvey_(`下書き「${item.subject}」を再開しました`);
 }
 
 // 過去のアンケートの内容を、新規作成フォームにコピーする
@@ -648,8 +739,10 @@ async function copySurveyToForm_(sys, surveyId){
     }
     const survey = data.survey;
 
+    currentSurveyIds = { athlete: "", general: "" }; // コピーは新規作成なので、編集中IDはリセットする
     document.getElementById("surveySubjectInput").value = survey.subject;
     document.getElementById("surveyContentInput").value = survey.content || "";
+    document.getElementById("surveyPublishDateInput").value = "";
     document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
     document.getElementById("targetAthlete").checked = sys === "athlete";
     document.getElementById("targetGeneral").checked = sys === "general";
@@ -691,30 +784,40 @@ async function loadSurveyListForSystem_(sys){
     const list = data.list || [];
     if (!list.length){
       listEl.innerHTML = `<div class="survey-list-empty">アンケートはまだありません</div>`;
-      return;
+      return list;
     }
     listEl.innerHTML = "";
     list.forEach(item => {
+      const isDraft = item.status === "draft";
       const el = document.createElement("div");
       el.className = "survey-list-item";
-      el.innerHTML = `<div class="sli-subject">${item.subject}</div>
-        <div class="sli-meta">締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"}</div>`;
-      el.addEventListener("click", () => openSurveyResults_(sys, item.id));
+      const badge = isDraft ? `<span class="sli-draft-badge">一時保存</span>` : "";
+      const meta = isDraft
+        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""}`
+        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"}`;
+      el.innerHTML = `<div class="sli-subject">${badge}<span>${item.subject}</span></div>
+        <div class="sli-meta">${meta}</div>`;
+      el.addEventListener("click", () => {
+        if (isDraft) resumeSurveyDraft_(sys, item);
+        else openSurveyResults_(sys, item.id);
+      });
 
       const copyBtn = document.createElement("button");
       copyBtn.className = "sli-copy-btn";
       copyBtn.textContent = "コピーして作成";
       copyBtn.addEventListener("click", (e) => {
-        e.stopPropagation(); // 親の「結果を見る」クリックを発火させない
+        e.stopPropagation(); // 親のクリックを発火させない
         copySurveyToForm_(sys, item.id);
       });
       el.appendChild(copyBtn);
 
       listEl.appendChild(el);
     });
+    return list;
   } catch (err){
     console.error(err);
     listEl.innerHTML = `<div class="survey-list-empty">読み込みに失敗しました（未対応の可能性があります）</div>`;
+    return [];
   }
 }
 
