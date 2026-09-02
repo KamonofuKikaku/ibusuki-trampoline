@@ -85,7 +85,11 @@
   .sq-options-row { display: flex; gap: 6px; margin-bottom: 6px; }
   .sq-options-row input { flex: 1; margin-bottom: 0; }
   .sq-add-option-btn { border: none; background: var(--cream-deep, #EFE9DC); color: var(--ink-soft); font-size: 12px; padding: 6px 10px; border-radius: 8px; }
-  .sq-minmax-row { display: flex; gap: 8px; }
+  .sq-number-hint { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
+  .sq-minmax-row { display: flex; gap: 10px; }
+  .sq-minmax-col { flex: 1; }
+  .sq-minmax-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 3px; }
+  .sq-minmax-col input { margin-bottom: 0; }
   .sq-minmax-row input { margin-bottom: 0; }
 
   .survey-add-question-btn {
@@ -516,23 +520,46 @@ function addQuestionCard_(prefill){
   radioFields.appendChild(addOptBtn);
   card.appendChild(radioFields);
 
+  const numberHint = document.createElement("div");
+  numberHint.className = "sq-number-hint";
+  numberHint.textContent = "お客さんが選べる数の範囲（最小〜最大）";
+  card.appendChild(numberHint);
+
   const numberFields = document.createElement("div");
   numberFields.className = "sq-minmax-row";
+  const minWrap = document.createElement("div");
+  minWrap.className = "sq-minmax-col";
+  const minLabel = document.createElement("div");
+  minLabel.className = "sq-minmax-label";
+  minLabel.textContent = "最小";
   const minInput = document.createElement("input");
-  minInput.type = "number"; minInput.placeholder = "最小(例:1)"; minInput.value = (prefill && prefill.min) || "1";
+  minInput.type = "number"; minInput.value = (prefill && prefill.min) || "1";
+  minWrap.appendChild(minLabel);
+  minWrap.appendChild(minInput);
+
+  const maxWrap = document.createElement("div");
+  maxWrap.className = "sq-minmax-col";
+  const maxLabel = document.createElement("div");
+  maxLabel.className = "sq-minmax-label";
+  maxLabel.textContent = "最大";
   const maxInput = document.createElement("input");
-  maxInput.type = "number"; maxInput.placeholder = "最大(例:5)"; maxInput.value = (prefill && prefill.max) || "5";
-  numberFields.appendChild(minInput);
-  numberFields.appendChild(maxInput);
+  maxInput.type = "number"; maxInput.value = (prefill && prefill.max) || "5";
+  maxWrap.appendChild(maxLabel);
+  maxWrap.appendChild(maxInput);
+
+  numberFields.appendChild(minWrap);
+  numberFields.appendChild(maxWrap);
   card.appendChild(numberFields);
 
   const isNumber = prefill && prefill.type === "number";
   radioFields.style.display = isNumber ? "none" : "block";
   numberFields.style.display = isNumber ? "flex" : "none";
+  numberHint.style.display = isNumber ? "block" : "none";
 
   typeSelect.addEventListener("change", () => {
     radioFields.style.display = typeSelect.value === "radio" ? "block" : "none";
     numberFields.style.display = typeSelect.value === "number" ? "flex" : "none";
+    numberHint.style.display = typeSelect.value === "number" ? "block" : "none";
   });
 
   card._collect = () => {
