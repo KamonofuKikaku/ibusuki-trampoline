@@ -117,9 +117,14 @@
     background: var(--orange-soft, #FFE3D6); padding: 1px 7px; border-radius: 999px;
   }
   .sli-copy-btn {
-    margin-top: 8px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
+    margin-top: 8px; margin-right: 6px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
     font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
   }
+  .sli-delete-btn {
+    margin-top: 8px; border: 1px solid var(--danger); background: var(--white); color: var(--danger);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-delete-btn:disabled { opacity: 0.5; }
   .survey-list-empty { font-size: 12.5px; color: var(--ink-soft); }
 
   .modal-overlay-survey {
@@ -845,6 +850,34 @@ async function loadSurveyListForSystem_(sys){
         copySurveyToForm_(sys, item.id);
       });
       el.appendChild(copyBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "sli-delete-btn";
+      deleteBtn.textContent = "削除";
+      deleteBtn.addEventListener("click", async (e) => {
+        e.stopPropagation(); // 親のクリックを発火させない
+        if (!confirm(`「${item.subject}」を削除しますか？${isDraft ? "" : "\n回答データも一緒に削除されます。"}`)) return;
+        deleteBtn.disabled = true;
+        try {
+          const res = await fetch(ENDPOINT_BY_SYSTEM[sys], {
+            method: "POST",
+            body: JSON.stringify({ action: "staffDeleteSurvey", password: currentPassword, surveyId: item.id }),
+          });
+          const data = await res.json();
+          if (data.success){
+            if (currentSurveyIds[sys] === item.id) currentSurveyIds[sys] = ""; // 編集中だったものが消えたら紐付けも解除
+            loadSurveyLists_();
+          } else {
+            alert("削除に失敗しました");
+            deleteBtn.disabled = false;
+          }
+        } catch (err){
+          console.error(err);
+          alert("通信に失敗しました");
+          deleteBtn.disabled = false;
+        }
+      });
+      el.appendChild(deleteBtn);
 
       listEl.appendChild(el);
     });
