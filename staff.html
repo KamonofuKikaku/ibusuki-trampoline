@@ -294,13 +294,8 @@
     </div>
 
     <div class="survey-section">
-      <div class="survey-section-title">選手用のアンケート</div>
-      <div id="athleteSurveyList" class="survey-list"></div>
-    </div>
-
-    <div class="survey-section">
-      <div class="survey-section-title">一般用のアンケート</div>
-      <div id="generalSurveyList" class="survey-list"></div>
+      <div class="survey-section-title">アンケート一覧</div>
+      <div id="surveyList" class="survey-list"></div>
     </div>
   </div>
 
@@ -485,8 +480,11 @@ document.querySelectorAll(".system-tab-btn").forEach(btn => {
 });
 
 /* ---------- アンケート管理 ---------- */
-const ENDPOINT_BY_SYSTEM = { athlete: ATHLETE_ENDPOINT, general: GENERAL_ENDPOINT };
-const SYSTEM_LABEL = { athlete: "選手用", general: "一般用" };
+// アンケートは一般用のスプレッドシートに一本化する(選手用・一般用で別々に保存すると、
+// 片方だけ消し忘れる等の管理ミスにつながるため)。配信先は「どのシステムに保存するか」ではなく
+// 「どちらの利用者に見せるか」を表すだけのフラグとして扱う
+const SURVEY_ENDPOINT = GENERAL_ENDPOINT;
+const SYSTEM_LABEL = { athlete: "選手用", general: "一般用", both: "選手用・一般用" };
 
 function addQuestionCard_(prefill){
   const builder = document.getElementById("surveyQuestionsBuilder");
@@ -600,12 +598,11 @@ function addQuestionCard_(prefill){
 document.getElementById("addQuestionBtn").addEventListener("click", addQuestionCard_);
 addQuestionCard_(); // 最初から1問分用意しておく
 
-// 編集中のアンケートのID（システムごと。新規作成中は空文字）
-// 一時保存を繰り返した時に、同じ下書きを上書きするために使う
-let currentSurveyIds = { athlete: "", general: "" };
+// 編集中のアンケートのID（一時保存を繰り返した時に、同じ下書きを上書きするために使う。新規作成中は空文字）
+let currentSurveyId = "";
 
 function resetSurveyForm_(){
-  currentSurveyIds = { athlete: "", general: "" };
+  currentSurveyId = "";
   document.getElementById("surveySubjectInput").value = "";
   document.getElementById("surveyContentInput").value = "";
   document.getElementById("surveyNotesInput").value = "";
@@ -617,21 +614,28 @@ function resetSurveyForm_(){
   addQuestionCard_();
 }
 
+function getSelectedAudience_(){
+  const athlete = document.getElementById("targetAthlete").checked;
+  const general = document.getElementById("targetGeneral").checked;
+  if (athlete && general) return "both";
+  if (athlete) return "athlete";
+  if (general) return "general";
+  return ""; // どちらも未選択
+}
+
 async function saveSurvey_(isDraft){
   const subject = document.getElementById("surveySubjectInput").value.trim();
   const content = document.getElementById("surveyContentInput").value.trim();
   const notes = document.getElementById("surveyNotesInput").value.trim();
   const publishDate = document.getElementById("surveyPublishDateInput").value;
   const deadline = document.getElementById("surveyDeadlineInput").value;
-  const targets = [];
-  if (document.getElementById("targetAthlete").checked) targets.push("athlete");
-  if (document.getElementById("targetGeneral").checked) targets.push("general");
+  const audience = getSelectedAudience_();
 
   if (!subject){
     alert("件名は必須です");
     return;
   }
-  if (targets.length === 0){
+  if (!audience){
     alert("配信先を1つ以上選んでください");
     return;
   }
@@ -659,45 +663,41 @@ async function saveSurvey_(isDraft){
 
   const draftBtn = document.getElementById("draftSurveyBtn");
   const createBtn = document.getElementById("createSurveyBtn");
-  const activeBtn = isDraft ? draftBtn : createBtn;
   draftBtn.disabled = true;
   createBtn.disabled = true;
+  const activeBtn = isDraft ? draftBtn : createBtn;
   activeBtn.textContent = isDraft ? "一時保存中…" : "作成中…";
 
-  const results = [];
-  for (const sys of targets){
-    try {
-      const res = await fetch(ENDPOINT_BY_SYSTEM[sys], {
-        method: "POST",
-        body: JSON.stringify({
-          action: "staffSaveSurvey", password: currentPassword,
-          id: currentSurveyIds[sys] || undefined,
-          subject, content, notes, publishDate, deadline, questions, isDraft,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) currentSurveyIds[sys] = data.id;
-      results.push({ sys, ok: !!data.success });
-    } catch (err){
-      console.error(err);
-      results.push({ sys, ok: false });
+  try {
+    const res = await fetch(SURVEY_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffSaveSurvey", password: currentPassword,
+        id: currentSurveyId || undefined,
+        subject, content, notes, publishDate, deadline, questions, isDraft, audience,
+      }),
+    });
+    const data = await res.json();
+    if (data.success){
+      currentSurveyId = data.id;
+      if (isDraft){
+        showToastSurvey_("一時保存しました");
+      } else {
+        alert("作成しました");
+        resetSurveyForm_();
+      }
+    } else {
+      alert("保存に失敗しました");
     }
+  } catch (err){
+    console.error(err);
+    alert("通信に失敗しました");
   }
 
   draftBtn.disabled = false;
   createBtn.disabled = false;
   draftBtn.textContent = "一時保存する";
   createBtn.textContent = "アンケートを作成する";
-
-  const failed = results.filter(r => !r.ok).map(r => SYSTEM_LABEL[r.sys]);
-  if (failed.length){
-    alert(failed.join("・") + "への保存に失敗しました（対応していない可能性があります）");
-  } else if (isDraft){
-    showToastSurvey_("一時保存しました");
-  } else {
-    alert("作成しました");
-    resetSurveyForm_();
-  }
   loadSurveyLists_();
 }
 
@@ -723,40 +723,37 @@ document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSu
 document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
 
 async function loadSurveyLists_(){
-  const [athleteList, generalList] = await Promise.all([
-    loadSurveyListForSystem_("athlete"), loadSurveyListForSystem_("general"),
-  ]);
+  const list = await loadSurveyListForSystem_();
 
   // 下書きがあれば、まだ何も編集していない状態の時だけ、再開するか確認する
-  const alreadyEditing = !!(currentSurveyIds.athlete || currentSurveyIds.general);
-  if (alreadyEditing) return;
+  if (currentSurveyId) return;
 
-  const draftCandidates = [
-    ...athleteList.filter(i => i.status === "draft").map(i => ({ sys: "athlete", item: i })),
-    ...generalList.filter(i => i.status === "draft").map(i => ({ sys: "general", item: i })),
-  ];
+  const draftCandidates = list.filter(i => i.status === "draft");
   if (draftCandidates.length === 0) return;
 
   // 一番新しく作られた下書きを優先して案内する
-  draftCandidates.sort((a, b) => (b.item.createdDate || "").localeCompare(a.item.createdDate || ""));
+  draftCandidates.sort((a, b) => (b.createdDate || "").localeCompare(a.createdDate || ""));
   const top = draftCandidates[0];
-  if (confirm(`下書き「${top.item.subject}」があります。再開しますか？`)){
-    resumeSurveyDraft_(top.sys, top.item);
+  if (confirm(`下書き「${top.subject}」があります。再開しますか？`)){
+    resumeSurveyDraft_(top);
   }
 }
 
+function setAudienceCheckboxes_(audience){
+  document.getElementById("targetAthlete").checked = audience === "athlete" || audience === "both";
+  document.getElementById("targetGeneral").checked = audience === "general" || audience === "both";
+}
+
 // 下書きの内容を、新規作成フォームに読み込む
-function resumeSurveyDraft_(sys, item){
-  currentSurveyIds = { athlete: "", general: "" };
-  currentSurveyIds[sys] = item.id;
+function resumeSurveyDraft_(item){
+  currentSurveyId = item.id;
 
   document.getElementById("surveySubjectInput").value = item.subject || "";
   document.getElementById("surveyContentInput").value = item.content || "";
   document.getElementById("surveyNotesInput").value = item.notes || "";
   document.getElementById("surveyPublishDateInput").value = item.publishDate || "";
   document.getElementById("surveyDeadlineInput").value = item.deadline || "";
-  document.getElementById("targetAthlete").checked = sys === "athlete";
-  document.getElementById("targetGeneral").checked = sys === "general";
+  setAudienceCheckboxes_(item.audience);
 
   const builder = document.getElementById("surveyQuestionsBuilder");
   builder.innerHTML = "";
@@ -768,9 +765,9 @@ function resumeSurveyDraft_(sys, item){
 }
 
 // 過去のアンケートの内容を、新規作成フォームにコピーする
-async function copySurveyToForm_(sys, surveyId){
+async function copySurveyToForm_(surveyId){
   try {
-    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
     const data = await res.json();
     if (!data.success){
       alert("コピー元の読み込みに失敗しました");
@@ -778,14 +775,13 @@ async function copySurveyToForm_(sys, surveyId){
     }
     const survey = data.survey;
 
-    currentSurveyIds = { athlete: "", general: "" }; // コピーは新規作成なので、編集中IDはリセットする
+    currentSurveyId = ""; // コピーは新規作成なので、編集中IDはリセットする
     document.getElementById("surveySubjectInput").value = survey.subject;
     document.getElementById("surveyContentInput").value = survey.content || "";
     document.getElementById("surveyNotesInput").value = survey.notes || "";
     document.getElementById("surveyPublishDateInput").value = "";
     document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
-    document.getElementById("targetAthlete").checked = sys === "athlete";
-    document.getElementById("targetGeneral").checked = sys === "general";
+    setAudienceCheckboxes_(survey.audience);
 
     const builder = document.getElementById("surveyQuestionsBuilder");
     builder.innerHTML = "";
@@ -815,11 +811,11 @@ function showToastSurvey_(msg){
   showToastSurvey_._t = setTimeout(() => { el.style.opacity = "0"; }, 2200);
 }
 
-async function loadSurveyListForSystem_(sys){
-  const listEl = document.getElementById(sys === "athlete" ? "athleteSurveyList" : "generalSurveyList");
+async function loadSurveyListForSystem_(){
+  const listEl = document.getElementById("surveyList");
   listEl.innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
   try {
-    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyList&password=${encodeURIComponent(currentPassword)}`);
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyList&password=${encodeURIComponent(currentPassword)}`);
     const data = await res.json();
     const list = data.list || [];
     if (!list.length){
@@ -832,14 +828,15 @@ async function loadSurveyListForSystem_(sys){
       const el = document.createElement("div");
       el.className = "survey-list-item";
       const badge = isDraft ? `<span class="sli-draft-badge">一時保存</span>` : "";
+      const audienceLabel = SYSTEM_LABEL[item.audience] || "選手用・一般用";
       const meta = isDraft
-        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""}`
-        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"}`;
+        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""} ／ 配信先: ${audienceLabel}`
+        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"} ／ 配信先: ${audienceLabel}`;
       el.innerHTML = `<div class="sli-subject">${badge}<span>${item.subject}</span></div>
         <div class="sli-meta">${meta}</div>`;
       el.addEventListener("click", () => {
-        if (isDraft) resumeSurveyDraft_(sys, item);
-        else openSurveyResults_(sys, item.id);
+        if (isDraft) resumeSurveyDraft_(item);
+        else openSurveyResults_(item.id);
       });
 
       const copyBtn = document.createElement("button");
@@ -847,9 +844,38 @@ async function loadSurveyListForSystem_(sys){
       copyBtn.textContent = "コピーして作成";
       copyBtn.addEventListener("click", (e) => {
         e.stopPropagation(); // 親のクリックを発火させない
-        copySurveyToForm_(sys, item.id);
+        copySurveyToForm_(item.id);
       });
       el.appendChild(copyBtn);
+
+      if (!isDraft){
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "sli-toggle-btn";
+        toggleBtn.textContent = item.active ? "停止する" : "再開する";
+        toggleBtn.addEventListener("click", async (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          const nextActive = !item.active;
+          toggleBtn.disabled = true;
+          try {
+            const res = await fetch(SURVEY_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetSurveyActive", password: currentPassword, surveyId: item.id, active: nextActive }),
+            });
+            const data = await res.json();
+            if (data.success){
+              loadSurveyLists_();
+            } else {
+              alert("切り替えに失敗しました");
+              toggleBtn.disabled = false;
+            }
+          } catch (err){
+            console.error(err);
+            alert("通信に失敗しました");
+            toggleBtn.disabled = false;
+          }
+        });
+        el.appendChild(toggleBtn);
+      }
 
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "sli-delete-btn";
@@ -859,13 +885,13 @@ async function loadSurveyListForSystem_(sys){
         if (!confirm(`「${item.subject}」を削除しますか？${isDraft ? "" : "\n回答データも一緒に削除されます。"}`)) return;
         deleteBtn.disabled = true;
         try {
-          const res = await fetch(ENDPOINT_BY_SYSTEM[sys], {
+          const res = await fetch(SURVEY_ENDPOINT, {
             method: "POST",
             body: JSON.stringify({ action: "staffDeleteSurvey", password: currentPassword, surveyId: item.id }),
           });
           const data = await res.json();
           if (data.success){
-            if (currentSurveyIds[sys] === item.id) currentSurveyIds[sys] = ""; // 編集中だったものが消えたら紐付けも解除
+            if (currentSurveyId === item.id) currentSurveyId = ""; // 編集中だったものが消えたら紐付けも解除
             loadSurveyLists_();
           } else {
             alert("削除に失敗しました");
@@ -884,12 +910,12 @@ async function loadSurveyListForSystem_(sys){
     return list;
   } catch (err){
     console.error(err);
-    listEl.innerHTML = `<div class="survey-list-empty">読み込みに失敗しました（未対応の可能性があります）</div>`;
+    listEl.innerHTML = `<div class="survey-list-empty">読み込みに失敗しました</div>`;
     return [];
   }
 }
 
-async function openSurveyResults_(sys, surveyId){
+async function openSurveyResults_(surveyId){
   const overlay = document.getElementById("surveyResultsOverlay");
   const box = document.getElementById("surveyResultsBox");
   const content = document.getElementById("surveyResultsContent");
@@ -898,14 +924,15 @@ async function openSurveyResults_(sys, surveyId){
   box.classList.add("show");
 
   try {
-    const res = await fetch(`${ENDPOINT_BY_SYSTEM[sys]}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
     const data = await res.json();
     if (!data.success){
       content.innerHTML = "結果を取得できませんでした";
       return;
     }
+    const audienceLabel = SYSTEM_LABEL[data.survey.audience] || "選手用・一般用";
     let html = `<div class="survey-section-title">${data.survey.subject}</div>`;
-    html += `<div class="sli-meta" style="margin-bottom:14px;">${SYSTEM_LABEL[sys]}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件</div>`;
+    html += `<div class="sli-meta" style="margin-bottom:14px;">配信先: ${audienceLabel}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件</div>`;
 
     data.tally.forEach(t => {
       html += `<div class="sr-tally-row"><div class="sr-q">${t.question}</div>`;
@@ -921,7 +948,8 @@ async function openSurveyResults_(sys, surveyId){
 
     html += `<div class="survey-field-label">個別の回答</div>`;
     data.responses.forEach(r => {
-      html += `<div class="sr-response-item"><span class="sr-name">${r.name}</span>（${r.respondedAt}）<br>`;
+      const sysLabel = SYSTEM_LABEL[r.system] || "";
+      html += `<div class="sr-response-item"><span class="sr-name">${r.name}</span>（${sysLabel}／${r.respondedAt}）<br>`;
       html += r.answers.map(a => `${a.question}: ${a.answer}`).join(" / ");
       html += `</div>`;
     });
