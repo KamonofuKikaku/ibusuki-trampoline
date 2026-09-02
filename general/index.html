@@ -904,7 +904,7 @@ async function doCancel(key, time){
       renderSlotList(key);
       renderMonth();
       showToast("キャンセルできませんでした。もう一度お試しください");
-      if (data.debug) showDebugError_("キャンセル失敗の詳細: " + data.debug);
+      if (data.debug) console.error("cancel failed debug:", data.debug);
     }
   } catch (err){
     console.error("cancel failed", err);
@@ -1078,25 +1078,6 @@ submitBtn.addEventListener("click", async () => {
   }
 });
 
-// 実機での原因調査用：捕まえきれないエラーが起きたら、画面に直接表示する
-// （開発者ツールが無くても、起きたエラーの内容がそのまま読める）
-function showDebugError_(msg){
-  let el = document.getElementById("debugErrorBanner");
-  if (!el){
-    el = document.createElement("div");
-    el.id = "debugErrorBanner";
-    el.style.cssText = "position:fixed;top:0;left:0;right:0;background:#E0503A;color:#fff;font-size:12px;padding:10px 14px;z-index:999;white-space:pre-wrap;word-break:break-all;";
-    document.body.appendChild(el);
-  }
-  el.textContent = "エラー: " + msg;
-}
-window.addEventListener("error", (e) => {
-  showDebugError_((e.message || "不明なエラー") + " (" + (e.filename || "") + ":" + (e.lineno || "") + ")");
-});
-window.addEventListener("unhandledrejection", (e) => {
-  showDebugError_("Promiseエラー: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
-});
-
 (async function start(){
   // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
   // 記録が無い場合(初めて・未登録の可能性)だけ、念のため先にフォームを開いておく
@@ -1147,10 +1128,10 @@ window.addEventListener("unhandledrejection", (e) => {
     showLoadingOverlay();
 
     // 万が一どこかで止まっても、10秒後には強制的にローディングを消して
-    // 下のカレンダー自体は見える状態にしておく（原因調査中の保険）
+    // 下のカレンダー自体は見える状態にしておく（保険）
     const forceHideTimer = setTimeout(() => {
       hideLoadingOverlay();
-      showDebugError_("読み込みが10秒以上かかっています(LIFFまたは通信が止まっている可能性)");
+      console.warn("読み込みが10秒以上かかっています(LIFFまたは通信が止まっている可能性)");
     }, 10000);
 
     const availabilityPromise = fetchAvailability();
@@ -1169,7 +1150,6 @@ window.addEventListener("unhandledrejection", (e) => {
     hideLoadingOverlay();
   } catch (err){
     console.error("start() failed", err);
-    showDebugError_("start()内で失敗: " + (err && err.message ? err.message : String(err)));
     hideLoadingOverlay();
   }
 })();
