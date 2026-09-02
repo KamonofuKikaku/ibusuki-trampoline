@@ -354,6 +354,29 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ---------- アンケート ---------- */
+  .survey-banner {
+    position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; background: var(--mint); color: var(--white); padding: 10px 16px;
+    font-size: 12.5px; font-weight: 700; transition: transform 0.25s ease;
+  }
+  .survey-banner.hide-on-scroll { transform: translateY(-100%); }
+  .survey-banner button {
+    flex-shrink: 0; border: none; background: var(--white); color: var(--mint); font-weight: 700;
+    font-size: 12px; padding: 6px 12px; border-radius: 999px;
+  }
+  .survey-question { margin-bottom: 16px; text-align: left; }
+  .survey-question .sq-title { font-size: 13.5px; font-weight: 700; margin-bottom: 8px; }
+  .survey-options { display: flex; flex-direction: column; gap: 6px; }
+  .survey-options.numbers { flex-direction: row; flex-wrap: wrap; }
+  .survey-option-label {
+    display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid #E6DFD3; font-size: 13px; cursor: pointer;
+  }
+  .survey-options.numbers .survey-option-label { flex: 1; min-width: 44px; justify-content: center; padding: 9px 4px; }
+  .survey-option-label input { width: auto; margin: 0; }
+  .survey-option-label.checked { border-color: var(--mint); background: var(--mint-soft); color: var(--mint); font-weight: 700; }
+
   /* ---------- register (初回のお名前登録) ---------- */
   .register-overlay {
     display: none;
@@ -566,6 +589,11 @@
 <body>
 <div id="app">
 
+  <div class="survey-banner" id="surveyBanner" style="display:none;">
+    <span id="surveyBannerText">アンケートの回答はこちら</span>
+    <button id="surveyBannerBtn">回答する</button>
+  </div>
+
   <header>
     <div class="eyebrow">TRAMPOLINE GYM BOOKING</div>
     <div class="registered-name" id="registeredNameDisplay" style="display:none;"></div>
@@ -608,6 +636,16 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="register-overlay" id="surveyOverlay">
+    <div class="register-card" id="surveyCard" style="text-align:left; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+      <div class="register-title" id="surveySubjectEl" style="text-align:center;"></div>
+      <div class="register-hint" id="surveyContentEl" style="text-align:center;"></div>
+      <div id="surveyQuestionsEl"></div>
+      <button class="register-btn" id="surveySubmitBtn">回答する</button>
+      <button class="edit-name-link" id="surveySkipBtn">今はしない</button>
+    </div>
+  </div>
 
   <div class="register-overlay" id="registerOverlay">
     <div class="register-card">
@@ -1039,57 +1077,6 @@ submitBtn.addEventListener("click", async () => {
   }
 });
 
-(async function start(){
-  // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
-  // 記録が無い場合(初めて・未登録の可能性)だけ、念のため先にフォームを開いておく
-  let cachedRegistered = false;
-  try {
-    cachedRegistered = localStorage.getItem("cachedRegistered") === "true";
-    const cachedName = localStorage.getItem("cachedRegisteredName");
-    if (cachedRegistered && cachedName) {
-      currentRegisteredName = cachedName;
-      updateRegisteredNameDisplay();
-    }
-  } catch (e) {}
-  if (!cachedRegistered) {
-    document.getElementById("registerOverlay").classList.add("show");
-  }
-
-  // 前回開いた時のデータがあれば、まずそれを即座に表示（体感速度優先）
-  try {
-    const cachedBooked = localStorage.getItem("cachedBookedDates");
-    if (cachedBooked) bookedSet = new Set(JSON.parse(cachedBooked));
-  } catch (e) {}
-  try {
-    const cachedAvail = localStorage.getItem("cachedAvailability");
-    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
-  } catch (e) {}
-
-  // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
-  renderMonth();
-  renderSelection();
-
-  // 最新データが揃うまで、半透明のオーバーレイで「更新中」を示す
-  showLoadingOverlay();
-
-  // LINEログインと空き状況取得を同時に開始（片方を待たない）
-  const availabilityPromise = fetchAvailability();
-  const liffPromise = initLiff();
-
-  // 空き状況が届き次第、確定していなくても先に反映
-  await availabilityPromise;
-  renderMonth();
-
-  // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
-  // 名前登録の確認は、この予約情報取得のレスポンスに相乗りさせて別通信を無くしている
-  await liffPromise;
-  await fetchMyBookings();
-  renderMonth();
-  renderSelection();
-
-  hideLoadingOverlay();
-})();
-
 let currentRegisteredName = "";
 
 function updateRegisteredNameDisplay(){
@@ -1152,6 +1139,210 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
     btn.textContent = "登録する";
   }
 });
+
+/* ---------- アンケート ---------- */
+let activeSurvey = null;
+let surveyAnswers = {}; // questionIndex(文字列) -> 回答値
+
+async function fetchActiveSurvey(){
+  if (!liffProfile) return;
+  try {
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}`);
+    activeSurvey = data.survey || null;
+    if (!activeSurvey){
+      document.getElementById("surveyBanner").style.display = "none";
+      return;
+    }
+    document.getElementById("surveyBanner").style.display = "flex";
+    document.getElementById("surveyBannerText").textContent = activeSurvey.subject + "の回答はこちら";
+
+    const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
+    const todayStr = fmt(new Date());
+    if (dismissedDate !== todayStr){
+      openSurveyPopup();
+    }
+  } catch (err){
+    console.error("surveyActive fetch failed", err);
+  }
+}
+
+function renderSurveyQuestions(){
+  document.getElementById("surveySubjectEl").textContent = activeSurvey.subject;
+  document.getElementById("surveyContentEl").textContent = activeSurvey.content || "";
+  document.getElementById("surveyContentEl").style.display = activeSurvey.content ? "block" : "none";
+
+  surveyAnswers = {};
+  const wrap = document.getElementById("surveyQuestionsEl");
+  wrap.innerHTML = "";
+
+  activeSurvey.questions.forEach((q, qIndex) => {
+    const qEl = document.createElement("div");
+    qEl.className = "survey-question";
+    const titleEl = document.createElement("div");
+    titleEl.className = "sq-title";
+    titleEl.textContent = q.question;
+    qEl.appendChild(titleEl);
+
+    const optionsEl = document.createElement("div");
+    optionsEl.className = "survey-options" + (q.type === "number" ? " numbers" : "");
+
+    let choices = [];
+    if (q.type === "radio") choices = q.options || [];
+    if (q.type === "number") {
+      const min = Number(q.min || 1), max = Number(q.max || 5);
+      for (let n = min; n <= max; n++) choices.push(String(n));
+    }
+
+    choices.forEach(choice => {
+      const label = document.createElement("label");
+      label.className = "survey-option-label";
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "sq_" + qIndex;
+      input.value = choice;
+      input.addEventListener("change", () => {
+        surveyAnswers[qIndex] = choice;
+        optionsEl.querySelectorAll(".survey-option-label").forEach(l => l.classList.remove("checked"));
+        label.classList.add("checked");
+      });
+      label.appendChild(input);
+      const span = document.createElement("span");
+      span.textContent = choice;
+      label.appendChild(span);
+      optionsEl.appendChild(label);
+    });
+
+    qEl.appendChild(optionsEl);
+    wrap.appendChild(qEl);
+  });
+}
+
+function openSurveyPopup(){
+  if (!activeSurvey) return;
+  renderSurveyQuestions();
+  document.getElementById("surveyOverlay").classList.add("show");
+}
+function closeSurveyPopup(){
+  document.getElementById("surveyOverlay").classList.remove("show");
+}
+
+document.getElementById("surveyBannerBtn").addEventListener("click", openSurveyPopup);
+
+document.getElementById("surveySkipBtn").addEventListener("click", () => {
+  if (activeSurvey) localStorage.setItem("surveyDismissedDate_" + activeSurvey.id, fmt(new Date()));
+  closeSurveyPopup();
+});
+
+document.getElementById("surveySubmitBtn").addEventListener("click", async () => {
+  if (!activeSurvey || !liffProfile) return;
+  const totalQuestions = activeSurvey.questions.length;
+  if (Object.keys(surveyAnswers).length < totalQuestions){
+    showToast("すべての質問に回答してください");
+    return;
+  }
+  const answers = activeSurvey.questions.map((q, qIndex) => ({ question: q.question, answer: surveyAnswers[qIndex] }));
+
+  const btn = document.getElementById("surveySubmitBtn");
+  btn.disabled = true;
+  btn.textContent = "送信中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "surveySubmit", userId: liffProfile.userId,
+        displayName: currentRegisteredName || liffProfile.displayName,
+        surveyId: activeSurvey.id, answers: answers,
+      }),
+    });
+    const result = await res.json();
+    if (result.success){
+      showToast("回答ありがとうございました！");
+      closeSurveyPopup();
+      document.getElementById("surveyBanner").style.display = "none";
+      activeSurvey = null;
+    } else if (result.reason === "already_answered"){
+      showToast("すでに回答済みです");
+      closeSurveyPopup();
+      document.getElementById("surveyBanner").style.display = "none";
+    } else {
+      showToast("送信に失敗しました。もう一度お試しください");
+    }
+  } catch (err){
+    console.error("surveySubmit failed", err);
+    showToast("通信に失敗しました");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "回答する";
+  }
+});
+
+// バナーはスクロールで下に隠れ、上端付近や上スクロールで再度出てくる
+(function setupSurveyBannerScroll_(){
+  let lastY = 0;
+  window.addEventListener("scroll", () => {
+    const banner = document.getElementById("surveyBanner");
+    if (banner.style.display === "none") return;
+    const y = window.scrollY;
+    if (y > lastY && y > 40){
+      banner.classList.add("hide-on-scroll");
+    } else {
+      banner.classList.remove("hide-on-scroll");
+    }
+    lastY = y;
+  }, { passive: true });
+})();
+
+(async function start(){
+  // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
+  // 記録が無い場合(初めて・未登録の可能性)だけ、念のため先にフォームを開いておく
+  let cachedRegistered = false;
+  try {
+    cachedRegistered = localStorage.getItem("cachedRegistered") === "true";
+    const cachedName = localStorage.getItem("cachedRegisteredName");
+    if (cachedRegistered && cachedName) {
+      currentRegisteredName = cachedName;
+      updateRegisteredNameDisplay();
+    }
+  } catch (e) {}
+  if (!cachedRegistered) {
+    document.getElementById("registerOverlay").classList.add("show");
+  }
+
+  // 前回開いた時のデータがあれば、まずそれを即座に表示（体感速度優先）
+  try {
+    const cachedBooked = localStorage.getItem("cachedBookedDates");
+    if (cachedBooked) bookedSet = new Set(JSON.parse(cachedBooked));
+  } catch (e) {}
+  try {
+    const cachedAvail = localStorage.getItem("cachedAvailability");
+    if (cachedAvail) availabilityMap = JSON.parse(cachedAvail);
+  } catch (e) {}
+
+  // カレンダーの枠だけ先にすぐ表示（データが届く前でも骨組みは見せる）
+  renderMonth();
+  renderSelection();
+
+  // 最新データが揃うまで、半透明のオーバーレイで「更新中」を示す
+  showLoadingOverlay();
+
+  // LINEログインと空き状況取得を同時に開始（片方を待たない）
+  const availabilityPromise = fetchAvailability();
+  const liffPromise = initLiff();
+
+  // 空き状況が届き次第、確定していなくても先に反映
+  await availabilityPromise;
+  renderMonth();
+
+  // LINEログインが終わったら、自分の予約情報を重ねて反映（キャッシュを最新情報で上書き）
+  // 名前登録の確認は、この予約情報取得のレスポンスに相乗りさせて別通信を無くしている
+  await liffPromise;
+  await fetchMyBookings();
+  renderMonth();
+  renderSelection();
+  fetchActiveSurvey(); // 予約カレンダーの表示をブロックしないよう、待たずに裏で走らせる
+
+  hideLoadingOverlay();
+})();
 </script>
 </body>
 </html>
