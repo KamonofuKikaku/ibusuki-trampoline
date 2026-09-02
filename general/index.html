@@ -607,9 +607,11 @@ async function fetchActiveSurvey(){
 
     const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
     const todayStr = fmt(new Date());
-    if (dismissedDate !== todayStr){
+    const nameNotRegisteredYet = document.getElementById("registerOverlay").classList.contains("show");
+    if (dismissedDate !== todayStr && !nameNotRegisteredYet){
       openSurveyPopup();
     }
+    // 名前登録がまだの場合は、登録が終わってからこちらを開く(registerSaveBtnの成功時に呼ばれる)
   } catch (err){
     console.error("surveyActive fetch failed", err);
   }
@@ -1205,6 +1207,11 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
         localStorage.setItem("cachedRegisteredName", name);
       } catch (e) {}
       showToast("登録しました。よろしくお願いします！");
+      // 名前登録を優先していたので、保留になっていたアンケートがあればここで開く
+      if (activeSurvey){
+        const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
+        if (dismissedDate !== fmt(new Date())) openSurveyPopup();
+      }
     } else {
       showToast("登録に失敗しました。もう一度お試しください");
     }
