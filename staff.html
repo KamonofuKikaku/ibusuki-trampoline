@@ -271,6 +271,9 @@
       <label class="survey-field-label">内容（任意）</label>
       <textarea id="surveyContentInput" rows="3" placeholder="アンケートの説明があれば入力してください"></textarea>
 
+      <label class="survey-field-label">備考（任意・お客様側に必ず表示されます）</label>
+      <textarea id="surveyNotesInput" rows="2" placeholder="例：ご協力よろしくお願いします など"></textarea>
+
       <label class="survey-field-label">公開日（空欄=作成後すぐ公開）</label>
       <input type="date" id="surveyPublishDateInput" />
 
@@ -600,6 +603,7 @@ function resetSurveyForm_(){
   currentSurveyIds = { athlete: "", general: "" };
   document.getElementById("surveySubjectInput").value = "";
   document.getElementById("surveyContentInput").value = "";
+  document.getElementById("surveyNotesInput").value = "";
   document.getElementById("surveyPublishDateInput").value = "";
   document.getElementById("surveyDeadlineInput").value = "";
   document.getElementById("targetAthlete").checked = true;
@@ -611,6 +615,7 @@ function resetSurveyForm_(){
 async function saveSurvey_(isDraft){
   const subject = document.getElementById("surveySubjectInput").value.trim();
   const content = document.getElementById("surveyContentInput").value.trim();
+  const notes = document.getElementById("surveyNotesInput").value.trim();
   const publishDate = document.getElementById("surveyPublishDateInput").value;
   const deadline = document.getElementById("surveyDeadlineInput").value;
   const targets = [];
@@ -662,7 +667,7 @@ async function saveSurvey_(isDraft){
         body: JSON.stringify({
           action: "staffSaveSurvey", password: currentPassword,
           id: currentSurveyIds[sys] || undefined,
-          subject, content, publishDate, deadline, questions, isDraft,
+          subject, content, notes, publishDate, deadline, questions, isDraft,
         }),
       });
       const data = await res.json();
@@ -742,6 +747,7 @@ function resumeSurveyDraft_(sys, item){
 
   document.getElementById("surveySubjectInput").value = item.subject || "";
   document.getElementById("surveyContentInput").value = item.content || "";
+  document.getElementById("surveyNotesInput").value = item.notes || "";
   document.getElementById("surveyPublishDateInput").value = item.publishDate || "";
   document.getElementById("surveyDeadlineInput").value = item.deadline || "";
   document.getElementById("targetAthlete").checked = sys === "athlete";
@@ -770,6 +776,7 @@ async function copySurveyToForm_(sys, surveyId){
     currentSurveyIds = { athlete: "", general: "" }; // コピーは新規作成なので、編集中IDはリセットする
     document.getElementById("surveySubjectInput").value = survey.subject;
     document.getElementById("surveyContentInput").value = survey.content || "";
+    document.getElementById("surveyNotesInput").value = survey.notes || "";
     document.getElementById("surveyPublishDateInput").value = "";
     document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
     document.getElementById("targetAthlete").checked = sys === "athlete";
