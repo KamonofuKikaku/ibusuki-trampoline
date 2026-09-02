@@ -686,6 +686,8 @@
 ========================================================= */
 const LIFF_ID = "2010959314-SoDIKt2f";
 const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
+// アンケートだけは一般用のスプレッドシートに一本化されているため、そちらのURLを直接呼び出す
+const SURVEY_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
 /* =========================================================
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
@@ -1157,7 +1159,7 @@ let surveyAnswers = {}; // questionIndex(文字列) -> 回答値
 async function fetchActiveSurvey(){
   if (!liffProfile) return;
   try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}`);
+    const data = await fetchWithRetry_(`${SURVEY_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}&system=athlete`);
     activeSurvey = data.survey || null;
     if (!activeSurvey){
       document.getElementById("surveyBanner").style.display = "none";
@@ -1261,12 +1263,12 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
   btn.disabled = true;
   btn.textContent = "送信中…";
   try {
-    const res = await fetch(GAS_ENDPOINT, {
+    const res = await fetch(SURVEY_ENDPOINT, {
       method: "POST",
       body: JSON.stringify({
         action: "surveySubmit", userId: liffProfile.userId,
         displayName: currentRegisteredName || liffProfile.displayName,
-        surveyId: activeSurvey.id, answers: answers,
+        surveyId: activeSurvey.id, answers: answers, system: "athlete",
       }),
     });
     const result = await res.json();
