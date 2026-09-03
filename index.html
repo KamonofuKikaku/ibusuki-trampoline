@@ -1203,7 +1203,7 @@ function renderSurveyQuestions(){
     qEl.className = "survey-question";
     const titleEl = document.createElement("div");
     titleEl.className = "sq-title";
-    titleEl.textContent = q.question;
+    titleEl.textContent = q.question + (q.required === false ? "（任意）" : "");
     qEl.appendChild(titleEl);
 
     if (q.type === "text") {
@@ -1271,12 +1271,17 @@ document.getElementById("surveySkipBtn").addEventListener("click", () => {
 
 document.getElementById("surveySubmitBtn").addEventListener("click", async () => {
   if (!activeSurvey || !liffProfile) return;
-  const totalQuestions = activeSurvey.questions.length;
-  if (Object.keys(surveyAnswers).length < totalQuestions){
-    showToast("すべての質問に回答してください");
+  // 必須(requiredがfalseでない)の質問だけ、回答が入っているかを確認する
+  const missingRequired = activeSurvey.questions.some((q, qIndex) => {
+    if (q.required === false) return false;
+    const a = surveyAnswers[qIndex];
+    return a === undefined || a === "";
+  });
+  if (missingRequired){
+    showToast("必須の質問にすべて回答してください");
     return;
   }
-  const answers = activeSurvey.questions.map((q, qIndex) => ({ question: q.question, answer: surveyAnswers[qIndex] }));
+  const answers = activeSurvey.questions.map((q, qIndex) => ({ question: q.question, answer: surveyAnswers[qIndex] !== undefined ? surveyAnswers[qIndex] : "" }));
 
   const btn = document.getElementById("surveySubmitBtn");
   btn.disabled = true;
