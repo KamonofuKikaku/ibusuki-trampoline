@@ -823,15 +823,28 @@ async function loadSurveyListForSystem_(){
       return list;
     }
     listEl.innerHTML = "";
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
     list.forEach(item => {
       const isDraft = item.status === "draft";
       const el = document.createElement("div");
       el.className = "survey-list-item";
       const badge = isDraft ? `<span class="sli-draft-badge">一時保存</span>` : "";
       const audienceLabel = SYSTEM_LABEL[item.audience] || "選手用・一般用";
+
+      let statusLabel = "";
+      if (!isDraft){
+        const pastDeadline = item.deadline && item.deadline < todayStr;
+        const beforePublish = item.publishDate && item.publishDate > todayStr;
+        if (!item.active) statusLabel = "停止中";
+        else if (pastDeadline) statusLabel = "配信終了（締切済み）";
+        else if (beforePublish) statusLabel = "公開待ち";
+        else statusLabel = "配信中";
+      }
+
       const meta = isDraft
         ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""} ／ 配信先: ${audienceLabel}`
-        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${item.active ? "配信中" : "停止中"} ／ 配信先: ${audienceLabel}`;
+        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${statusLabel} ／ 配信先: ${audienceLabel}`;
       el.innerHTML = `<div class="sli-subject">${badge}<span>${item.subject}</span></div>
         <div class="sli-meta">${meta}</div>`;
       el.addEventListener("click", () => {
@@ -894,7 +907,7 @@ async function loadSurveyListForSystem_(){
             if (currentSurveyId === item.id) currentSurveyId = ""; // 編集中だったものが消えたら紐付けも解除
             loadSurveyLists_();
           } else {
-            alert("削除に失敗しました");
+            alert("削除に失敗しました" + (data.reason ? "（" + data.reason + "）" : ""));
             deleteBtn.disabled = false;
           }
         } catch (err){
