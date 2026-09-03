@@ -596,7 +596,7 @@ let surveyAnswers = {}; // questionIndex(文字列) -> 回答値
 async function fetchActiveSurvey(){
   if (!liffProfile) return;
   try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}`);
+    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}&system=general`);
     activeSurvey = data.survey || null;
     if (!activeSurvey){
       document.getElementById("surveyBanner").style.display = "none";
@@ -705,7 +705,7 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
       body: JSON.stringify({
         action: "surveySubmit", userId: liffProfile.userId,
         displayName: currentRegisteredName || liffProfile.displayName,
-        surveyId: activeSurvey.id, answers: answers,
+        surveyId: activeSurvey.id, answers: answers, system: "general",
       }),
     });
     const result = await res.json();
