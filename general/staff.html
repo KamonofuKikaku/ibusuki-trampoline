@@ -66,6 +66,7 @@
   .teacher-chip .teacher-names { display: flex; flex-direction: column; line-height: 1.3; }
   .teacher-chip .teacher-display-name { font-size: 14px; font-weight: 700; color: var(--ink); }
   .teacher-chip .teacher-full-name { font-size: 10.5px; color: var(--ink-soft); }
+  .teacher-chip .teacher-email { font-size: 10px; color: var(--mint); }
   .teacher-chip button {
     border: none; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 1;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -265,6 +266,8 @@
     <input type="text" id="teacherFullNameInput" placeholder="例：山田太郎" />
     <label class="modal-field-label">表示名（3文字目安・カレンダー等に表示）</label>
     <input type="text" id="teacherDisplayNameInput" placeholder="例：山田" maxlength="6" />
+    <label class="modal-field-label">メールアドレス（任意・アンケート結果の送信先候補になります）</label>
+    <input type="email" id="teacherEmailInput" placeholder="例：yamada@example.com" />
     <div class="modal-actions">
       <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
       <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
@@ -445,9 +448,10 @@ const teacherModal = document.getElementById("teacherModal");
 const teacherModalTitle = document.getElementById("teacherModalTitle");
 const teacherFullNameInput = document.getElementById("teacherFullNameInput");
 const teacherDisplayNameInput = document.getElementById("teacherDisplayNameInput");
+const teacherEmailInput = document.getElementById("teacherEmailInput");
 const cancelAddTeacherBtn = document.getElementById("cancelAddTeacherBtn");
 const confirmAddTeacherBtn = document.getElementById("confirmAddTeacherBtn");
-let currentTeachers = []; // [{fullName, displayName}, ...]
+let currentTeachers = []; // [{fullName, displayName, email}, ...]
 let editingDisplayName = null; // null=新規追加モード、値あり=編集モード（元の表示名）
 
 function renderTeachers(teachers){
@@ -471,6 +475,12 @@ function renderTeachers(teachers){
     fullEl.className = "teacher-full-name";
     fullEl.textContent = t.fullName;
     names.appendChild(fullEl);
+    if (t.email){
+      const emailEl = document.createElement("div");
+      emailEl.className = "teacher-email";
+      emailEl.textContent = t.email;
+      names.appendChild(emailEl);
+    }
     chip.appendChild(names);
 
     const editBtn = document.createElement("button");
@@ -514,12 +524,13 @@ async function doDeleteTeacher(displayName){
   }
 }
 
-// teacher: null なら新規追加モード、{fullName,displayName} なら編集モード
+// teacher: null なら新規追加モード、{fullName,displayName,email} なら編集モード
 function openTeacherModal(teacher){
   editingDisplayName = teacher ? teacher.displayName : null;
   teacherModalTitle.textContent = teacher ? "講師情報を編集" : "講師を追加";
   teacherFullNameInput.value = teacher ? teacher.fullName : "";
   teacherDisplayNameInput.value = teacher ? teacher.displayName : "";
+  teacherEmailInput.value = teacher ? (teacher.email || "") : "";
   confirmAddTeacherBtn.textContent = teacher ? "変更する" : "追加する";
   teacherModalOverlay.classList.add("show");
   teacherModal.classList.add("show");
@@ -539,6 +550,7 @@ teacherModalOverlay.addEventListener("click", closeTeacherModal);
 confirmAddTeacherBtn.addEventListener("click", async () => {
   const fullName = teacherFullNameInput.value.trim();
   const displayName = teacherDisplayNameInput.value.trim();
+  const email = teacherEmailInput.value.trim();
   if (!fullName || !displayName){
     showToast("正式名・表示名を両方入力してください");
     return;
@@ -558,6 +570,7 @@ confirmAddTeacherBtn.addEventListener("click", async () => {
         body: JSON.stringify({
           action: "staffRenameTeacher", password: password,
           oldDisplayName: editingDisplayName, newFullName: fullName, newDisplayName: displayName,
+          newEmail: email,
         }),
       });
       const result = await res.json();
@@ -573,7 +586,7 @@ confirmAddTeacherBtn.addEventListener("click", async () => {
       // 新規追加モード
       const res = await fetch(GAS_ENDPOINT, {
         method: "POST",
-        body: JSON.stringify({ action: "staffAddTeacher", password: password, fullName: fullName, displayName: displayName }),
+        body: JSON.stringify({ action: "staffAddTeacher", password: password, fullName: fullName, displayName: displayName, email: email }),
       });
       const result = await res.json();
       if (result.success){
@@ -657,9 +670,6 @@ function formatCalDateLabel_(dateStr){
 const CALENDAR_WINDOW_DAYS = 60; // 今日から何日分の列を常に表示するか
 
 function renderTemplate(data){
-  // upcomingは「すでにデータがある日」しか返ってこないので、まず今日から60日分の
-  // 空の日付リストを作り、そこにupcomingの中身をマージする（データが1件も無くても
-  // カレンダーの列自体は常に表示され、最初の1件を追加できるようにするため）
   const byDate = {};
   (data.upcoming || []).forEach(item => { byDate[item.date] = item.slots || []; });
 
@@ -677,8 +687,6 @@ function renderTemplate(data){
   renderCalendar(data.athleteHours || {});
 }
 
-// 全ての表示日のうち、一番長い範囲(選手用の営業時間 or 実際のブロック)をベースに、
-// カレンダー全体で共通の縦軸(時間の行)を決める
 function computeCalendarRange_(athleteHours){
   const DEFAULT_START = timeStrToMinutes_("10:00");
   const DEFAULT_END = timeStrToMinutes_("21:00");
@@ -709,7 +717,7 @@ function computeCalendarRange_(athleteHours){
   });
 
   if (!hasAny || rangeEnd <= rangeStart) return { start: DEFAULT_START, end: DEFAULT_END };
-  const MIN_START = timeStrToMinutes_("09:00"); // 営業時間外(朝9時より前)は表示しない
+  const MIN_START = timeStrToMinutes_("09:00");
   return { start: Math.max(rangeStart, MIN_START), end: rangeEnd };
 }
 
@@ -722,7 +730,6 @@ function renderCalendar(athleteHours){
   table.innerHTML = "";
   const range = computeCalendarRange_(athleteHours);
 
-  // 各日付ごとの営業時間範囲（無ければ制限なし=常にタップ可能）
   const dateRanges = currentUpcoming.map(dateItem => {
     const ref = athleteHours[dateItem.date];
     if (!ref || ref.closed) return null;
@@ -731,13 +738,11 @@ function renderCalendar(athleteHours){
     return (s !== null && e !== null && e > s) ? { start: s, end: e } : null;
   });
 
-  // 各日付ごとに、選手用が「休館」の日かどうか(＝施設自体が休みの日)
   const dateClosed = currentUpcoming.map(dateItem => {
     const ref = athleteHours[dateItem.date];
     return !!(ref && ref.closed);
   });
 
-  // 見出し行：日付（スクロールしても分かるよう、上下に加えて、途中(15:00の手前)にも置く）
   function buildDateHeaderRow(){
     const headRow = document.createElement("tr");
     headRow.appendChild(document.createElement("th"));
@@ -750,14 +755,11 @@ function renderCalendar(athleteHours){
   }
   table.appendChild(buildDateHeaderRow());
 
-  // 各日付列ごとに、あとN行分は前の行のブロックでrowspan済み、をカウントしておく
   const skipCounts = currentUpcoming.map(() => 0);
 
   for (let t = range.start; t < range.end; t += 15){
     const timeStr = minutesToTimeStr_(t);
 
-    // 15:00の手前に日付見出しをもう1本挟む。ただし、どこかの列でブロックが
-    // またがっている最中(rowspanの途中)だと表がズレるので、その時はスキップする
     if (timeStr === "15:00" && skipCounts.every(c => c === 0)){
       table.appendChild(buildDateHeaderRow());
     }
@@ -791,7 +793,7 @@ function renderCalendar(athleteHours){
         row.appendChild(td);
       } else {
         const dr = dateRanges[colIdx];
-        const inAthleteHours = dr && (t >= dr.start && t < dr.end); // 選手用が使用中の時間帯
+        const inAthleteHours = dr && (t >= dr.start && t < dr.end);
         const td = document.createElement("td");
         td.className = inAthleteHours ? "cal-closed-cell" : "cal-empty-cell";
         td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
@@ -805,7 +807,6 @@ function renderCalendar(athleteHours){
   table.appendChild(buildDateHeaderRow());
 }
 
-// slot: 既存ブロック(編集モード) / null(追加モード)、startHint: 追加モードでタップした開始時刻
 function renderPresetButtons(){
   const presets = (lastOverviewData && lastOverviewData.blockPresets) || [];
   const section = document.getElementById("presetButtonsSection");
@@ -873,14 +874,13 @@ async function doDeleteBlockPreset(label){
   }
 }
 
-/* ---------- 既存の予定をタップした時の簡易ポップアップ（詳細/削除） ---------- */
 const quickActionModalOverlay = document.getElementById("quickActionModalOverlay");
 const quickActionModal = document.getElementById("quickActionModal");
 const quickActionTitle = document.getElementById("quickActionTitle");
 const quickActionEditBtn = document.getElementById("quickActionEditBtn");
 const quickActionDeleteBtn = document.getElementById("quickActionDeleteBtn");
 const quickActionCancelBtn = document.getElementById("quickActionCancelBtn");
-let quickActionContext = null; // { dateStr, slot }
+let quickActionContext = null;
 
 function openQuickActionModal(dateStr, slot){
   quickActionContext = { dateStr, slot };
@@ -989,7 +989,7 @@ function openBlockModal(dateStr, slot, startHint){
     blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " に追加";
     const start = startHint || "10:00";
     blockStartInput.value = start;
-    blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60); // デフォルトは1時間後
+    blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60);
     blockCapacityInput.value = "";
     if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
       blockTeacherSelect.value = lastUsedTeacherDisplayName;
@@ -1052,7 +1052,7 @@ deleteBlockBtn.addEventListener("click", async () => {
     if (result.success){
       showToast("削除しました");
       closeBlockModal();
-      patchLocalSlot_(editingBlockDate, editingBlockOldStart, null); // 削除も手元のデータから即座に反映
+      patchLocalSlot_(editingBlockDate, editingBlockOldStart, null);
       renderTemplate(lastOverviewData);
     } else {
       showToast("削除に失敗しました");
@@ -1065,8 +1065,6 @@ deleteBlockBtn.addEventListener("click", async () => {
   }
 });
 
-// サーバーに保存できたコマの内容を、手元のデータ(lastOverviewData)にもその場で反映する
-// （保存のたびに全データを読み直すと遅いので、見た目だけ即座に更新する）
 function patchLocalSlot_(dateStr, oldStart, newSlot){
   if (!lastOverviewData) return;
   if (!lastOverviewData.upcoming) lastOverviewData.upcoming = [];
@@ -1098,7 +1096,6 @@ confirmBlockBtn.addEventListener("click", async () => {
     return;
   }
 
-  // 選手用の営業時間（＝選手が使用中の時間、または休館日）と重なっていないか確認する
   const athleteHours = (lastOverviewData && lastOverviewData.athleteHours) || {};
   const athRange = athleteHours[editingBlockDate];
   if (athRange && athRange.closed){
@@ -1117,8 +1114,8 @@ confirmBlockBtn.addEventListener("click", async () => {
 
   confirmBlockBtn.disabled = true;
   confirmBlockBtn.textContent = "保存中…";
-  const wasAdd = !editingBlockOldStart; // 保存後にプリセット登録を聞くかどうかの判定に使う
-  const repeatWeekly = repeatWeeklyInput.checked; // 追加・編集どちらでもチェックできる
+  const wasAdd = !editingBlockOldStart;
+  const repeatWeekly = repeatWeeklyInput.checked;
   const capacityValue = blockCapacityInput.value.trim();
   try {
     let action;
@@ -1135,7 +1132,7 @@ confirmBlockBtn.addEventListener("click", async () => {
     };
     if (editingBlockOldStart){
       payload.oldStartTime = editingBlockOldStart;
-      payload.isRecurring = repeatWeekly; // 編集時は、ここでチェックすると以降の同じ曜日にも展開する
+      payload.isRecurring = repeatWeekly;
     }
 
     const res = await fetch(GAS_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
@@ -1145,13 +1142,11 @@ confirmBlockBtn.addEventListener("click", async () => {
       closeBlockModal();
 
       if (repeatWeekly){
-        // 複数の日付が一度に変わるので、この場合だけ全体を読み直して確実に反映する
         showToast(`${result.addedCount || 0}件の日付に登録しました`);
         const data = await fetchOverview(password);
         if (!data.error) renderOverview(data);
       } else {
         showToast(editingBlockOldStart ? "変更しました" : "追加しました");
-        // 保存前に持っていた予約人数・予約者一覧があれば引き継ぎ、無ければ新規(0件)として扱う
         let existingBooked = 0, existingEntries = [];
         if (editingBlockOldStart && lastOverviewData && lastOverviewData.upcoming){
           const dateEntry = lastOverviewData.upcoming.find(d => d.date === editingBlockDate);
@@ -1164,9 +1159,9 @@ confirmBlockBtn.addEventListener("click", async () => {
           time: start, endTime: end, teacher: teacher, capacity: effectiveCapacity, title: eventTitle,
           booked: existingBooked, remain: remain, full: remain <= 0, entries: existingEntries,
         });
-        renderTemplate(lastOverviewData); // 手元のデータだけで即座に再描画(通信を待たない)
+        renderTemplate(lastOverviewData);
       }
-      if (wasAdd && !isEvent) openPresetSavePrompt(start, end, teacher, capacityValue); // イベントはプリセット登録の対象外
+      if (wasAdd && !isEvent) openPresetSavePrompt(start, end, teacher, capacityValue);
     } else if (result.reason === "duplicate_start"){
       showToast("その開始時刻にはすでに別の予定があります");
     } else {
@@ -1181,7 +1176,6 @@ confirmBlockBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- 担当ブロックのプリセット登録プロンプト ---------- */
 const presetSaveModalOverlay = document.getElementById("presetSaveModalOverlay");
 const presetSaveModal = document.getElementById("presetSaveModal");
 const skipPresetSaveBtn = document.getElementById("skipPresetSaveBtn");
@@ -1233,7 +1227,6 @@ confirmPresetSaveBtn.addEventListener("click", async () => {
 
 
 
-/* ---------- 予約状況 ---------- */
 function renderUpcoming(upcoming, todayStr){
   upcomingList.innerHTML = "";
   if (!upcoming.length){
@@ -1288,8 +1281,6 @@ function renderUpcoming(upcoming, todayStr){
       row.appendChild(main);
 
       if (isEventSlot){
-        // 予約不可の予定は、このタブの旧仕様の編集フォームでは扱えない(タイトルを保持できない)ので、
-        // ここでは編集不可にする(編集はカレンダータブから)
         block.appendChild(row);
         return;
       }
@@ -1392,7 +1383,6 @@ async function doStaffCancel(userId, dateStr, timeStr){
   }
 }
 
-/* ---------- お月謝 ---------- */
 async function fetchBillingList(){
   try {
     const res = await fetch(`${GAS_ENDPOINT}?action=staffBillingList&password=${encodeURIComponent(password)}`);
@@ -1432,7 +1422,6 @@ function renderBilling(list){
       : "今月の予約はまだありません";
     row.appendChild(datesEl);
 
-    // 現金決済チェック + 支払い済み月表示（カードで言う「カード登録済み」に相当）
     const cashRow = document.createElement("div");
     cashRow.className = "cash-row";
     const cashCheckbox = document.createElement("input");
@@ -1489,7 +1478,7 @@ function renderBilling(list){
           item.cashPayment = checked;
           showToast(checked ? "現金決済に設定しました" : "現金決済を解除しました");
         } else {
-          cashCheckbox.checked = !checked; // 失敗したので元に戻す
+          cashCheckbox.checked = !checked;
           markPaidBtn.style.display = !checked ? "inline-block" : "none";
           showToast("更新に失敗しました");
         }
@@ -1593,7 +1582,6 @@ refreshCardBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---------- 全体描画・ログイン ---------- */
 function renderOverview(data){
   lastOverviewData = data;
   document.getElementById("basicCapacityText").textContent = data.basicCapacity;
@@ -1639,8 +1627,6 @@ passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loginBtn.click();
 });
 
-// 統合スタッフ画面(親ページ)からiframeとして開かれた場合は、
-// URLの ?pw=... を使って自動ログインする
 (function start(){
   const urlParams = new URLSearchParams(window.location.search);
   const fromParent = urlParams.get("pw");
