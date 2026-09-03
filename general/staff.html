@@ -82,7 +82,9 @@
   .modal-overlay.show { opacity: 1; pointer-events: auto; }
   .modal-box {
     position: fixed; left: 50%; top: 50%; transform: translate(-50%, -46%); width: calc(100% - 64px);
-    max-width: 360px; background: var(--white); border-radius: 18px; padding: 22px 20px; z-index: 41;
+    max-width: 360px; max-height: 85vh; overflow-y: auto; overflow-x: hidden; touch-action: pan-y;
+    -webkit-overflow-scrolling: touch; box-sizing: border-box;
+    background: var(--white); border-radius: 18px; padding: 22px 20px; z-index: 41;
     box-shadow: 0 12px 40px rgba(43,35,32,0.22); opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
   }
   .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
