@@ -297,6 +297,11 @@
 
   <div class="survey-panel" id="wrap-survey">
     <div class="survey-section">
+      <div class="survey-section-title">アンケート一覧</div>
+      <div id="surveyList" class="survey-list"></div>
+    </div>
+
+    <div class="survey-section">
       <div class="survey-section-title">新しいアンケートを作成</div>
 
       <label class="survey-field-label">配信先 <span class="survey-required">*</span></label>
@@ -340,11 +345,6 @@
 
       <button class="survey-draft-btn" id="draftSurveyBtn">一時保存する</button>
       <button class="survey-create-btn" id="createSurveyBtn">アンケートを作成する</button>
-    </div>
-
-    <div class="survey-section">
-      <div class="survey-section-title">アンケート一覧</div>
-      <div id="surveyList" class="survey-list"></div>
     </div>
   </div>
 
@@ -557,7 +557,7 @@ function addQuestionCard_(prefill){
   card.appendChild(removeBtn);
 
   const typeSelect = document.createElement("select");
-  typeSelect.innerHTML = `<option value="radio">選択肢（ラジオボタン）</option><option value="number">数の選択</option>`;
+  typeSelect.innerHTML = `<option value="radio">選択肢（ラジオボタン）</option><option value="number">数の選択</option><option value="text">自由記述</option>`;
   if (prefill && prefill.type) typeSelect.value = prefill.type;
   card.appendChild(typeSelect);
 
@@ -631,7 +631,8 @@ function addQuestionCard_(prefill){
   card.appendChild(numberFields);
 
   const isNumber = prefill && prefill.type === "number";
-  radioFields.style.display = isNumber ? "none" : "block";
+  const isText = prefill && prefill.type === "text";
+  radioFields.style.display = (isNumber || isText) ? "none" : "block";
   numberFields.style.display = isNumber ? "flex" : "none";
   numberHint.style.display = isNumber ? "block" : "none";
 
@@ -648,6 +649,9 @@ function addQuestionCard_(prefill){
       const options = Array.from(optionsWrap.querySelectorAll("input")).map(i => i.value.trim()).filter(Boolean);
       if (options.length < 2) return null;
       return { type: "radio", question: question, options: options };
+    }
+    if (typeSelect.value === "text"){
+      return { type: "text", question: question };
     }
     return { type: "number", question: question, min: Number(minInput.value) || 1, max: Number(maxInput.value) || 5 };
   };
@@ -1125,6 +1129,12 @@ async function openSurveyResults_(surveyId){
     }
     const audienceLabel = SYSTEM_LABEL[data.survey.audience] || "選手用・一般用";
     let html = `<div class="survey-section-title">${data.survey.subject}</div>`;
+    html += `<button class="survey-pick-people-btn" id="emailResultsBtn" style="margin-bottom:10px;">📧 メールで送信</button>`;
+    html += `<div id="emailSendRow" style="display:none; margin-bottom:14px;">
+      <input type="email" id="emailRecipientInput" list="teacherEmailList" placeholder="送信先のメールアドレス" class="people-picker-search" style="margin-bottom:6px;" />
+      <datalist id="teacherEmailList"></datalist>
+      <button class="survey-create-btn" id="emailSendConfirmBtn" style="margin-top:0;">この宛先に送信する</button>
+    </div>`;
     html += `<div class="sli-meta" style="margin-bottom:14px;">配信先: ${audienceLabel}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件</div>`;
 
     data.tally.forEach(t => {
@@ -1135,6 +1145,14 @@ async function openSurveyResults_(surveyId){
         });
       } else if (t.type === "number"){
         html += `<div class="sr-tally-opt"><span>平均</span><span>${t.average !== null ? t.average.toFixed(1) : "-"}（${t.count}件）</span></div>`;
+      } else if (t.type === "text"){
+        if (t.texts.length){
+          t.texts.forEach(txt => {
+            html += `<div class="sr-tally-opt" style="display:block;">・${txt}</div>`;
+          });
+        } else {
+          html += `<div class="sr-tally-opt"><span>まだ回答がありません</span></div>`;
+        }
       }
       html += `</div>`;
     });
@@ -1148,6 +1166,80 @@ async function openSurveyResults_(surveyId){
     });
 
     content.innerHTML = html;
+
+    // 講師名簿のメールアドレスを、送信先の候補として読み込んでおく(未登録なら何も出ない)
+    fetch(`${GENERAL_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(currentPassword)}`)
+      .then(res => res.json())
+      .then(overviewData => {
+        const dl = document.getElementById("teacherEmailList");
+        if (!dl) return;
+        (overviewData.teachers || []).forEach(t => {
+          if (!t.email) return;
+          const opt = document.createElement("option");
+          opt.value = t.email;
+          opt.label = t.displayName || t.fullName;
+          dl.appendChild(opt);
+        });
+      })
+      .catch(err => console.error(err));
+
+    // 本文を組み立てておく(送信ボタンを押した時に使う)
+    let emailBodyText = `【${data.survey.subject}】の集計結果\n配信先: ${audienceLabel}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件\n\n`;
+    data.tally.forEach(t => {
+      emailBodyText += `■ ${t.question}\n`;
+      if (t.type === "radio"){
+        Object.keys(t.counts).forEach(opt => { emailBodyText += `　${opt}: ${t.counts[opt]}件\n`; });
+      } else if (t.type === "number"){
+        emailBodyText += `　平均: ${t.average !== null ? t.average.toFixed(1) : "-"}（${t.count}件）\n`;
+      } else if (t.type === "text"){
+        t.texts.forEach(txt => { emailBodyText += `　・${txt}\n`; });
+      }
+      emailBodyText += "\n";
+    });
+    emailBodyText += "――― 個別の回答 ―――\n";
+    data.responses.forEach(r => {
+      const sysLabel = SYSTEM_LABEL[r.system] || "";
+      emailBodyText += `${r.name}（${sysLabel}／${r.respondedAt}）\n`;
+      emailBodyText += r.answers.map(a => `${a.question}: ${a.answer}`).join(" / ") + "\n\n";
+    });
+
+    document.getElementById("emailResultsBtn").addEventListener("click", () => {
+      document.getElementById("emailSendRow").style.display = "block";
+      document.getElementById("emailRecipientInput").focus();
+    });
+
+    document.getElementById("emailSendConfirmBtn").addEventListener("click", async () => {
+      const to = document.getElementById("emailRecipientInput").value.trim();
+      if (!to){
+        alert("送信先のメールアドレスを入力してください");
+        return;
+      }
+      const btn = document.getElementById("emailSendConfirmBtn");
+      btn.disabled = true;
+      btn.textContent = "送信中…";
+      try {
+        const res = await fetch(SURVEY_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "staffSendSurveyEmail", password: currentPassword,
+            to: to, subject: `アンケート結果：${data.survey.subject}`, body: emailBodyText,
+          }),
+        });
+        const result = await res.json();
+        if (result.success){
+          showToastSurvey_(to + " に送信しました");
+          document.getElementById("emailSendRow").style.display = "none";
+        } else {
+          alert("送信に失敗しました" + (result.reason ? "（" + result.reason + "）" : ""));
+        }
+      } catch (err){
+        console.error(err);
+        alert("通信に失敗しました");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "この宛先に送信する";
+      }
+    });
   } catch (err){
     console.error(err);
     content.innerHTML = "通信に失敗しました";
