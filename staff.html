@@ -73,6 +73,9 @@
     font-size: 13.5px; box-sizing: border-box; font-family: inherit;
   }
   .survey-target-row { display: flex; gap: 14px; }
+  .survey-datetime-row { display: flex; gap: 8px; }
+  .survey-datetime-row input[type="date"] { flex: 1.4; }
+  .survey-datetime-row select { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 12.5px; background: var(--white); }
   .survey-checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; }
   .survey-checkbox input { width: auto; margin: 0; }
 
@@ -280,10 +283,16 @@
       <textarea id="surveyNotesInput" rows="2" placeholder="例：ご協力よろしくお願いします など"></textarea>
 
       <label class="survey-field-label">公開日（空欄=作成後すぐ公開）</label>
-      <input type="date" id="surveyPublishDateInput" />
+      <div class="survey-datetime-row">
+        <input type="date" id="surveyPublishDateInput" />
+        <select id="surveyPublishHourInput"><option value="">時刻指定なし</option></select>
+      </div>
 
       <label class="survey-field-label">締切日 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
-      <input type="date" id="surveyDeadlineInput" />
+      <div class="survey-datetime-row">
+        <input type="date" id="surveyDeadlineInput" />
+        <select id="surveyDeadlineHourInput"><option value="">時刻指定なし（その日いっぱい）</option></select>
+      </div>
 
       <label class="survey-field-label">質問 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
       <div id="surveyQuestionsBuilder"></div>
@@ -595,6 +604,17 @@ function addQuestionCard_(prefill){
 
   builder.appendChild(card);
 }
+// 公開・締切の時刻選択(0〜23時、分は無し)を組み立てる
+["surveyPublishHourInput", "surveyDeadlineHourInput"].forEach(id => {
+  const sel = document.getElementById(id);
+  for (let h = 0; h < 24; h++){
+    const opt = document.createElement("option");
+    opt.value = String(h);
+    opt.textContent = h + "時";
+    sel.appendChild(opt);
+  }
+});
+
 document.getElementById("addQuestionBtn").addEventListener("click", addQuestionCard_);
 addQuestionCard_(); // 最初から1問分用意しておく
 
@@ -607,7 +627,9 @@ function resetSurveyForm_(){
   document.getElementById("surveyContentInput").value = "";
   document.getElementById("surveyNotesInput").value = "";
   document.getElementById("surveyPublishDateInput").value = "";
+  document.getElementById("surveyPublishHourInput").value = "";
   document.getElementById("surveyDeadlineInput").value = "";
+  document.getElementById("surveyDeadlineHourInput").value = "";
   document.getElementById("targetAthlete").checked = true;
   document.getElementById("targetGeneral").checked = true;
   document.getElementById("surveyQuestionsBuilder").innerHTML = "";
@@ -628,7 +650,9 @@ async function saveSurvey_(isDraft){
   const content = document.getElementById("surveyContentInput").value.trim();
   const notes = document.getElementById("surveyNotesInput").value.trim();
   const publishDate = document.getElementById("surveyPublishDateInput").value;
+  const publishHour = document.getElementById("surveyPublishHourInput").value;
   const deadline = document.getElementById("surveyDeadlineInput").value;
+  const deadlineHour = document.getElementById("surveyDeadlineHourInput").value;
   const audience = getSelectedAudience_();
 
   if (!subject){
@@ -674,7 +698,7 @@ async function saveSurvey_(isDraft){
       body: JSON.stringify({
         action: "staffSaveSurvey", password: currentPassword,
         id: currentSurveyId || undefined,
-        subject, content, notes, publishDate, deadline, questions, isDraft, audience,
+        subject, content, notes, publishDate, publishHour, deadline, deadlineHour, questions, isDraft, audience,
       }),
     });
     const data = await res.json();
@@ -745,14 +769,22 @@ function setAudienceCheckboxes_(audience){
 }
 
 // 下書きの内容を、新規作成フォームに読み込む
+// 保存されている "yyyy-MM-dd" または "yyyy-MM-dd HH:00" を、日付欄・時刻欄に分けて反映する
+function setDateTimeFields_(dateInputId, hourInputId, stored){
+  const str = (stored || "").toString();
+  const parts = str.split(" ");
+  document.getElementById(dateInputId).value = parts[0] || "";
+  document.getElementById(hourInputId).value = parts[1] ? String(Number(parts[1].split(":")[0])) : "";
+}
+
 function resumeSurveyDraft_(item){
   currentSurveyId = item.id;
 
   document.getElementById("surveySubjectInput").value = item.subject || "";
   document.getElementById("surveyContentInput").value = item.content || "";
   document.getElementById("surveyNotesInput").value = item.notes || "";
-  document.getElementById("surveyPublishDateInput").value = item.publishDate || "";
-  document.getElementById("surveyDeadlineInput").value = item.deadline || "";
+  setDateTimeFields_("surveyPublishDateInput", "surveyPublishHourInput", item.publishDate);
+  setDateTimeFields_("surveyDeadlineInput", "surveyDeadlineHourInput", item.deadline);
   setAudienceCheckboxes_(item.audience);
 
   const builder = document.getElementById("surveyQuestionsBuilder");
@@ -780,7 +812,9 @@ async function copySurveyToForm_(surveyId){
     document.getElementById("surveyContentInput").value = survey.content || "";
     document.getElementById("surveyNotesInput").value = survey.notes || "";
     document.getElementById("surveyPublishDateInput").value = "";
+    document.getElementById("surveyPublishHourInput").value = "";
     document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
+    document.getElementById("surveyDeadlineHourInput").value = "";
     setAudienceCheckboxes_(survey.audience);
 
     const builder = document.getElementById("surveyQuestionsBuilder");
