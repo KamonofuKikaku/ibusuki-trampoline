@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>スタッフ管理（一般用）</title>
+<title>スタッフ管理</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13,1613 +13,506 @@
     --ink: #2B2320;
     --ink-soft: #7A6F63;
     --orange: #FF6F3C;
-    --orange-soft: #FFE3D6;
     --mint: #2FBF8F;
-    --mint-soft: rgba(47,191,143,0.14);
-    --booked: #4F8FE0;
     --danger: #E0503A;
-    --danger-soft: #FDE4DE;
     --white: #FFFFFF;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; }
-  button { transition: transform 0.12s ease, opacity 0.12s ease; cursor: pointer; }
-  button:active:not(:disabled) { transform: scale(0.94); opacity: 0.85; }
-  button:disabled { cursor: default; }
-  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 60px; }
+  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; height: 100%; }
+  #shell { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
 
-  header { padding: 20px 20px 8px; text-align: center; }
+  header { padding: 18px 20px 4px; text-align: center; flex-shrink: 0; }
   header .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
-  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 22px; margin: 6px 0 0; }
+  header h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 20px; margin: 6px 0 0; }
 
-  .login-box { margin: 40px 20px; background: var(--white); border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 14px rgba(43,35,32,0.08); text-align: center; }
+  .login-box {
+    margin: 40px 20px; background: var(--white); border-radius: 16px; padding: 24px 20px;
+    box-shadow: 0 4px 14px rgba(43,35,32,0.08); text-align: center;
+  }
+  .login-box p { font-size: 13px; color: var(--ink-soft); margin: 0 0 4px; }
   .login-box input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 15px; margin: 14px 0; text-align: center; }
   .login-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 15px; }
   .login-box button:disabled { background: var(--ink-soft); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
-  .warn-banner {
-    margin: 12px 16px 0; padding: 12px 14px; border-radius: 12px;
-    background: var(--danger-soft); color: var(--danger); font-size: 13px; font-weight: 700;
-    display: none; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-  }
-  .warn-banner.show { display: flex; }
-  .warn-banner button { border: none; background: var(--danger); color: var(--white); font-weight: 700; font-size: 12.5px; padding: 8px 12px; border-radius: 8px; flex-shrink: 0; }
+  /* ---------- ブランド表示（ログイン前後どちらでも出す） ---------- */
+  .brand-header { padding: 20px 20px 4px; text-align: center; flex-shrink: 0; }
+  .brand-eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; }
+  .brand-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 19px; margin-top: 4px; color: var(--ink); }
 
-  .section { margin: 14px 16px; padding: 18px 18px 20px; background: var(--white); border-radius: 18px; box-shadow: 0 3px 14px rgba(43,35,32,0.07); }
-  .section .label { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
-  .hint { color: var(--ink-soft); font-size: 12px; margin-bottom: 10px; }
-  .empty-note { color: var(--ink-soft); font-size: 13px; }
+  /* ---------- 選手用／一般用 切り替えヘッダー ---------- */
+  .system-tabs {
+    display: none; gap: 8px; padding: 10px 16px; flex-shrink: 0;
+    background: var(--white); box-shadow: 0 2px 8px rgba(43,35,32,0.06); position: sticky; top: 0; z-index: 10;
+  }
+  .system-tabs.show { display: flex; }
+  .system-tab-btn {
+    flex: 1; border: none; background: var(--cream); color: var(--ink-soft); font-weight: 700;
+    font-size: 14px; padding: 11px; border-radius: 10px; font-family: "Zen Maru Gothic", sans-serif;
+  }
+  .system-tab-btn.active { background: var(--orange); color: var(--white); }
 
-  .tabs { display: flex; gap: 6px; padding: 4px 16px; overflow-x: auto; }
-  .tab-btn { flex-shrink: 0; border: none; background: var(--white); color: var(--ink-soft); font-weight: 700; font-size: 13px; padding: 9px 14px; border-radius: 999px; box-shadow: 0 1px 6px rgba(43,35,32,0.05); }
-  .tab-btn.active { background: var(--orange); color: var(--white); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  .iframe-wrap { flex: 1; display: none; position: relative; }
+  .iframe-wrap.show { display: block; }
+  .iframe-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
 
-  /* ---------- 講師管理 ---------- */
-  .teacher-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .teacher-chip {
-    display: flex; align-items: center; gap: 8px; background: var(--cream);
-    border: 1px solid #EDE6D8; border-radius: 14px; padding: 8px 8px 8px 14px;
+  .iframe-loading {
+    position: absolute; inset: 0; background: var(--cream); display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--ink-soft); font-weight: 700; z-index: 5;
   }
-  .teacher-chip .teacher-names { display: flex; flex-direction: column; line-height: 1.3; }
-  .teacher-chip .teacher-display-name { font-size: 14px; font-weight: 700; color: var(--ink); }
-  .teacher-chip .teacher-full-name { font-size: 10.5px; color: var(--ink-soft); }
-  .teacher-chip .teacher-email { font-size: 10px; color: var(--mint); }
-  .teacher-chip button {
-    border: none; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 1;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .teacher-chip .edit-teacher { background: var(--mint-soft); color: var(--mint); }
-  .teacher-chip .del-teacher { background: var(--danger-soft); color: var(--danger); }
-  .add-teacher-row { display: none; }
+  .iframe-loading .dino-img, .iframe-loading .tramp-mat,
+  .iframe-loading .tramp-shadow, .iframe-loading .burst { animation-play-state: running; }
 
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 40;
-    opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
+  /* ---------- アンケート管理パネル ---------- */
+  .survey-panel { display: none; flex: 1; overflow-y: auto; padding: 14px 16px 40px; }
+  .survey-panel.show { display: block; }
+  .survey-section {
+    background: var(--white); border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    box-shadow: 0 3px 10px rgba(43,35,32,0.06);
   }
-  .modal-overlay.show { opacity: 1; pointer-events: auto; }
-  .modal-box {
-    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -46%); width: calc(100% - 64px);
-    max-width: 360px; max-height: 85vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    background: var(--white); border-radius: 18px; padding: 22px 20px; z-index: 41;
-    box-shadow: 0 12px 40px rgba(43,35,32,0.22); opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+  .survey-section-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 15px; margin-bottom: 10px; }
+  .survey-field-label { display: block; font-size: 12px; color: var(--ink-soft); margin: 10px 0 4px; }
+  .survey-required { color: var(--danger); font-weight: 700; }
+  .survey-panel input[type="text"], .survey-panel input[type="date"], .survey-panel textarea {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #E6DFD3;
+    font-size: 13.5px; box-sizing: border-box; font-family: inherit;
   }
-  .modal-box.show { opacity: 1; transform: translate(-50%, -50%); pointer-events: auto; }
-  .modal-title { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
-  .modal-field-label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
-  .modal-checkbox-row { display: flex; justify-content: center; margin-bottom: 14px; }
-  .modal-checkbox-row .ccb-inner { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); white-space: nowrap; }
-  .modal-checkbox-row input { width: auto; margin: 0; flex-shrink: 0; }
-  .preset-button-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .preset-btn {
-    width: 100%; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
-    font-weight: 700; font-size: 13px; padding: 8px 30px 8px 12px; border-radius: 10px; position: relative;
-    text-align: left; display: flex; align-items: center; gap: 8px;
+  .survey-target-row { display: flex; gap: 14px; }
+  .survey-target-col {
+    flex: 1; background: var(--cream); border-radius: 10px; padding: 10px; display: flex;
+    flex-direction: column; gap: 6px; align-items: flex-start;
   }
-  .preset-btn .preset-label { font-weight: 900; flex-shrink: 0; }
-  .preset-btn .preset-detail { font-weight: 500; font-size: 11.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .preset-btn .preset-del {
-    position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%;
-    background: var(--danger); color: var(--white); font-size: 10px; line-height: 1; border: none;
-    display: flex; align-items: center; justify-content: center;
+  .survey-target-specific-badge {
+    font-size: 10px; font-weight: 700; color: var(--orange); background: var(--orange-soft, #FFE3D6);
+    padding: 1px 7px; border-radius: 999px;
   }
-  .modal-box input, .modal-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 14.5px; margin-bottom: 16px; }
-  .modal-actions { display: flex; gap: 10px; }
-  .modal-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-weight: 700; font-size: 13.5px; }
-  .modal-cancel { background: var(--cream); color: var(--ink-soft); }
-  .modal-confirm { background: var(--orange); color: var(--white); }
+  .survey-pick-people-btn {
+    border: 1px solid var(--ink-soft); background: var(--white); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 8px;
+  }
+  .people-picker-hint { font-size: 11.5px; color: var(--ink-soft); margin: 6px 0 10px; }
+  .people-picker-search {
+    width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #E6DFD3;
+    font-size: 13px; box-sizing: border-box; margin-bottom: 10px;
+  }
+  .people-picker-list { max-height: 40vh; overflow-y: auto; margin-bottom: 10px; }
+  .people-picker-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #F0EAE0; font-size: 13.5px;
+  }
+  .people-picker-item input { width: auto; margin: 0; }
+  .survey-datetime-row { display: flex; gap: 8px; }
+  .survey-datetime-row input[type="date"] { flex: 1.4; }
+  .survey-datetime-row select { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 12.5px; background: var(--white); }
+  .survey-checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .survey-checkbox input { width: auto; margin: 0; }
 
-  /* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
-  .cal-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid #F0EAE0; border-radius: 10px; margin-bottom: 10px; }
-  .cal-table { border-collapse: separate; border-spacing: 0; font-size: 11px; }
-  .cal-table th, .cal-table td { border: none; border-right: 1px solid #F0EAE0; border-bottom: 1px solid #F0EAE0; text-align: center; padding: 0; }
-  .cal-table th {
-    background: var(--cream); font-weight: 700; color: var(--ink-soft); padding: 6px 8px;
-    position: sticky; top: 0; z-index: 2; white-space: nowrap; font-size: 11.5px;
+  .survey-question-card { background: var(--cream); border-radius: 10px; padding: 10px; margin-top: 10px; position: relative; }
+  .survey-question-card .sq-remove {
+    position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%;
+    border: none; background: var(--danger); color: var(--white); font-size: 11px;
   }
-  .cal-table th:first-child, .cal-table td:first-child {
-    position: sticky; left: 0; z-index: 3; background: var(--cream); color: var(--ink-soft);
-    font-weight: 700; padding: 3px 6px; white-space: nowrap; border-right: 1px solid #E4DCCB;
-  }
-  .cal-empty-cell { width: 44px; height: 22px; cursor: pointer; background: var(--white); }
-  .cal-empty-cell:active { background: var(--orange-soft); }
-  .cal-closed-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, #EDE6D8, #EDE6D8 4px, #E4DCCB 4px, #E4DCCB 8px); cursor: pointer; }
-  .cal-holiday-cell { width: 44px; height: 22px; background: repeating-linear-gradient(45deg, var(--danger-soft), var(--danger-soft) 4px, #F7C9BF 4px, #F7C9BF 8px); }
-  .cal-block-cell {
-    background: var(--mint); color: var(--white); font-weight: 700; padding: 3px 2px;
-    cursor: pointer; vertical-align: middle; line-height: 1.3;
-  }
-  .cal-block-cell:active { opacity: 0.8; }
-  .cal-block-cell .cb-teacher { font-size: 12.5px; font-weight: 900; }
-  .cal-block-cell .cb-time { font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 500; }
-  .cal-block-cell.is-event { background: var(--ink-soft); }
-  .cal-block-cell.is-event .cb-time { color: rgba(255,255,255,0.75); }
-  .save-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: var(--mint); color: var(--white); font-weight: 700; font-size: 14px; }
-  .save-btn:disabled { background: var(--ink-soft); }
-  .block-entries-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .block-entries-list .empty-note { font-size: 12px; }
+  .survey-question-card select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; margin-bottom: 6px; font-size: 13px; }
+  .survey-question-card input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; margin-bottom: 6px; font-size: 13px; box-sizing: border-box; }
+  .sq-options-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .sq-options-row input { flex: 1; margin-bottom: 0; }
+  .sq-add-option-btn { border: none; background: var(--cream-deep, #EFE9DC); color: var(--ink-soft); font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+  .sq-number-hint { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
+  .sq-required-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+  .sq-required-row input { width: auto; margin: 0; }
+  .sq-minmax-row { display: flex; gap: 10px; }
+  .sq-minmax-col { flex: 1; }
+  .sq-minmax-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 3px; }
+  .sq-minmax-col input { margin-bottom: 0; }
+  .sq-minmax-row input { margin-bottom: 0; }
 
-  /* ---------- 予約状況 ---------- */
-  .date-block { margin-bottom: 14px; }
-  .date-block .date-title { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
-  .date-block .date-title.today { color: var(--booked); }
-  .slot-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid rgba(43,35,32,0.06);
+  .survey-add-question-btn {
+    width: 100%; margin-top: 10px; border: 2px dashed #E6DFD3; background: transparent; color: var(--ink-soft);
+    font-weight: 700; font-size: 13px; padding: 10px; border-radius: 10px;
   }
-  .slot-row .slot-main { display: flex; flex-direction: column; gap: 2px; }
-  .slot-row .slot-time { font-weight: 700; font-size: 13.5px; }
-  .slot-row .slot-sub { font-size: 11.5px; color: var(--ink-soft); }
-  .slot-row .slot-names { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
-  .slot-row .edit-btn { border: none; background: var(--white); color: var(--ink-soft); font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 8px; box-shadow: 0 1px 4px rgba(43,35,32,0.06); flex-shrink: 0; }
-  .cancel-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--mint-soft); color: var(--mint); border-radius: 999px; padding: 3px 4px 3px 9px; font-size: 11.5px; font-weight: 700; margin: 2px 4px 0 0; }
-  .cancel-chip button { border: none; background: rgba(47,191,143,0.2); color: var(--mint); width: 15px; height: 15px; border-radius: 50%; font-size: 10px; line-height: 1; }
+  .survey-draft-btn {
+    width: 100%; margin-top: 16px; border: 2px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 13.5px; padding: 12px; border-radius: 12px; font-family: "Zen Maru Gothic", sans-serif;
+  }
+  .survey-create-btn {
+    width: 100%; margin-top: 8px; border: none; background: var(--orange); color: var(--white);
+    font-weight: 700; font-size: 14.5px; padding: 13px; border-radius: 12px; font-family: "Zen Maru Gothic", sans-serif;
+  }
+  .survey-create-btn:disabled { background: var(--ink-soft); }
 
-  .edit-panel { display: none; background: var(--white); border: 1px dashed #E6DFD3; border-radius: 10px; padding: 10px; margin-top: 6px; }
-  .edit-panel.show { display: block; }
-  .edit-panel .row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .edit-panel input, .edit-panel select { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; }
-  .edit-panel .actions { display: flex; gap: 8px; }
-  .edit-panel button { flex: 1; padding: 8px; border-radius: 8px; border: none; font-weight: 700; font-size: 12.5px; }
-  .edit-panel .save { background: var(--mint); color: var(--white); }
-  .edit-panel .close-slot { background: var(--danger-soft); color: var(--danger); }
-  .quick-weekday-label { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
-  .quick-weekday-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-  .quick-weekday-btn {
-    flex: 1; min-width: 30px; border: 1px solid #E6DFD3; background: var(--cream); color: var(--ink);
-    font-weight: 700; font-size: 12.5px; padding: 7px 0; border-radius: 8px;
+  .survey-list-item {
+    background: var(--cream); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
   }
-  .quick-weekday-btn:active { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
+  .survey-list-item .sli-subject { font-weight: 700; font-size: 13.5px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .survey-list-item .sli-meta { font-size: 11.5px; color: var(--ink-soft); }
+  .sli-draft-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; color: var(--orange);
+    background: var(--orange-soft, #FFE3D6); padding: 1px 7px; border-radius: 999px;
+  }
+  .sli-copy-btn {
+    margin-top: 8px; margin-right: 6px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-results-btn {
+    margin-top: 8px; margin-right: 6px; border: none; background: var(--orange); color: var(--white);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-toggle-btn {
+    margin-top: 8px; margin-right: 6px; border: 1px solid var(--ink-soft); background: var(--white); color: var(--ink-soft);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-toggle-btn:disabled { opacity: 0.5; }
+  .sli-delete-btn {
+    margin-top: 8px; border: 1px solid var(--danger); background: var(--white); color: var(--danger);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-delete-btn:disabled { opacity: 0.5; }
+  .survey-list-empty { font-size: 12.5px; color: var(--ink-soft); }
 
-  /* ---------- お月謝 ---------- */
-  .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
-  .billing-row .billing-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-  .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-  .card-badge.on { background: var(--mint-soft); color: var(--mint); }
-  .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
-  .cash-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
-  .cash-row input[type="checkbox"] { width: auto; margin: 0; }
-  .cash-paid-month { font-size: 11px; color: var(--ink-soft); }
-  .cash-paid-btn {
-    border: none; background: var(--mint-soft); color: var(--mint); font-weight: 700; font-size: 11px;
-    padding: 4px 9px; border-radius: 999px; margin-left: auto;
+  .modal-overlay-survey {
+    display: none; position: fixed; inset: 0; background: rgba(43,35,32,0.4); z-index: 80;
   }
-  .billing-dates { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
-  .billing-row input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; margin-bottom: 6px; }
-  .charge-btn { width: 100%; padding: 9px; border-radius: 8px; border: none; background: var(--orange); color: var(--white); font-weight: 700; font-size: 13px; }
+  .modal-overlay-survey.show { display: block; }
+  .survey-results-box {
+    display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: calc(100% - 48px); max-width: 400px; max-height: 80vh; overflow-y: auto;
+    background: var(--white); border-radius: 16px; padding: 20px; z-index: 81; box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+  }
+  .survey-results-box.show { display: block; }
+  .survey-results-close {
+    position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: var(--cream); color: var(--ink-soft); font-size: 15px;
+  }
+  .sr-tally-row { margin-bottom: 14px; }
+  .sr-tally-row .sr-q { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+  .sr-tally-opt { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: var(--ink-soft); }
+  .sr-response-item { border-top: 1px solid #F0EAE0; padding: 8px 0; font-size: 12px; }
+  .sr-response-item .sr-name { font-weight: 700; color: var(--ink); }
 
-  .toast {
-    position: fixed; left: 50%; transform: translateX(-50%) translateY(20px); bottom: 30px;
-    background: var(--ink); color: var(--white); padding: 10px 18px; border-radius: 999px; font-size: 13px;
-    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none; z-index: 50;
+  /* ---------- login loading overlay (dino) ---------- */
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.75); z-index: 60; display: flex; align-items: center;
+    justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
   }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .loading-overlay.show { opacity: 1; pointer-events: auto; }
+  .loading-overlay.show .dino-img, .loading-overlay.show .tramp-mat,
+  .loading-overlay.show .tramp-shadow, .loading-overlay.show .burst { animation-play-state: running; }
+
+  .loading-mascot { display: flex; flex-direction: column; align-items: center; }
+  .loading-text { margin-top: 2px; font-family: "Zen Maru Gothic", sans-serif; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dino-scene { position: relative; width: 130px; height: 160px; }
+  .tramp-shadow { position: absolute; left: 50%; bottom: 26px; width: 96px; height: 14px; margin-left: -48px; border-radius: 50%; background: rgba(43, 35, 32, 0.12); }
+  .tramp-mat {
+    position: absolute; left: 50%; bottom: 28px; width: 92px; height: 22px; margin-left: -46px;
+    border-radius: 50%; background: #5C7FA6; border: 3px solid #3E5C7C; transform-origin: center;
+    animation: matSquish 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 2;
+  }
+  .tramp-leg { position: absolute; bottom: 6px; width: 4px; height: 26px; background: #B99E7A; border-radius: 2px; z-index: 1; }
+  .tramp-leg-l1 { left: 50%; margin-left: -44px; transform: rotate(18deg); }
+  .tramp-leg-l2 { left: 50%; margin-left: -24px; transform: rotate(8deg); }
+  .tramp-leg-r1 { left: 50%; margin-left: 40px; transform: rotate(-18deg); }
+  .tramp-leg-r2 { left: 50%; margin-left: 20px; transform: rotate(-8deg); }
+  .dino-img {
+    position: absolute; left: 50%; bottom: 34px; width: 64px; margin-left: -32px; transform-origin: 50% 100%;
+    animation: dinoBounce 0.9s ease-in-out infinite; animation-play-state: paused; z-index: 3;
+  }
+  .burst {
+    position: absolute; left: 50%; bottom: 40px; width: 5px; height: 32px; border-radius: 3px;
+    background: #FFB648; opacity: 0; animation: burstFlash 0.9s ease-in-out infinite; animation-play-state: paused;
+  }
+  .burst-l { margin-left: -26px; transform: rotate(-24deg); }
+  .burst-c { margin-left: -2.5px; background: #FFE07A; }
+  .burst-r { margin-left: 20px; transform: rotate(24deg); }
+
+  @keyframes dinoBounce {
+    0%   { transform: translateY(0) scaleY(1); }
+    35%  { transform: translateY(-42px) scaleY(1.03); }
+    62%  { transform: translateY(0) scaleY(0.9); }
+    76%  { transform: translateY(3px) scaleY(0.86); }
+    100% { transform: translateY(0) scaleY(1); }
+  }
+  @keyframes matSquish {
+    0%   { transform: scaleX(1) scaleY(1); }
+    58%  { transform: scaleX(1) scaleY(1); }
+    70%  { transform: scaleX(1.12) scaleY(0.55); }
+    84%  { transform: scaleX(1) scaleY(1); }
+    100% { transform: scaleX(1) scaleY(1); }
+  }
+  @keyframes burstFlash {
+    0%, 54% { opacity: 0; }
+    66%     { opacity: 1; }
+    84%, 100% { opacity: 0; }
+  }
 </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <div class="eyebrow">TRAMPOLINE GYM BOOKING — 一般用</div>
-    <h1>スタッフ管理（一般用）</h1>
-  </header>
+<div id="shell">
+  <div class="brand-header">
+    <div class="brand-eyebrow">TRAMPOLINE GYM BOOKING</div>
+    <div class="brand-title">指宿トランポリンジム</div>
+  </div>
 
   <div id="loginView" class="login-box">
-    <div>パスワードを入力してください</div>
+    <p>選手用・一般用、共通のパスワードでログインします</p>
     <input type="password" id="passwordInput" placeholder="パスワード" />
     <button id="loginBtn">ログイン</button>
     <div class="login-error" id="loginError">パスワードが違います</div>
   </div>
 
-  <div id="mainView" style="display:none;">
-    <div class="warn-banner" id="warnBanner">
-      <span id="warnText"></span>
-      <button id="warnApproveBtn">確認する</button>
-    </div>
+  <div class="system-tabs" id="systemTabs">
+    <button class="system-tab-btn active" data-system="athlete">選手用</button>
+    <button class="system-tab-btn" data-system="general">一般用</button>
+    <button class="system-tab-btn" data-system="survey">アンケート</button>
+  </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="template">カレンダー</button>
-      <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
-      <button class="tab-btn" data-tab="billing">お月謝</button>
-    </div>
-
-    <div class="tab-panel active" id="tab-template">
-      <div class="section">
-        <div class="label">講師一覧</div>
-        <div class="teacher-chip-row" id="teacherChipRow"></div>
-        <button class="save-btn" id="openAddTeacherBtn" style="background: var(--orange);">＋ 講師を追加</button>
-      </div>
-
-      <div class="section">
-        <div class="label">予定カレンダー</div>
-        <div class="cal-wrap" id="calWrap">
-          <table class="cal-table" id="calTable"></table>
+  <div class="iframe-wrap" id="wrap-athlete">
+    <div class="iframe-loading" id="loading-athlete" style="display:none;">
+      <div class="loading-mascot">
+        <div class="dino-scene">
+          <div class="tramp-shadow"></div>
+          <div class="burst burst-l"></div>
+          <div class="burst burst-c"></div>
+          <div class="burst burst-r"></div>
+          <div class="tramp-leg tramp-leg-l1"></div>
+          <div class="tramp-leg tramp-leg-l2"></div>
+          <div class="tramp-leg tramp-leg-r1"></div>
+          <div class="tramp-leg tramp-leg-r2"></div>
+          <div class="tramp-mat"></div>
+          <img src="dino.png" class="dino-img" alt="">
         </div>
-        <div class="hint">基本定員: <span id="basicCapacityText">-</span>名。空いている時間をタップして追加、既にある予定をタップして編集・削除できます。横にスクロールすると先の日程を見られます。</div>
+        <div class="loading-text">じゅんびちゅう…</div>
       </div>
     </div>
-
-    <div class="tab-panel" id="tab-bookings">
-      <div class="section">
-        <div class="label">予約状況の確認・修正</div>
-        <div class="hint">担当講師や個別定員の変更、休みへの切り替えができます（1週間以内の変更は予約者へLINE通知が届きます）</div>
-        <div id="upcomingList"></div>
+    <iframe id="iframe-athlete" title="選手用スタッフ管理"></iframe>
+  </div>
+  <div class="iframe-wrap" id="wrap-general">
+    <div class="iframe-loading" id="loading-general" style="display:none;">
+      <div class="loading-mascot">
+        <div class="dino-scene">
+          <div class="tramp-shadow"></div>
+          <div class="burst burst-l"></div>
+          <div class="burst burst-c"></div>
+          <div class="burst burst-r"></div>
+          <div class="tramp-leg tramp-leg-l1"></div>
+          <div class="tramp-leg tramp-leg-l2"></div>
+          <div class="tramp-leg tramp-leg-r1"></div>
+          <div class="tramp-leg tramp-leg-r2"></div>
+          <div class="tramp-mat"></div>
+          <img src="dino.png" class="dino-img" alt="">
+        </div>
+        <div class="loading-text">じゅんびちゅう…</div>
       </div>
     </div>
+    <iframe id="iframe-general" title="一般用スタッフ管理"></iframe>
+  </div>
 
-    <div class="tab-panel" id="tab-billing">
-      <div class="section">
-        <div class="label">今月の請求</div>
-        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。</div>
-        <button class="save-btn" id="refreshCardBtn" style="background: var(--white); color: var(--ink-soft); box-shadow: 0 1px 6px rgba(43,35,32,0.05); margin-bottom: 10px;">カード登録状況を更新</button>
-        <div id="billingList"></div>
+  <div class="survey-panel" id="wrap-survey">
+    <div class="survey-section">
+      <div class="survey-section-title">アンケート一覧</div>
+      <div id="surveyList" class="survey-list"></div>
+    </div>
+
+    <div class="survey-section">
+      <div class="survey-section-title">新しいアンケートを作成</div>
+
+      <label class="survey-field-label">配信先 <span class="survey-required">*</span></label>
+      <div class="survey-target-row">
+        <div class="survey-target-col">
+          <label class="survey-checkbox"><input type="checkbox" id="targetAthlete" checked /> 選手用</label>
+          <span class="survey-target-specific-badge" id="athleteSpecificBadge" style="display:none;">指定あり</span>
+          <button type="button" class="survey-pick-people-btn" id="pickAthletePeopleBtn">対象者を選択</button>
+        </div>
+        <div class="survey-target-col">
+          <label class="survey-checkbox"><input type="checkbox" id="targetGeneral" checked /> 一般用</label>
+          <span class="survey-target-specific-badge" id="generalSpecificBadge" style="display:none;">指定あり</span>
+          <button type="button" class="survey-pick-people-btn" id="pickGeneralPeopleBtn">対象者を選択</button>
+        </div>
       </div>
+
+      <label class="survey-field-label">件名 <span class="survey-required">*</span></label>
+      <input type="text" id="surveySubjectInput" placeholder="例：施設についてのアンケート" required />
+
+      <label class="survey-field-label">内容（任意）</label>
+      <textarea id="surveyContentInput" rows="3" placeholder="アンケートの説明があれば入力してください"></textarea>
+
+      <label class="survey-field-label">備考（任意・お客様側に必ず表示されます）</label>
+      <textarea id="surveyNotesInput" rows="2" placeholder="例：ご協力よろしくお願いします など"></textarea>
+
+      <label class="survey-field-label">公開日（空欄=作成後すぐ公開）</label>
+      <div class="survey-datetime-row">
+        <input type="date" id="surveyPublishDateInput" />
+        <select id="surveyPublishHourInput"><option value="">時刻指定なし</option></select>
+      </div>
+
+      <label class="survey-field-label">締切日 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
+      <div class="survey-datetime-row">
+        <input type="date" id="surveyDeadlineInput" />
+        <select id="surveyDeadlineHourInput"><option value="">時刻指定なし（その日いっぱい）</option></select>
+      </div>
+
+      <label class="survey-field-label">質問 <span class="survey-required">*</span>（一時保存の間は空欄でも可）</label>
+      <div id="surveyQuestionsBuilder"></div>
+      <button class="survey-add-question-btn" id="addQuestionBtn">＋ 質問を追加</button>
+
+      <button class="survey-draft-btn" id="draftSurveyBtn">一時保存する</button>
+      <button class="survey-create-btn" id="createSurveyBtn">アンケートを作成する</button>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-
-  <div class="modal-overlay" id="teacherModalOverlay"></div>
-  <div class="modal-box" id="teacherModal">
-    <div class="modal-title" id="teacherModalTitle">講師を追加</div>
-    <label class="modal-field-label">正式名（フルネーム）</label>
-    <input type="text" id="teacherFullNameInput" placeholder="例：山田太郎" />
-    <label class="modal-field-label">表示名（3文字目安・カレンダー等に表示）</label>
-    <input type="text" id="teacherDisplayNameInput" placeholder="例：山田" maxlength="6" />
-    <label class="modal-field-label">メールアドレス（任意・アンケート結果の送信先候補になります）</label>
-    <input type="email" id="teacherEmailInput" placeholder="例：yamada@example.com" />
-    <div class="modal-actions">
-      <button class="modal-cancel" id="cancelAddTeacherBtn">キャンセル</button>
-      <button class="modal-confirm" id="confirmAddTeacherBtn">追加する</button>
-    </div>
+  <div class="modal-overlay-survey" id="surveyResultsOverlay"></div>
+  <div class="survey-results-box" id="surveyResultsBox">
+    <button class="survey-results-close" id="surveyResultsCloseBtn">×</button>
+    <div id="surveyResultsContent"></div>
   </div>
 
-  <div class="modal-overlay" id="blockModalOverlay"></div>
-  <div class="modal-box" id="blockModal">
-    <div class="modal-title" id="blockModalTitle">担当ブロックを追加</div>
-    <div id="blockEntriesSection" style="display:none;">
-      <label class="modal-field-label">予約者</label>
-      <div id="blockEntriesList" class="block-entries-list"></div>
-    </div>
-    <div id="presetButtonsSection" style="display:none;">
-      <label class="modal-field-label">よく使う内容から選ぶ</label>
-      <div class="preset-button-row" id="presetButtonRow"></div>
-    </div>
-    <label class="modal-checkbox-row" id="isEventRow">
-      <span class="ccb-inner">
-        <input type="checkbox" id="isEventInput" />
-        <span>予約不可のコマ</span>
-      </span>
-    </label>
-    <label class="modal-field-label">開始時刻</label>
-    <input type="time" id="blockStartInput" step="900" />
-    <label class="modal-field-label">終了時刻</label>
-    <input type="time" id="blockEndInput" step="900" />
-    <div id="bookableFieldsSection">
-      <label class="modal-field-label">担当講師</label>
-      <select id="blockTeacherSelect"></select>
-      <label class="modal-field-label">定員（空欄=基本定員）</label>
-      <input type="number" id="blockCapacityInput" min="1" placeholder="例：6" />
-    </div>
-    <div id="eventFieldsSection" style="display:none;">
-      <label class="modal-field-label">タイトル</label>
-      <input type="text" id="eventTitleInput" placeholder="例：貸切・清掃・イベント準備 など" />
-    </div>
-    <label class="modal-checkbox-row" id="repeatWeeklyRow">
-      <span class="ccb-inner">
-        <input type="checkbox" id="repeatWeeklyInput" />
-        <span>毎週繰り返す</span>
-      </span>
-    </label>
-    <div class="modal-actions">
-      <button class="modal-cancel" id="cancelBlockBtn">キャンセル</button>
-      <button class="modal-cancel" id="deleteBlockBtn" style="display:none; background: var(--danger-soft); color: var(--danger);">削除</button>
-      <button class="modal-confirm" id="confirmBlockBtn">追加する</button>
-    </div>
+  <div class="modal-overlay-survey" id="peoplePickerOverlay"></div>
+  <div class="survey-results-box" id="peoplePickerBox">
+    <button class="survey-results-close" id="peoplePickerCloseBtn">×</button>
+    <div class="survey-section-title" id="peoplePickerTitle">対象者を選択</div>
+    <div class="people-picker-hint">チェックした人にだけ配信します（誰もチェックしなければ全員に配信します）</div>
+    <input type="text" id="peoplePickerSearch" placeholder="名前で検索" class="people-picker-search" />
+    <div id="peoplePickerList" class="people-picker-list"></div>
+    <button class="survey-create-btn" id="peoplePickerDoneBtn">選択を確定</button>
   </div>
 
-  <div class="modal-overlay" id="presetSaveModalOverlay"></div>
-  <div class="modal-box" id="presetSaveModal">
-    <div class="modal-title">この内容を登録しますか？</div>
-    <div class="modal-field-label" style="margin-bottom:14px;">よく使う内容として登録しておくと、次回から「よく使う内容から選ぶ」でワンタップで呼び出せます（最大3件）。</div>
-    <div class="modal-actions">
-      <button class="modal-cancel" id="skipPresetSaveBtn">登録しない</button>
-      <button class="modal-confirm" id="confirmPresetSaveBtn">登録する</button>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="quickActionModalOverlay"></div>
-  <div class="modal-box" id="quickActionModal">
-    <div class="modal-title" id="quickActionTitle">この予定について</div>
-    <div class="modal-actions" style="flex-direction: column; gap: 8px;">
-      <button class="modal-confirm" id="quickActionEditBtn" style="width:100%;">詳細を見る・編集する</button>
-      <button class="modal-cancel" id="quickActionDeleteBtn" style="width:100%; background: var(--danger-soft); color: var(--danger);">削除する</button>
-      <button class="modal-cancel" id="quickActionCancelBtn" style="width:100%;">キャンセル</button>
+  <div class="loading-overlay" id="loginLoadingOverlay">
+    <div class="loading-mascot">
+      <div class="dino-scene">
+        <div class="tramp-shadow"></div>
+        <div class="burst burst-l"></div>
+        <div class="burst burst-c"></div>
+        <div class="burst burst-r"></div>
+        <div class="tramp-leg tramp-leg-l1"></div>
+        <div class="tramp-leg tramp-leg-l2"></div>
+        <div class="tramp-leg tramp-leg-r1"></div>
+        <div class="tramp-leg tramp-leg-r2"></div>
+        <div class="tramp-mat"></div>
+        <img src="dino.png" class="dino-img" alt="">
+      </div>
+      <div class="loading-text">確認中…</div>
     </div>
   </div>
 </div>
 
-
 <script>
 /* ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼ */
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
+const ATHLETE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
+const GENERAL_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
+// この2つのURLと同じ並びの.htmlファイルを、このstaff.htmlと同じGitHubリポジトリに置く
+const ATHLETE_PAGE = "athlete_staff_inner.html";
+const GENERAL_PAGE = "general/staff.html";
 /* ▲▲▲ ここまで ▲▲▲ */
 
-const WEEKDAY_LABELS = ["月","火","水","木","金","土","日"];
-const SUNDAY_FIRST_LABELS = ["日","月","火","水","木","金","土"]; // 個別コマ編集ポップアップのボタン表示順
-
 const loginView = document.getElementById("loginView");
-const mainView = document.getElementById("mainView");
 const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
-const toastEl = document.getElementById("toast");
-const warnBanner = document.getElementById("warnBanner");
-const warnText = document.getElementById("warnText");
-const warnApproveBtn = document.getElementById("warnApproveBtn");
-const upcomingList = document.getElementById("upcomingList");
-const billingList = document.getElementById("billingList");
-const refreshCardBtn = document.getElementById("refreshCardBtn");
+const systemTabs = document.getElementById("systemTabs");
 
-let password = "";
-let lastOverviewData = null;
-let pendingWarnMonth = null;
+const wraps = { athlete: document.getElementById("wrap-athlete"), general: document.getElementById("wrap-general") };
+const loadings = { athlete: document.getElementById("loading-athlete"), general: document.getElementById("loading-general") };
+const iframes = { athlete: document.getElementById("iframe-athlete"), general: document.getElementById("iframe-general") };
 
-function showToast(msg){
-  toastEl.textContent = msg;
-  toastEl.classList.add("show");
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
-}
-
-async function fetchOverview(pw){
-  const res = await fetch(`${GAS_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(pw)}`);
-  return await res.json();
-}
-
-function formatDateLabel(dateStr, todayStr){
-  const [y,m,d] = dateStr.split("-");
-  const dateObj = new Date(Number(y), Number(m)-1, Number(d));
-  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
-  const label = `${Number(m)}/${Number(d)}(${w})`;
-  return dateStr === todayStr ? label + " 本日" : label;
-}
-
-/* ---------- タブ切り替え ---------- */
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-  });
-});
-
-/* ---------- 月次承認バナー ---------- */
-function renderApprovalBanner(approvals, todayStr){
-  const [ty, tm] = todayStr.split("-").map(Number);
-  const curMonth = `${ty}-${String(tm).padStart(2,"0")}`;
-  const nextD = new Date(ty, tm, 1); // 翌月1日
-  const nextMonth = `${nextD.getFullYear()}-${String(nextD.getMonth()+1).padStart(2,"0")}`;
-
-  const byMonth = {};
-  (approvals || []).forEach(a => byMonth[a.month] = a);
-
-  const unapproved = [curMonth, nextMonth].filter(m => byMonth[m] && byMonth[m].status === "未承認");
-  if (!unapproved.length){
-    warnBanner.classList.remove("show");
-    pendingWarnMonth = null;
-    return;
-  }
-  pendingWarnMonth = unapproved[0];
-  warnText.textContent = `${unapproved.join("・")}分の営業予定がまだ確認されていません`;
-  warnBanner.classList.add("show");
-}
-
-warnApproveBtn.addEventListener("click", async () => {
-  if (!pendingWarnMonth) return;
-  warnApproveBtn.disabled = true;
+async function checkPassword_(endpoint, pw){
   try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffApproveMonth", password: password, month: pendingWarnMonth, approver: "スタッフ" }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(pendingWarnMonth + "分を確認済みにしました");
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("処理に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    warnApproveBtn.disabled = false;
-  }
-});
-
-/* ---------- 講師管理 ---------- */
-const teacherChipRow = document.getElementById("teacherChipRow");
-const openAddTeacherBtn = document.getElementById("openAddTeacherBtn");
-const teacherModalOverlay = document.getElementById("teacherModalOverlay");
-const teacherModal = document.getElementById("teacherModal");
-const teacherModalTitle = document.getElementById("teacherModalTitle");
-const teacherFullNameInput = document.getElementById("teacherFullNameInput");
-const teacherDisplayNameInput = document.getElementById("teacherDisplayNameInput");
-const teacherEmailInput = document.getElementById("teacherEmailInput");
-const cancelAddTeacherBtn = document.getElementById("cancelAddTeacherBtn");
-const confirmAddTeacherBtn = document.getElementById("confirmAddTeacherBtn");
-let currentTeachers = []; // [{fullName, displayName, email}, ...]
-let editingDisplayName = null; // null=新規追加モード、値あり=編集モード（元の表示名）
-
-function renderTeachers(teachers){
-  currentTeachers = teachers || [];
-  teacherChipRow.innerHTML = "";
-  if (!currentTeachers.length){
-    teacherChipRow.innerHTML = `<span class="empty-note">まだ講師が登録されていません。下のボタンから追加してください</span>`;
-    return;
-  }
-  currentTeachers.forEach(t => {
-    const chip = document.createElement("div");
-    chip.className = "teacher-chip";
-
-    const names = document.createElement("div");
-    names.className = "teacher-names";
-    const displayEl = document.createElement("div");
-    displayEl.className = "teacher-display-name";
-    displayEl.textContent = t.displayName;
-    names.appendChild(displayEl);
-    const fullEl = document.createElement("div");
-    fullEl.className = "teacher-full-name";
-    fullEl.textContent = t.fullName;
-    names.appendChild(fullEl);
-    if (t.email){
-      const emailEl = document.createElement("div");
-      emailEl.className = "teacher-email";
-      emailEl.textContent = t.email;
-      names.appendChild(emailEl);
-    }
-    chip.appendChild(names);
-
-    const editBtn = document.createElement("button");
-    editBtn.className = "edit-teacher";
-    editBtn.textContent = "✎";
-    editBtn.title = "編集";
-    editBtn.addEventListener("click", () => openTeacherModal(t));
-    chip.appendChild(editBtn);
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "del-teacher";
-    delBtn.textContent = "×";
-    delBtn.title = "名簿から削除";
-    delBtn.addEventListener("click", () => {
-      if (!window.confirm(`「${t.displayName}」を名簿から削除しますか？（すでに設定済みのマスはそのまま残ります）`)) return;
-      doDeleteTeacher(t.displayName);
-    });
-    chip.appendChild(delBtn);
-
-    teacherChipRow.appendChild(chip);
-  });
-}
-
-async function doDeleteTeacher(displayName){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffDeleteTeacher", password: password, displayName: displayName }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`「${displayName}」を削除しました`);
-      renderTeachers(result.teachers);
-      if (lastOverviewData) renderTemplate(lastOverviewData);
-    } else {
-      showToast("削除に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-// teacher: null なら新規追加モード、{fullName,displayName,email} なら編集モード
-function openTeacherModal(teacher){
-  editingDisplayName = teacher ? teacher.displayName : null;
-  teacherModalTitle.textContent = teacher ? "講師情報を編集" : "講師を追加";
-  teacherFullNameInput.value = teacher ? teacher.fullName : "";
-  teacherDisplayNameInput.value = teacher ? teacher.displayName : "";
-  teacherEmailInput.value = teacher ? (teacher.email || "") : "";
-  confirmAddTeacherBtn.textContent = teacher ? "変更する" : "追加する";
-  teacherModalOverlay.classList.add("show");
-  teacherModal.classList.add("show");
-  setTimeout(() => teacherFullNameInput.focus(), 50);
-}
-function closeTeacherModal(){
-  teacherModalOverlay.classList.remove("show");
-  teacherModal.classList.remove("show");
-}
-
-openAddTeacherBtn.addEventListener("click", () => openTeacherModal(null));
-cancelAddTeacherBtn.addEventListener("click", closeTeacherModal);
-teacherModalOverlay.addEventListener("click", closeTeacherModal);
-// Enterキーでの送信は行わない（日本語入力の変換確定Enterと誤認識するため、
-// ボタンを押した時だけ登録・変更する）
-
-confirmAddTeacherBtn.addEventListener("click", async () => {
-  const fullName = teacherFullNameInput.value.trim();
-  const displayName = teacherDisplayNameInput.value.trim();
-  const email = teacherEmailInput.value.trim();
-  if (!fullName || !displayName){
-    showToast("正式名・表示名を両方入力してください");
-    return;
-  }
-
-  confirmAddTeacherBtn.disabled = true;
-  try {
-    if (editingDisplayName){
-      // 編集モード：一括変更
-      if (editingDisplayName !== displayName &&
-          !window.confirm(`表示名を「${editingDisplayName}」から「${displayName}」に変更すると、すでに設定済みの箇所も全て一括で変わります。よろしいですか？`)) {
-        confirmAddTeacherBtn.disabled = false;
-        return;
-      }
-      const res = await fetch(GAS_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "staffRenameTeacher", password: password,
-          oldDisplayName: editingDisplayName, newFullName: fullName, newDisplayName: displayName,
-          newEmail: email,
-        }),
-      });
-      const result = await res.json();
-      if (result.success){
-        showToast(`「${displayName}」に変更しました`);
-        closeTeacherModal();
-        const data = await fetchOverview(password);
-        if (!data.error) renderOverview(data);
-      } else {
-        showToast("変更に失敗しました");
-      }
-    } else {
-      // 新規追加モード
-      const res = await fetch(GAS_ENDPOINT, {
-        method: "POST",
-        body: JSON.stringify({ action: "staffAddTeacher", password: password, fullName: fullName, displayName: displayName, email: email }),
-      });
-      const result = await res.json();
-      if (result.success){
-        showToast(`「${displayName}」を追加しました`);
-        closeTeacherModal();
-        renderTeachers(result.teachers);
-        if (lastOverviewData) renderTemplate(lastOverviewData); // 新しい講師をプルダウンに反映
-      } else if (result.reason === "duplicate"){
-        showToast("すでに同じ表示名の講師がいます");
-      } else {
-        showToast("追加に失敗しました");
-      }
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    confirmAddTeacherBtn.disabled = false;
-  }
-});
-
-/* ---------- 予定カレンダー（横=日付、縦=時間） ---------- */
-const calTable = document.getElementById("calTable");
-
-const blockModalOverlay = document.getElementById("blockModalOverlay");
-const blockModal = document.getElementById("blockModal");
-const blockModalTitle = document.getElementById("blockModalTitle");
-const blockStartInput = document.getElementById("blockStartInput");
-const blockEndInput = document.getElementById("blockEndInput");
-const blockTeacherSelect = document.getElementById("blockTeacherSelect");
-const blockCapacityInput = document.getElementById("blockCapacityInput");
-const repeatWeeklyInput = document.getElementById("repeatWeeklyInput");
-const isEventInput = document.getElementById("isEventInput");
-const eventTitleInput = document.getElementById("eventTitleInput");
-const bookableFieldsSection = document.getElementById("bookableFieldsSection");
-const eventFieldsSection = document.getElementById("eventFieldsSection");
-
-function updateEventModeVisibility(){
-  const isEvent = isEventInput.checked;
-  bookableFieldsSection.style.display = isEvent ? "none" : "block";
-  eventFieldsSection.style.display = isEvent ? "block" : "none";
-  const presetSection = document.getElementById("presetButtonsSection");
-  if (isEvent){
-    presetSection.style.display = "none";
-  } else {
-    presetSection.style.display = document.getElementById("presetButtonRow").children.length ? "block" : "none";
-  }
-}
-isEventInput.addEventListener("change", updateEventModeVisibility);
-const cancelBlockBtn = document.getElementById("cancelBlockBtn");
-const deleteBlockBtn = document.getElementById("deleteBlockBtn");
-const confirmBlockBtn = document.getElementById("confirmBlockBtn");
-
-let currentUpcoming = []; // [{date, slots:[{time,endTime,teacher,...}]}, ...]
-let editingBlockDate = null;    // 編集中の日付("2026-08-10")。null=新規追加モード
-let editingBlockOldStart = null; // 編集中ブロックの元の開始時刻。null=新規追加モード
-let lastUsedTeacherDisplayName = "";
-
-// "HH:MM"以外の想定外の値が来ても落ちないよう、パースできなければnullを返す
-function timeStrToMinutes_(t){
-  if (typeof t !== "string") return null;
-  const m2 = t.match(/^(\d{1,2}):(\d{2})/);
-  if (!m2) return null;
-  const h = Number(m2[1]);
-  const m = Number(m2[2]);
-  if (isNaN(h) || isNaN(m)) return null;
-  return h * 60 + m;
-}
-function minutesToTimeStr_(mins){
-  const h = Math.floor(mins / 60) % 24;
-  const m = mins % 60;
-  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-}
-function formatCalDateLabel_(dateStr){
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dateObj = new Date(y, m - 1, d);
-  const w = ["日","月","火","水","木","金","土"][dateObj.getDay()];
-  return `${m}/${d}(${w})`;
-}
-
-const CALENDAR_WINDOW_DAYS = 60; // 今日から何日分の列を常に表示するか
-
-function renderTemplate(data){
-  const byDate = {};
-  (data.upcoming || []).forEach(item => { byDate[item.date] = item.slots || []; });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const list = [];
-  for (let i = 0; i < CALENDAR_WINDOW_DAYS; i++){
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    list.push({ date: dateStr, slots: byDate[dateStr] || [] });
-  }
-
-  currentUpcoming = list;
-  renderCalendar(data.athleteHours || {});
-}
-
-function computeCalendarRange_(athleteHours){
-  const DEFAULT_START = timeStrToMinutes_("10:00");
-  const DEFAULT_END = timeStrToMinutes_("21:00");
-  let rangeStart = DEFAULT_START;
-  let rangeEnd = DEFAULT_END;
-  let hasAny = false;
-
-  currentUpcoming.forEach(dateItem => {
-    const ref = athleteHours[dateItem.date];
-    if (ref && !ref.closed){
-      const s = timeStrToMinutes_(ref.start);
-      const e = timeStrToMinutes_(ref.end);
-      if (s !== null && e !== null && e > s){
-        rangeStart = Math.min(rangeStart, s);
-        rangeEnd = Math.max(rangeEnd, e);
-        hasAny = true;
-      }
-    }
-    (dateItem.slots || []).forEach(slot => {
-      const s = timeStrToMinutes_(slot.time);
-      const e = timeStrToMinutes_(slot.endTime);
-      if (s !== null && e !== null && e > s){
-        rangeStart = Math.min(rangeStart, s);
-        rangeEnd = Math.max(rangeEnd, e);
-        hasAny = true;
-      }
-    });
-  });
-
-  if (!hasAny || rangeEnd <= rangeStart) return { start: DEFAULT_START, end: DEFAULT_END };
-  const MIN_START = timeStrToMinutes_("09:00");
-  return { start: Math.max(rangeStart, MIN_START), end: rangeEnd };
-}
-
-function renderCalendar(athleteHours){
-  const wrap = document.getElementById("calWrap");
-  if (!wrap.querySelector("#calTable")){
-    wrap.innerHTML = `<table class="cal-table" id="calTable"></table>`;
-  }
-  const table = document.getElementById("calTable");
-  table.innerHTML = "";
-  const range = computeCalendarRange_(athleteHours);
-
-  const dateRanges = currentUpcoming.map(dateItem => {
-    const ref = athleteHours[dateItem.date];
-    if (!ref || ref.closed) return null;
-    const s = timeStrToMinutes_(ref.start);
-    const e = timeStrToMinutes_(ref.end);
-    return (s !== null && e !== null && e > s) ? { start: s, end: e } : null;
-  });
-
-  const dateClosed = currentUpcoming.map(dateItem => {
-    const ref = athleteHours[dateItem.date];
-    return !!(ref && ref.closed);
-  });
-
-  function buildDateHeaderRow(){
-    const headRow = document.createElement("tr");
-    headRow.appendChild(document.createElement("th"));
-    currentUpcoming.forEach(dateItem => {
-      const th = document.createElement("th");
-      th.textContent = formatCalDateLabel_(dateItem.date);
-      headRow.appendChild(th);
-    });
-    return headRow;
-  }
-  table.appendChild(buildDateHeaderRow());
-
-  const skipCounts = currentUpcoming.map(() => 0);
-
-  for (let t = range.start; t < range.end; t += 15){
-    const timeStr = minutesToTimeStr_(t);
-
-    if (timeStr === "15:00" && skipCounts.every(c => c === 0)){
-      table.appendChild(buildDateHeaderRow());
-    }
-
-    const row = document.createElement("tr");
-
-    const labelTd = document.createElement("td");
-    labelTd.textContent = timeStr;
-    row.appendChild(labelTd);
-
-    currentUpcoming.forEach((dateItem, colIdx) => {
-      if (skipCounts[colIdx] > 0){
-        skipCounts[colIdx]--;
-        return;
-      }
-      const slot = (dateItem.slots || []).find(s => s.time === timeStr);
-      if (slot){
-        const isEventSlot = !slot.teacher && slot.title;
-        const span = Math.max(1, Math.round((timeStrToMinutes_(slot.endTime) - timeStrToMinutes_(slot.time)) / 15));
-        const td = document.createElement("td");
-        td.className = "cal-block-cell" + (isEventSlot ? " is-event" : "");
-        td.rowSpan = span;
-        const label = isEventSlot ? slot.title : slot.teacher;
-        td.innerHTML = `<div class="cb-teacher">${label}</div><div class="cb-time">${slot.time}〜${slot.endTime}</div>`;
-        td.addEventListener("click", () => openQuickActionModal(dateItem.date, slot));
-        row.appendChild(td);
-        skipCounts[colIdx] = span - 1;
-      } else if (dateClosed[colIdx]){
-        const td = document.createElement("td");
-        td.className = "cal-holiday-cell";
-        row.appendChild(td);
-      } else {
-        const dr = dateRanges[colIdx];
-        const inAthleteHours = dr && (t >= dr.start && t < dr.end);
-        const td = document.createElement("td");
-        td.className = inAthleteHours ? "cal-closed-cell" : "cal-empty-cell";
-        td.addEventListener("click", () => openBlockModal(dateItem.date, null, timeStr));
-        row.appendChild(td);
-      }
-    });
-
-    table.appendChild(row);
-  }
-
-  table.appendChild(buildDateHeaderRow());
-}
-
-function renderPresetButtons(){
-  const presets = (lastOverviewData && lastOverviewData.blockPresets) || [];
-  const section = document.getElementById("presetButtonsSection");
-  const row = document.getElementById("presetButtonRow");
-  row.innerHTML = "";
-  if (!presets.length){
-    section.style.display = "none";
-    return;
-  }
-  section.style.display = "block";
-  presets.forEach(preset => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "preset-btn";
-
-    const labelEl = document.createElement("span");
-    labelEl.className = "preset-label";
-    labelEl.textContent = preset.label;
-    btn.appendChild(labelEl);
-
-    const detailEl = document.createElement("span");
-    detailEl.className = "preset-detail";
-    detailEl.textContent = `${preset.start}〜${preset.end} ${preset.teacher || ""}`;
-    btn.appendChild(detailEl);
-
-    btn.addEventListener("click", () => {
-      blockStartInput.value = preset.start;
-      blockEndInput.value = preset.end;
-      if (currentTeachers.some(t => t.displayName === preset.teacher)) blockTeacherSelect.value = preset.teacher;
-      blockCapacityInput.value = preset.capacity === "" || preset.capacity === undefined ? "" : preset.capacity;
-    });
-
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "preset-del";
-    del.textContent = "×";
-    del.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!window.confirm(`プリセット「${preset.label}」を削除しますか？`)) return;
-      doDeleteBlockPreset(preset.label);
-    });
-    btn.appendChild(del);
-
-    row.appendChild(btn);
-  });
-}
-
-async function doDeleteBlockPreset(label){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffDeleteBlockPreset", password: password, label: label }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`プリセット「${label}」を削除しました`);
-      if (lastOverviewData) lastOverviewData.blockPresets = result.presets;
-      renderPresetButtons();
-    } else {
-      showToast("削除に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-const quickActionModalOverlay = document.getElementById("quickActionModalOverlay");
-const quickActionModal = document.getElementById("quickActionModal");
-const quickActionTitle = document.getElementById("quickActionTitle");
-const quickActionEditBtn = document.getElementById("quickActionEditBtn");
-const quickActionDeleteBtn = document.getElementById("quickActionDeleteBtn");
-const quickActionCancelBtn = document.getElementById("quickActionCancelBtn");
-let quickActionContext = null;
-
-function openQuickActionModal(dateStr, slot){
-  quickActionContext = { dateStr, slot };
-  const isEventSlot = !slot.teacher && slot.title;
-  const detail = isEventSlot ? `（${slot.title}）` : `（担当: ${slot.teacher}）`;
-  quickActionTitle.textContent = `${formatCalDateLabel_(dateStr)} ${slot.time}〜${slot.endTime}${detail}`;
-  quickActionModalOverlay.classList.add("show");
-  quickActionModal.classList.add("show");
-}
-function closeQuickActionModal(){
-  quickActionModalOverlay.classList.remove("show");
-  quickActionModal.classList.remove("show");
-  quickActionContext = null;
-}
-quickActionCancelBtn.addEventListener("click", closeQuickActionModal);
-quickActionModalOverlay.addEventListener("click", closeQuickActionModal);
-
-quickActionEditBtn.addEventListener("click", () => {
-  if (!quickActionContext) return;
-  const { dateStr, slot } = quickActionContext;
-  closeQuickActionModal();
-  openBlockModal(dateStr, slot);
-});
-
-quickActionDeleteBtn.addEventListener("click", async () => {
-  if (!quickActionContext) return;
-  const { dateStr, slot } = quickActionContext;
-  if (!window.confirm(`${formatCalDateLabel_(dateStr)} ${slot.time}〜${slot.endTime} の予定を削除しますか？`)) return;
-
-  quickActionDeleteBtn.disabled = true;
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffDeleteDateBlock", password: password, date: dateStr, startTime: slot.time }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast("削除しました");
-      closeQuickActionModal();
-      patchLocalSlot_(dateStr, slot.time, null);
-      renderTemplate(lastOverviewData);
-    } else {
-      showToast("削除に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    quickActionDeleteBtn.disabled = false;
-  }
-});
-
-function openBlockModal(dateStr, slot, startHint){
-  editingBlockDate = dateStr;
-
-  blockTeacherSelect.innerHTML = "";
-  currentTeachers.forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t.displayName;
-    opt.textContent = t.displayName;
-    blockTeacherSelect.appendChild(opt);
-  });
-
-  renderPresetButtons();
-
-  const blockEntriesSection = document.getElementById("blockEntriesSection");
-  const blockEntriesList = document.getElementById("blockEntriesList");
-
-  if (slot){
-    editingBlockOldStart = slot.time;
-    blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " の予定を編集";
-    blockStartInput.value = slot.time;
-    blockEndInput.value = slot.endTime;
-    blockTeacherSelect.value = slot.teacher;
-    blockCapacityInput.value = (slot.capacity === undefined || slot.capacity === "") ? "" : slot.capacity;
-    deleteBlockBtn.style.display = "block";
-    confirmBlockBtn.textContent = "変更する";
-    document.getElementById("repeatWeeklyRow").style.display = "flex";
-    repeatWeeklyInput.checked = false;
-    const isEventSlot = !slot.teacher && slot.title;
-    isEventInput.checked = isEventSlot;
-    eventTitleInput.value = isEventSlot ? slot.title : "";
-
-    blockEntriesSection.style.display = "block";
-    blockEntriesList.innerHTML = "";
-    const entries = slot.entries || [];
-    if (!entries.length){
-      blockEntriesList.innerHTML = `<span class="empty-note">予約はまだありません</span>`;
-    } else {
-      entries.forEach(entry => {
-        const chip = document.createElement("span");
-        chip.className = "cancel-chip";
-        chip.innerHTML = `<span>${entry.name}</span>`;
-        const x = document.createElement("button");
-        x.textContent = "×";
-        x.addEventListener("click", () => {
-          if (!window.confirm(`${entry.name}さんの予約をキャンセルしますか？`)) return;
-          doCancelFromBlockModal(entry.userId, dateStr, slot.time);
-        });
-        chip.appendChild(x);
-        blockEntriesList.appendChild(chip);
-      });
-    }
-  } else {
-    editingBlockOldStart = null;
-    blockModalTitle.textContent = formatCalDateLabel_(dateStr) + " に追加";
-    const start = startHint || "10:00";
-    blockStartInput.value = start;
-    blockEndInput.value = minutesToTimeStr_(timeStrToMinutes_(start) + 60);
-    blockCapacityInput.value = "";
-    if (lastUsedTeacherDisplayName && currentTeachers.some(t => t.displayName === lastUsedTeacherDisplayName)){
-      blockTeacherSelect.value = lastUsedTeacherDisplayName;
-    }
-    blockEntriesSection.style.display = "none";
-    deleteBlockBtn.style.display = "none";
-    confirmBlockBtn.textContent = "追加する";
-    document.getElementById("repeatWeeklyRow").style.display = "flex";
-    repeatWeeklyInput.checked = false;
-    isEventInput.checked = false;
-    eventTitleInput.value = "";
-  }
-
-  updateEventModeVisibility();
-  blockModalOverlay.classList.add("show");
-  blockModal.classList.add("show");
-}
-function closeBlockModal(){
-  blockModalOverlay.classList.remove("show");
-  blockModal.classList.remove("show");
-}
-cancelBlockBtn.addEventListener("click", closeBlockModal);
-blockModalOverlay.addEventListener("click", closeBlockModal);
-
-async function doCancelFromBlockModal(userId, dateStr, timeStr){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast("キャンセルしました");
-      closeBlockModal();
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("キャンセルできませんでした");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-deleteBlockBtn.addEventListener("click", async () => {
-  if (!editingBlockOldStart || !editingBlockDate) return;
-  if (!window.confirm("この予定を削除しますか？")) return;
-
-  deleteBlockBtn.disabled = true;
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "staffDeleteDateBlock", password: password,
-        date: editingBlockDate, startTime: editingBlockOldStart,
-      }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast("削除しました");
-      closeBlockModal();
-      patchLocalSlot_(editingBlockDate, editingBlockOldStart, null);
-      renderTemplate(lastOverviewData);
-    } else {
-      showToast("削除に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    deleteBlockBtn.disabled = false;
-  }
-});
-
-function patchLocalSlot_(dateStr, oldStart, newSlot){
-  if (!lastOverviewData) return;
-  if (!lastOverviewData.upcoming) lastOverviewData.upcoming = [];
-  let dateEntry = lastOverviewData.upcoming.find(d => d.date === dateStr);
-  if (!dateEntry){
-    dateEntry = { date: dateStr, slots: [] };
-    lastOverviewData.upcoming.push(dateEntry);
-  }
-  if (oldStart){
-    const idx = dateEntry.slots.findIndex(s => s.time === oldStart);
-    if (idx !== -1) dateEntry.slots.splice(idx, 1);
-  }
-  if (newSlot) dateEntry.slots.push(newSlot);
-}
-
-confirmBlockBtn.addEventListener("click", async () => {
-  const start = blockStartInput.value;
-  const end = blockEndInput.value;
-  const isEvent = isEventInput.checked;
-  const teacher = isEvent ? "" : blockTeacherSelect.value;
-  const eventTitle = isEvent ? eventTitleInput.value.trim() : "";
-
-  if (!start || !end || (!isEvent && !teacher) || (isEvent && !eventTitle)){
-    showToast(isEvent ? "開始・終了時刻とタイトルを入力してください" : "開始・終了時刻と担当講師を入力してください");
-    return;
-  }
-  if (start >= end){
-    showToast("終了時刻は開始時刻より後にしてください");
-    return;
-  }
-
-  const athleteHours = (lastOverviewData && lastOverviewData.athleteHours) || {};
-  const athRange = athleteHours[editingBlockDate];
-  if (athRange && athRange.closed){
-    const ok = window.confirm("選手用の休館日になっています。このまま保存しますか？");
-    if (!ok) return;
-  } else if (athRange){
-    const s = timeStrToMinutes_(start);
-    const e = timeStrToMinutes_(end);
-    const athS = timeStrToMinutes_(athRange.start);
-    const athE = timeStrToMinutes_(athRange.end);
-    if (s !== null && e !== null && athS !== null && athE !== null && s < athE && e > athS){
-      const ok = window.confirm(`選手用のスケジュール（${athRange.start}〜${athRange.end}）と重なっています。このまま保存しますか？`);
-      if (!ok) return;
-    }
-  }
-
-  confirmBlockBtn.disabled = true;
-  confirmBlockBtn.textContent = "保存中…";
-  const wasAdd = !editingBlockOldStart;
-  const repeatWeekly = repeatWeeklyInput.checked;
-  const capacityValue = blockCapacityInput.value.trim();
-  try {
-    let action;
-    if (editingBlockOldStart){
-      action = "staffUpdateDateBlock";
-    } else {
-      action = repeatWeekly ? "staffAddRecurringDateBlock" : "staffAddDateBlock";
-    }
-    const payload = {
-      action: action, password: password,
-      date: editingBlockDate, startTime: start, endTime: end, teacher: teacher,
-      capacity: capacityValue === "" ? "" : Number(capacityValue),
-      isEvent: isEvent, title: eventTitle,
-    };
-    if (editingBlockOldStart){
-      payload.oldStartTime = editingBlockOldStart;
-      payload.isRecurring = repeatWeekly;
-    }
-
-    const res = await fetch(GAS_ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
-    const result = await res.json();
-    if (result.success){
-      if (!isEvent) lastUsedTeacherDisplayName = teacher;
-      closeBlockModal();
-
-      if (repeatWeekly){
-        showToast(`${result.addedCount || 0}件の日付に登録しました`);
-        const data = await fetchOverview(password);
-        if (!data.error) renderOverview(data);
-      } else {
-        showToast(editingBlockOldStart ? "変更しました" : "追加しました");
-        let existingBooked = 0, existingEntries = [];
-        if (editingBlockOldStart && lastOverviewData && lastOverviewData.upcoming){
-          const dateEntry = lastOverviewData.upcoming.find(d => d.date === editingBlockDate);
-          const oldSlot = dateEntry && dateEntry.slots.find(s => s.time === editingBlockOldStart);
-          if (oldSlot){ existingBooked = oldSlot.booked || 0; existingEntries = oldSlot.entries || []; }
-        }
-        const effectiveCapacity = isEvent ? 0 : (capacityValue === "" ? (lastOverviewData.basicCapacity || 6) : Number(capacityValue));
-        const remain = effectiveCapacity - existingBooked;
-        patchLocalSlot_(editingBlockDate, editingBlockOldStart, {
-          time: start, endTime: end, teacher: teacher, capacity: effectiveCapacity, title: eventTitle,
-          booked: existingBooked, remain: remain, full: remain <= 0, entries: existingEntries,
-        });
-        renderTemplate(lastOverviewData);
-      }
-      if (wasAdd && !isEvent) openPresetSavePrompt(start, end, teacher, capacityValue);
-    } else if (result.reason === "duplicate_start"){
-      showToast("その開始時刻にはすでに別の予定があります");
-    } else {
-      showToast("保存に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    confirmBlockBtn.disabled = false;
-    confirmBlockBtn.textContent = editingBlockOldStart ? "変更する" : "追加する";
-  }
-});
-
-const presetSaveModalOverlay = document.getElementById("presetSaveModalOverlay");
-const presetSaveModal = document.getElementById("presetSaveModal");
-const skipPresetSaveBtn = document.getElementById("skipPresetSaveBtn");
-const confirmPresetSaveBtn = document.getElementById("confirmPresetSaveBtn");
-let pendingPresetBlock = null;
-
-function openPresetSavePrompt(start, end, teacher, capacityValue){
-  pendingPresetBlock = { start, end, teacher, capacity: capacityValue === "" ? "" : Number(capacityValue) };
-  presetSaveModalOverlay.classList.add("show");
-  presetSaveModal.classList.add("show");
-}
-function closePresetSavePrompt(){
-  presetSaveModalOverlay.classList.remove("show");
-  presetSaveModal.classList.remove("show");
-  pendingPresetBlock = null;
-}
-skipPresetSaveBtn.addEventListener("click", closePresetSavePrompt);
-presetSaveModalOverlay.addEventListener("click", closePresetSavePrompt);
-
-confirmPresetSaveBtn.addEventListener("click", async () => {
-  if (!pendingPresetBlock) { closePresetSavePrompt(); return; }
-  confirmPresetSaveBtn.disabled = true;
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "staffSaveBlockPreset", password: password,
-        startTime: pendingPresetBlock.start, endTime: pendingPresetBlock.end,
-        teacher: pendingPresetBlock.teacher, capacity: pendingPresetBlock.capacity,
-      }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`プリセット「${result.presets[result.presets.length - 1].label}」として登録しました`);
-      if (lastOverviewData) lastOverviewData.blockPresets = result.presets;
-    } else if (result.reason === "max_reached"){
-      showToast("プリセットは最大3件までです。不要なものを削除してから登録してください");
-    } else {
-      showToast("登録に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    confirmPresetSaveBtn.disabled = false;
-    closePresetSavePrompt();
-  }
-});
-
-
-
-function renderUpcoming(upcoming, todayStr){
-  upcomingList.innerHTML = "";
-  if (!upcoming.length){
-    upcomingList.innerHTML = `<span class="empty-note">今後2ヶ月の予約枠はまだありません</span>`;
-    return;
-  }
-
-  upcoming.forEach(dateItem => {
-    const block = document.createElement("div");
-    block.className = "date-block";
-
-    const title = document.createElement("div");
-    title.className = "date-title" + (dateItem.date === todayStr ? " today" : "");
-    title.textContent = formatDateLabel(dateItem.date, todayStr);
-    block.appendChild(title);
-
-    dateItem.slots.forEach(slot => {
-      const isEventSlot = !slot.teacher && slot.title;
-      const row = document.createElement("div");
-      row.className = "slot-row";
-
-      const main = document.createElement("div");
-      main.className = "slot-main";
-      const timeEl = document.createElement("div");
-      timeEl.className = "slot-time";
-      timeEl.textContent = isEventSlot
-        ? (slot.time + "〜 " + slot.title)
-        : (slot.time + "〜（担当: " + (slot.teacher || "休み") + "）");
-      main.appendChild(timeEl);
-      if (!isEventSlot){
-        const subEl = document.createElement("div");
-        subEl.className = "slot-sub";
-        subEl.textContent = `定員${slot.capacity} / 予約${slot.booked}人`;
-        main.appendChild(subEl);
-      }
-
-      if (slot.entries && slot.entries.length){
-        const namesEl = document.createElement("div");
-        namesEl.className = "slot-names";
-        slot.entries.forEach(entry => {
-          const chip = document.createElement("span");
-          chip.className = "cancel-chip";
-          chip.innerHTML = `<span>${entry.name}</span>`;
-          const x = document.createElement("button");
-          x.textContent = "×";
-          x.addEventListener("click", () => confirmStaffCancel(entry.userId, dateItem.date, slot.time, entry.name));
-          chip.appendChild(x);
-          namesEl.appendChild(chip);
-        });
-        main.appendChild(namesEl);
-      }
-      row.appendChild(main);
-
-      if (isEventSlot){
-        block.appendChild(row);
-        return;
-      }
-
-      const editBtn = document.createElement("button");
-      editBtn.className = "edit-btn";
-      editBtn.textContent = "編集";
-      row.appendChild(editBtn);
-
-      const editPanel = document.createElement("div");
-      editPanel.className = "edit-panel";
-
-      const teacherInput = document.createElement("input");
-      teacherInput.type = "text";
-      teacherInput.placeholder = "担当講師";
-      teacherInput.value = slot.teacher || "";
-      const capacityInput = document.createElement("input");
-      capacityInput.type = "number";
-      capacityInput.placeholder = "個別定員(空欄=基本定員)";
-      const rowWrap = document.createElement("div");
-      rowWrap.className = "row";
-      rowWrap.appendChild(teacherInput);
-      rowWrap.appendChild(capacityInput);
-      editPanel.appendChild(rowWrap);
-
-      const actions = document.createElement("div");
-      actions.className = "actions";
-      const saveBtn = document.createElement("button");
-      saveBtn.className = "save";
-      saveBtn.textContent = "保存";
-      saveBtn.addEventListener("click", () => doUpdateSlot(dateItem.date, slot.time, teacherInput.value.trim(), capacityInput.value));
-      const closeBtn = document.createElement("button");
-      closeBtn.className = "close-slot";
-      closeBtn.textContent = "このコマを休みにする";
-      closeBtn.addEventListener("click", () => {
-        if (!window.confirm(formatDateLabel(dateItem.date, todayStr) + " " + slot.time + "〜 を休みにしますか？既存の予約は自動キャンセルされます。")) return;
-        doUpdateSlot(dateItem.date, slot.time, "", "");
-      });
-      actions.appendChild(saveBtn);
-      actions.appendChild(closeBtn);
-      editPanel.appendChild(actions);
-
-      editBtn.addEventListener("click", () => editPanel.classList.toggle("show"));
-      block.appendChild(row);
-      block.appendChild(editPanel);
-    });
-
-    upcomingList.appendChild(block);
-  });
-}
-
-async function doUpdateSlot(dateStr, timeStr, teacher, capacity){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "staffUpdateSlot", password: password,
-        date: dateStr, time: timeStr, teacher: teacher,
-        capacity: capacity === "" ? "" : Number(capacity),
-      }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast("更新しました");
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("更新に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-function confirmStaffCancel(userId, dateStr, timeStr, name){
-  const label = formatDateLabel(dateStr, lastOverviewData ? lastOverviewData.today : "") + " " + timeStr + "〜";
-  const ok = window.confirm(`${name}さんの${label}の予約をキャンセルしますか？`);
-  if (!ok) return;
-  doStaffCancel(userId, dateStr, timeStr);
-}
-
-async function doStaffCancel(userId, dateStr, timeStr){
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffCancel", password: password, userId: userId, date: dateStr, time: timeStr }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast("キャンセルしました");
-      const data = await fetchOverview(password);
-      if (!data.error) renderOverview(data);
-    } else {
-      showToast("キャンセルできませんでした");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  }
-}
-
-async function fetchBillingList(){
-  try {
-    const res = await fetch(`${GAS_ENDPOINT}?action=staffBillingList&password=${encodeURIComponent(password)}`);
+    const res = await fetch(`${endpoint}?action=staffOverview&password=${encodeURIComponent(pw)}`);
     const data = await res.json();
-    if (data.error) return;
-    renderBilling(data.list || []);
+    return !data.error;
   } catch (err){
-    console.error(err);
-    showToast("請求一覧の取得に失敗しました");
+    console.error("password check failed", err);
+    return false;
   }
-}
-
-function renderBilling(list){
-  billingList.innerHTML = "";
-  if (!list.length){
-    billingList.innerHTML = `<span class="empty-note">対象の利用者がまだいません</span>`;
-    return;
-  }
-
-  list.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "billing-row";
-
-    const nameRow = document.createElement("div");
-    nameRow.className = "billing-name";
-    nameRow.innerHTML = `<span>${item.name}</span>`;
-    const badge = document.createElement("span");
-    badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
-    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
-    nameRow.appendChild(badge);
-    row.appendChild(nameRow);
-
-    const datesEl = document.createElement("div");
-    datesEl.className = "billing-dates";
-    datesEl.textContent = item.bookingEntries.length
-      ? `今月の予約(${item.bookingCount}回): ${item.bookingEntries.join(", ")}`
-      : "今月の予約はまだありません";
-    row.appendChild(datesEl);
-
-    const cashRow = document.createElement("div");
-    cashRow.className = "cash-row";
-    const cashCheckbox = document.createElement("input");
-    cashCheckbox.type = "checkbox";
-    cashCheckbox.checked = item.cashPayment;
-    const cashLabel = document.createElement("span");
-    cashLabel.textContent = "現金決済";
-    cashRow.appendChild(cashCheckbox);
-    cashRow.appendChild(cashLabel);
-
-    const paidMonthEl = document.createElement("span");
-    paidMonthEl.className = "cash-paid-month";
-    paidMonthEl.textContent = item.cashPaidMonth ? `最終支払い確認: ${item.cashPaidMonth}` : "支払い確認なし";
-    cashRow.appendChild(paidMonthEl);
-
-    const markPaidBtn = document.createElement("button");
-    markPaidBtn.className = "cash-paid-btn";
-    markPaidBtn.textContent = "今月分を確認済みにする";
-    markPaidBtn.style.display = item.cashPayment ? "inline-block" : "none";
-    markPaidBtn.addEventListener("click", async () => {
-      markPaidBtn.disabled = true;
-      try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({ action: "staffMarkCashPaid", password: password, userId: item.userId }),
-        });
-        const result = await res.json();
-        if (result.success){
-          paidMonthEl.textContent = `最終支払い確認: ${result.month}`;
-          showToast(item.name + "さんの今月分を確認済みにしました");
-        } else {
-          showToast("更新に失敗しました");
-        }
-      } catch (err){
-        console.error(err);
-        showToast("通信に失敗しました");
-      } finally {
-        markPaidBtn.disabled = false;
-      }
-    });
-    cashRow.appendChild(markPaidBtn);
-
-    cashCheckbox.addEventListener("change", async () => {
-      const checked = cashCheckbox.checked;
-      markPaidBtn.style.display = checked ? "inline-block" : "none";
-      cashCheckbox.disabled = true;
-      try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({ action: "staffSetCashPayment", password: password, userId: item.userId, cashPayment: checked }),
-        });
-        const result = await res.json();
-        if (result.success){
-          item.cashPayment = checked;
-          showToast(checked ? "現金決済に設定しました" : "現金決済を解除しました");
-        } else {
-          cashCheckbox.checked = !checked;
-          markPaidBtn.style.display = !checked ? "inline-block" : "none";
-          showToast("更新に失敗しました");
-        }
-      } catch (err){
-        console.error(err);
-        cashCheckbox.checked = !checked;
-        markPaidBtn.style.display = !checked ? "inline-block" : "none";
-        showToast("通信に失敗しました");
-      } finally {
-        cashCheckbox.disabled = false;
-      }
-    });
-    row.appendChild(cashRow);
-
-    const amountInput = document.createElement("input");
-    amountInput.type = "number";
-    amountInput.step = "100";
-    amountInput.min = "0";
-    amountInput.placeholder = "金額";
-    amountInput.value = item.amount || "";
-    row.appendChild(amountInput);
-
-    const chargeBtn = document.createElement("button");
-    chargeBtn.className = "charge-btn";
-    chargeBtn.textContent = "請求する";
-    chargeBtn.addEventListener("click", async () => {
-      const amount = Number(amountInput.value);
-      if (!amount || amount <= 0){
-        showToast("金額を入力してください");
-        return;
-      }
-
-      if (item.cashPayment){
-        const proceed = window.confirm(
-          `${item.name}さんは現金決済のため除外されています。\nお間違えないですか？\n\n「OK」で進む／「キャンセル」で中止`
-        );
-        if (!proceed) return;
-        await runCharge(true);
-        return;
-      }
-
-      const ok = window.confirm(`${item.name}さんに${amount.toLocaleString()}円を請求します。よろしいですか？`);
-      if (!ok) return;
-      await runCharge(false);
-
-      async function runCharge(forceSquare){
-        chargeBtn.disabled = true;
-        chargeBtn.textContent = "処理中…";
-        try {
-          const res = await fetch(GAS_ENDPOINT, {
-            method: "POST",
-            body: JSON.stringify({
-              action: "staffCharge", password: password, userId: item.userId, amount: amount,
-              forceSquare: forceSquare,
-            }),
-          });
-          const result = await res.json();
-          if (result.success){
-            showToast(item.name + "さんへの請求処理が完了しました");
-          } else if (result.reason === "cash_payment"){
-            showToast(item.name + "さんは現金決済のため請求をスキップしました");
-          } else {
-            showToast("請求に失敗しました: " + (result.reason || ""));
-          }
-        } catch (err){
-          console.error(err);
-          showToast("通信に失敗しました");
-        } finally {
-          chargeBtn.disabled = false;
-          chargeBtn.textContent = "請求する";
-        }
-      }
-    });
-    row.appendChild(chargeBtn);
-
-    billingList.appendChild(row);
-  });
-}
-
-refreshCardBtn.addEventListener("click", async () => {
-  refreshCardBtn.disabled = true;
-  refreshCardBtn.textContent = "更新中…";
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "refreshCardStatus", password: password }),
-    });
-    const result = await res.json();
-    if (result.success){
-      showToast(`${result.updated}件のカード登録状況を更新しました`);
-      fetchBillingList();
-    } else {
-      showToast("更新に失敗しました");
-    }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    refreshCardBtn.disabled = false;
-    refreshCardBtn.textContent = "カード登録状況を更新";
-  }
-});
-
-function renderOverview(data){
-  lastOverviewData = data;
-  document.getElementById("basicCapacityText").textContent = data.basicCapacity;
-  renderApprovalBanner(data.approvals, data.today);
-  renderTeachers(data.teachers || []);
-  renderTemplate(data);
-  renderUpcoming(data.upcoming || [], data.today);
 }
 
 async function tryLogin(pw){
   loginBtn.disabled = true;
   loginBtn.textContent = "確認中…";
+  loginError.style.display = "none";
+  const loginLoadingOverlay = document.getElementById("loginLoadingOverlay");
+  loginLoadingOverlay.classList.add("show");
+
   try {
-    const data = await fetchOverview(pw);
-    if (data.error){
+    const [athleteOk, generalOk] = await Promise.all([
+      checkPassword_(ATHLETE_ENDPOINT, pw),
+      checkPassword_(GENERAL_ENDPOINT, pw),
+    ]);
+
+    if (!athleteOk && !generalOk){
+      loginError.textContent = "パスワードが違います";
       loginError.style.display = "block";
+      loginLoadingOverlay.classList.remove("show"); // ログイン失敗時はここで消す
       return;
     }
-    password = pw;
-    try { sessionStorage.setItem("staffPasswordGeneral", pw); } catch (e) {}
+    if (!athleteOk || !generalOk){
+      // 片方だけ通った場合は、選手用・一般用でパスワードがずれている可能性が高いので知らせる
+      loginError.textContent = (athleteOk ? "一般用" : "選手用") + "側のパスワードが一致していないようです。両方のスクリプトプロパティのSTAFF_PASSWORDをご確認ください。";
+      loginError.style.display = "block";
+      // 通った方だけでも見られるようにはしておく
+    }
+
+    try { sessionStorage.setItem("unifiedStaffPassword", pw); } catch (e) {}
     loginView.style.display = "none";
-    mainView.style.display = "block";
-    renderOverview(data);
-    fetchBillingList();
-    try { window.parent.postMessage({ type: "innerPageReady", system: "general" }, "*"); } catch (e) {}
+    systemTabs.classList.add("show");
+    wraps.athlete.classList.add("show"); // ログイン成功後に初めて選手用タブを表示する
+
+    // ログイン成功と同時に、選手用・一般用どちらも裏で読み込みを始めておく
+    // （一般用タブに切り替えた時に、また読み込み待ちが発生しないようにするため）
+    // 恐竜は、今見えている選手用タブの読み込みが終わるまで消さない
+    currentPassword = pw;
+    loadIframe_("athlete");
+    loadIframe_("general");
+
   } catch (err){
     console.error(err);
     loginError.textContent = "通信に失敗しました。時間をおいて再度お試しください";
     loginError.style.display = "block";
+    loginLoadingOverlay.classList.remove("show"); // 通信失敗時もここで消す
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = "ログイン";
   }
 }
 
+let currentPassword = "";
+const loadedIframes = { athlete: false, general: false };
+const PAGE_BY_SYSTEM = { athlete: ATHLETE_PAGE, general: GENERAL_PAGE };
+
+const pageReady = { athlete: false, general: false };
+
+function markPageReady_(system){
+  if (pageReady[system]) return;
+  pageReady[system] = true;
+  loadings[system].style.display = "none";
+  if (system === "athlete"){
+    // ログイン直後に見えているのは選手用タブなので、恐竜はこちらの準備完了で消す
+    document.getElementById("loginLoadingOverlay").classList.remove("show");
+  }
+}
+
+// 中のページ（athlete_staff_inner.html / general/staff.html）が、実際に
+// データ取得・描画まで終わった時に postMessage で知らせてくるので、それを待つ
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "innerPageReady") return;
+  if (!loadings[data.system]) return;
+  markPageReady_(data.system);
+});
+
+function loadIframe_(system){
+  if (loadedIframes[system] || !currentPassword) return;
+  loadedIframes[system] = true;
+  const cacheBust = Date.now(); // iframeの中身がキャッシュされたまま古くなるのを防ぐ
+  iframes[system].src = `${PAGE_BY_SYSTEM[system]}?pw=${encodeURIComponent(currentPassword)}&cb=${cacheBust}`;
+  // postMessageが何らかの理由で届かなかった時の保険として、
+  // 少し長めに待ってからでも最終的には消えるようにしておく
+  iframes[system].addEventListener("load", () => {
+    setTimeout(() => {
+      if (!pageReady[system]) markPageReady_(system);
+    }, 8000);
+  }, { once: true });
+}
+
 loginBtn.addEventListener("click", () => {
-  loginError.style.display = "none";
   const pw = passwordInput.value.trim();
   if (!pw) return;
   tryLogin(pw);
@@ -1628,15 +521,845 @@ passwordInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loginBtn.click();
 });
 
-(function start(){
-  const urlParams = new URLSearchParams(window.location.search);
-  const fromParent = urlParams.get("pw");
-  if (fromParent){
-    tryLogin(fromParent);
+document.querySelectorAll(".system-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".system-tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const target = btn.dataset.system;
+
+    const surveyPanel = document.getElementById("wrap-survey");
+    if (target === "survey"){
+      Object.keys(wraps).forEach(key => wraps[key].classList.remove("show"));
+      surveyPanel.classList.add("show");
+      loadSurveyLists_();
+      return;
+    }
+    surveyPanel.classList.remove("show");
+    Object.keys(wraps).forEach(key => wraps[key].classList.toggle("show", key === target));
+    loadIframe_(target);
+
+    // すでに読み込み済みのタブに切り替える場合も、一瞬だけ恐竜を出しておく
+    // （切り替え直後の一瞬のちらつきが気にならないようにするため。
+    //   まだ本当に読み込み中の場合はここでは何もせず、本来の合図を待つ）
+    const loadingEl = loadings[target];
+    if (pageReady[target]){
+      loadingEl.style.display = "flex";
+      setTimeout(() => { loadingEl.style.display = "none"; }, 350);
+    }
+  });
+});
+
+/* ---------- アンケート管理 ---------- */
+// アンケートは一般用のスプレッドシートに一本化する(選手用・一般用で別々に保存すると、
+// 片方だけ消し忘れる等の管理ミスにつながるため)。配信先は「どのシステムに保存するか」ではなく
+// 「どちらの利用者に見せるか」を表すだけのフラグとして扱う
+const SURVEY_ENDPOINT = GENERAL_ENDPOINT;
+const SYSTEM_LABEL = { athlete: "選手用", general: "一般用", both: "選手用・一般用" };
+
+function addQuestionCard_(prefill){
+  const builder = document.getElementById("surveyQuestionsBuilder");
+  const card = document.createElement("div");
+  card.className = "survey-question-card";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "sq-remove";
+  removeBtn.textContent = "×";
+  removeBtn.addEventListener("click", () => card.remove());
+  card.appendChild(removeBtn);
+
+  const typeSelect = document.createElement("select");
+  typeSelect.innerHTML = `<option value="radio">選択肢（ラジオボタン）</option><option value="number">数の選択</option><option value="text">自由記述</option>`;
+  if (prefill && prefill.type) typeSelect.value = prefill.type;
+  card.appendChild(typeSelect);
+
+  const questionInput = document.createElement("input");
+  questionInput.type = "text";
+  questionInput.placeholder = "質問文を入力（必須）";
+  questionInput.required = true;
+  if (prefill && prefill.question) questionInput.value = prefill.question;
+  card.appendChild(questionInput);
+
+  const requiredRow = document.createElement("label");
+  requiredRow.className = "sq-required-row";
+  const requiredCheckbox = document.createElement("input");
+  requiredCheckbox.type = "checkbox";
+  requiredCheckbox.checked = !(prefill && prefill.required === false); // 未指定の場合は必須がデフォルト
+  requiredRow.appendChild(requiredCheckbox);
+  const requiredLabel = document.createElement("span");
+  requiredLabel.textContent = "この質問への回答を必須にする";
+  requiredRow.appendChild(requiredLabel);
+  card.appendChild(requiredRow);
+
+  const radioFields = document.createElement("div");
+  radioFields.className = "sq-radio-fields";
+  const optionsWrap = document.createElement("div");
+  radioFields.appendChild(optionsWrap);
+  function addOptionRow_(value){
+    const row = document.createElement("div");
+    row.className = "sq-options-row";
+    const optInput = document.createElement("input");
+    optInput.type = "text";
+    optInput.placeholder = "選択肢";
+    if (value) optInput.value = value;
+    row.appendChild(optInput);
+    const rm = document.createElement("button");
+    rm.className = "sq-add-option-btn";
+    rm.textContent = "×";
+    rm.addEventListener("click", () => row.remove());
+    row.appendChild(rm);
+    optionsWrap.appendChild(row);
+  }
+  if (prefill && prefill.type === "radio" && prefill.options && prefill.options.length){
+    prefill.options.forEach(opt => addOptionRow_(opt));
+  } else {
+    addOptionRow_(); addOptionRow_();
+  }
+  const addOptBtn = document.createElement("button");
+  addOptBtn.className = "sq-add-option-btn";
+  addOptBtn.textContent = "＋ 選択肢を追加";
+  addOptBtn.addEventListener("click", () => addOptionRow_());
+  radioFields.appendChild(addOptBtn);
+  card.appendChild(radioFields);
+
+  const numberHint = document.createElement("div");
+  numberHint.className = "sq-number-hint";
+  numberHint.textContent = "お客さんが選べる数の範囲（最小〜最大）";
+  card.appendChild(numberHint);
+
+  const numberFields = document.createElement("div");
+  numberFields.className = "sq-minmax-row";
+  const minWrap = document.createElement("div");
+  minWrap.className = "sq-minmax-col";
+  const minLabel = document.createElement("div");
+  minLabel.className = "sq-minmax-label";
+  minLabel.textContent = "最小";
+  const minInput = document.createElement("input");
+  minInput.type = "number"; minInput.value = (prefill && prefill.min) || "1";
+  minWrap.appendChild(minLabel);
+  minWrap.appendChild(minInput);
+
+  const maxWrap = document.createElement("div");
+  maxWrap.className = "sq-minmax-col";
+  const maxLabel = document.createElement("div");
+  maxLabel.className = "sq-minmax-label";
+  maxLabel.textContent = "最大";
+  const maxInput = document.createElement("input");
+  maxInput.type = "number"; maxInput.value = (prefill && prefill.max) || "5";
+  maxWrap.appendChild(maxLabel);
+  maxWrap.appendChild(maxInput);
+
+  numberFields.appendChild(minWrap);
+  numberFields.appendChild(maxWrap);
+  card.appendChild(numberFields);
+
+  const isNumber = prefill && prefill.type === "number";
+  const isText = prefill && prefill.type === "text";
+  radioFields.style.display = (isNumber || isText) ? "none" : "block";
+  numberFields.style.display = isNumber ? "flex" : "none";
+  numberHint.style.display = isNumber ? "block" : "none";
+
+  typeSelect.addEventListener("change", () => {
+    radioFields.style.display = typeSelect.value === "radio" ? "block" : "none";
+    numberFields.style.display = typeSelect.value === "number" ? "flex" : "none";
+    numberHint.style.display = typeSelect.value === "number" ? "block" : "none";
+  });
+
+  card._collect = () => {
+    const question = questionInput.value.trim();
+    if (!question) return null;
+    const required = requiredCheckbox.checked;
+    if (typeSelect.value === "radio"){
+      const options = Array.from(optionsWrap.querySelectorAll("input")).map(i => i.value.trim()).filter(Boolean);
+      if (options.length < 2) return null;
+      return { type: "radio", question: question, options: options, required: required };
+    }
+    if (typeSelect.value === "text"){
+      return { type: "text", question: question, required: required };
+    }
+    return { type: "number", question: question, min: Number(minInput.value) || 1, max: Number(maxInput.value) || 5, required: required };
+  };
+
+  builder.appendChild(card);
+}
+// 公開・締切の時刻選択(0〜23時、分は無し)を組み立てる
+["surveyPublishHourInput", "surveyDeadlineHourInput"].forEach(id => {
+  const sel = document.getElementById(id);
+  for (let h = 0; h < 24; h++){
+    const opt = document.createElement("option");
+    opt.value = String(h);
+    opt.textContent = h + "時";
+    sel.appendChild(opt);
+  }
+});
+
+document.getElementById("addQuestionBtn").addEventListener("click", addQuestionCard_);
+addQuestionCard_(); // 最初から1問分用意しておく
+
+// 編集中のアンケートのID（一時保存を繰り返した時に、同じ下書きを上書きするために使う。新規作成中は空文字）
+let currentSurveyId = "";
+
+// 個別対象者の指定（システムごとのuserId配列。空配列 = 全員対象）
+let athleteTargetIds = [];
+let generalTargetIds = [];
+
+function updateSpecificBadges_(){
+  document.getElementById("athleteSpecificBadge").style.display = athleteTargetIds.length ? "inline-block" : "none";
+  document.getElementById("generalSpecificBadge").style.display = generalTargetIds.length ? "inline-block" : "none";
+}
+
+function resetSurveyForm_(){
+  currentSurveyId = "";
+  athleteTargetIds = [];
+  generalTargetIds = [];
+  updateSpecificBadges_();
+  document.getElementById("surveySubjectInput").value = "";
+  document.getElementById("surveyContentInput").value = "";
+  document.getElementById("surveyNotesInput").value = "";
+  document.getElementById("surveyPublishDateInput").value = "";
+  document.getElementById("surveyPublishHourInput").value = "";
+  document.getElementById("surveyDeadlineInput").value = "";
+  document.getElementById("surveyDeadlineHourInput").value = "";
+  document.getElementById("targetAthlete").checked = true;
+  document.getElementById("targetGeneral").checked = true;
+  document.getElementById("surveyQuestionsBuilder").innerHTML = "";
+  addQuestionCard_();
+}
+
+/* ---------- 対象者選択ポップアップ ---------- */
+let pickerCurrentSys = null; // "athlete" または "general"
+let pickerCheckedIds = new Set();
+let peoplePickerCache_ = [];
+
+function renderPeoplePickerList_(list){
+  const keyword = document.getElementById("peoplePickerSearch").value.trim();
+  const filtered = keyword ? list.filter(p => p.name.includes(keyword)) : list;
+  const listEl = document.getElementById("peoplePickerList");
+  if (!filtered.length){
+    listEl.innerHTML = `<div class="survey-list-empty">該当する人がいません</div>`;
     return;
   }
+  listEl.innerHTML = "";
+  filtered.forEach(p => {
+    const row = document.createElement("label");
+    row.className = "people-picker-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = pickerCheckedIds.has(p.userId);
+    cb.addEventListener("change", () => {
+      if (cb.checked) pickerCheckedIds.add(p.userId);
+      else pickerCheckedIds.delete(p.userId);
+    });
+    row.appendChild(cb);
+    const span = document.createElement("span");
+    span.textContent = p.name;
+    row.appendChild(span);
+    listEl.appendChild(row);
+  });
+}
+
+// システムごとの利用者一覧のキャッシュ(一度読み込んだら、タブを閉じるまで使い回す)
+const userListCache_ = { athlete: null, general: null };
+
+async function fetchUserList_(sys){
+  if (userListCache_[sys]) return userListCache_[sys]; // すでにあればそれを使う(通信しない)
+  const endpoint = sys === "athlete" ? ATHLETE_ENDPOINT : GENERAL_ENDPOINT;
+  const res = await fetch(`${endpoint}?action=staffUserList&password=${encodeURIComponent(currentPassword)}`);
+  const data = await res.json();
+  userListCache_[sys] = data.list || [];
+  return userListCache_[sys];
+}
+
+// アンケートタブを開いた時点で裏側で先に読み込んでおき、実際にボタンを押した時には
+// 待ち時間なしで開けるようにする
+function prefetchUserLists_(){
+  fetchUserList_("athlete").catch(err => console.error(err));
+  fetchUserList_("general").catch(err => console.error(err));
+}
+
+async function openPeoplePicker_(sys){
+  pickerCurrentSys = sys;
+  pickerCheckedIds = new Set(sys === "athlete" ? athleteTargetIds : generalTargetIds);
+
+  document.getElementById("peoplePickerTitle").textContent = (sys === "athlete" ? "選手用" : "一般用") + "の対象者を選択";
+  document.getElementById("peoplePickerSearch").value = "";
+  document.getElementById("peoplePickerOverlay").classList.add("show");
+  document.getElementById("peoplePickerBox").classList.add("show");
+
+  if (userListCache_[sys]){
+    // キャッシュがあれば通信を待たず即座に表示する
+    peoplePickerCache_ = userListCache_[sys];
+    renderPeoplePickerList_(peoplePickerCache_);
+    return;
+  }
+
+  document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
+  try {
+    peoplePickerCache_ = await fetchUserList_(sys);
+    renderPeoplePickerList_(peoplePickerCache_);
+  } catch (err){
+    console.error(err);
+    document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込みに失敗しました</div>`;
+  }
+}
+
+document.getElementById("pickAthletePeopleBtn").addEventListener("click", () => openPeoplePicker_("athlete"));
+document.getElementById("pickGeneralPeopleBtn").addEventListener("click", () => openPeoplePicker_("general"));
+
+document.getElementById("peoplePickerSearch").addEventListener("input", () => {
+  renderPeoplePickerList_(peoplePickerCache_);
+});
+
+function closePeoplePicker_(){
+  document.getElementById("peoplePickerOverlay").classList.remove("show");
+  document.getElementById("peoplePickerBox").classList.remove("show");
+}
+document.getElementById("peoplePickerCloseBtn").addEventListener("click", closePeoplePicker_);
+document.getElementById("peoplePickerOverlay").addEventListener("click", closePeoplePicker_);
+document.getElementById("peoplePickerDoneBtn").addEventListener("click", () => {
+  const ids = Array.from(pickerCheckedIds);
+  if (pickerCurrentSys === "athlete") athleteTargetIds = ids;
+  else generalTargetIds = ids;
+  updateSpecificBadges_();
+  closePeoplePicker_();
+});
+
+// 指定アンケートの対象者へ、LINEで一斉にお知らせを送る
+async function notifySurveyViaLine_(surveyId, onlyUnanswered){
+  try {
+    const res = await fetch(SURVEY_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: onlyUnanswered ? "staffRemindSurveyViaLine" : "staffNotifySurveyViaLine",
+        password: currentPassword, surveyId: surveyId,
+      }),
+    });
+    const data = await res.json();
+    if (data.success){
+      let msg = `一般用${data.generalSent}件`;
+      if (data.athleteSkipped){
+        msg += "／選手用は未設定のため送信できませんでした";
+      } else if (data.athleteSent){
+        msg += `／選手用${data.athleteSent}件`;
+      }
+      alert("LINEでお知らせしました（" + msg + "）");
+    } else {
+      alert("LINE通知の送信に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    alert("LINE通知の送信中に通信エラーが発生しました");
+  }
+}
+
+function getSelectedAudience_(){
+  const athlete = document.getElementById("targetAthlete").checked;
+  const general = document.getElementById("targetGeneral").checked;
+  if (athlete && general) return "both";
+  if (athlete) return "athlete";
+  if (general) return "general";
+  return ""; // どちらも未選択
+}
+
+async function saveSurvey_(isDraft){
+  const subject = document.getElementById("surveySubjectInput").value.trim();
+  const content = document.getElementById("surveyContentInput").value.trim();
+  const notes = document.getElementById("surveyNotesInput").value.trim();
+  const publishDate = document.getElementById("surveyPublishDateInput").value;
+  const publishHour = document.getElementById("surveyPublishHourInput").value;
+  const deadline = document.getElementById("surveyDeadlineInput").value;
+  const deadlineHour = document.getElementById("surveyDeadlineHourInput").value;
+  const audience = getSelectedAudience_();
+
+  if (!subject){
+    alert("件名は必須です");
+    return;
+  }
+  if (!audience){
+    alert("配信先を1つ以上選んでください");
+    return;
+  }
+  if (publishDate && deadline && publishDate > deadline){
+    if (isDraft){
+      if (!confirm("公開日が締切日より後になっています。エラーがありますが、このまま一時保存しますか？")) return;
+    } else {
+      alert("公開日は締切日より前の日付にしてください");
+      return;
+    }
+  }
+  const cards = Array.from(document.getElementById("surveyQuestionsBuilder").children);
+  const questions = cards.map(c => c._collect()).filter(Boolean);
+
+  if (!isDraft){
+    if (!deadline){
+      alert("締切日は必須です（一時保存なら空欄でも大丈夫です）");
+      return;
+    }
+    if (questions.length === 0){
+      alert("質問を1つ以上、正しく入力してください（選択肢は2つ以上）");
+      return;
+    }
+  }
+
+  const draftBtn = document.getElementById("draftSurveyBtn");
+  const createBtn = document.getElementById("createSurveyBtn");
+  draftBtn.disabled = true;
+  createBtn.disabled = true;
+  const activeBtn = isDraft ? draftBtn : createBtn;
+  activeBtn.textContent = isDraft ? "一時保存中…" : "作成中…";
+
+  try {
+    const res = await fetch(SURVEY_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "staffSaveSurvey", password: currentPassword,
+        id: currentSurveyId || undefined,
+        subject, content, notes, publishDate, publishHour, deadline, deadlineHour, questions, isDraft, audience,
+        athleteTargetIds, generalTargetIds,
+      }),
+    });
+    const data = await res.json();
+    if (data.success){
+      currentSurveyId = data.id;
+      if (isDraft){
+        showToastSurvey_("一時保存しました");
+      } else {
+        alert("作成しました");
+        if (confirm("皆さんにLINEでお知らせしますか？")){
+          await notifySurveyViaLine_(data.id);
+        }
+        resetSurveyForm_();
+      }
+    } else {
+      alert("保存に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    alert("通信に失敗しました");
+  }
+
+  draftBtn.disabled = false;
+  createBtn.disabled = false;
+  draftBtn.textContent = "一時保存する";
+  createBtn.textContent = "アンケートを作成する";
+  loadSurveyLists_();
+}
+
+function checkSurveyDateOrder_(){
+  const publishDate = document.getElementById("surveyPublishDateInput").value;
+  const deadline = document.getElementById("surveyDeadlineInput").value;
+  const deadlineInput = document.getElementById("surveyDeadlineInput");
+  if (publishDate && deadline && publishDate > deadline){
+    deadlineInput.style.border = "2px solid var(--danger)";
+    deadlineInput.style.background = "#FDE4DE";
+    showToastSurvey_("締切日は公開日より後にしてください");
+  } else {
+    deadlineInput.style.border = "";
+    deadlineInput.style.background = "";
+  }
+}
+["change", "input", "blur"].forEach(evt => {
+  document.getElementById("surveyPublishDateInput").addEventListener(evt, checkSurveyDateOrder_);
+  document.getElementById("surveyDeadlineInput").addEventListener(evt, checkSurveyDateOrder_);
+});
+
+document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSurvey_(true));
+document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
+
+async function loadSurveyLists_(){
+  prefetchUserLists_(); // 対象者選択ボタンを押す前に、裏側で先に読み込んでおく
+  const list = await loadSurveyListForSystem_();
+
+  // 下書きがあれば、まだ何も編集していない状態の時だけ、再開するか確認する
+  if (currentSurveyId) return;
+
+  const draftCandidates = list.filter(i => i.status === "draft");
+  if (draftCandidates.length === 0) return;
+
+  // 一番新しく作られた下書きを優先して案内する
+  draftCandidates.sort((a, b) => (b.createdDate || "").localeCompare(a.createdDate || ""));
+  const top = draftCandidates[0];
+  if (confirm(`下書き「${top.subject}」があります。再開しますか？`)){
+    resumeSurveyDraft_(top);
+  }
+}
+
+function setAudienceCheckboxes_(audience){
+  document.getElementById("targetAthlete").checked = audience === "athlete" || audience === "both";
+  document.getElementById("targetGeneral").checked = audience === "general" || audience === "both";
+}
+
+// 下書きの内容を、新規作成フォームに読み込む
+// 保存されている "yyyy-MM-dd" または "yyyy-MM-dd HH:00" を、日付欄・時刻欄に分けて反映する
+function setDateTimeFields_(dateInputId, hourInputId, stored){
+  const str = (stored || "").toString();
+  const parts = str.split(" ");
+  document.getElementById(dateInputId).value = parts[0] || "";
+  document.getElementById(hourInputId).value = parts[1] ? String(Number(parts[1].split(":")[0])) : "";
+}
+
+function resumeSurveyDraft_(item){
+  currentSurveyId = item.id;
+  athleteTargetIds = item.athleteTargetIds || [];
+  generalTargetIds = item.generalTargetIds || [];
+  updateSpecificBadges_();
+
+  document.getElementById("surveySubjectInput").value = item.subject || "";
+  document.getElementById("surveyContentInput").value = item.content || "";
+  document.getElementById("surveyNotesInput").value = item.notes || "";
+  setDateTimeFields_("surveyPublishDateInput", "surveyPublishHourInput", item.publishDate);
+  setDateTimeFields_("surveyDeadlineInput", "surveyDeadlineHourInput", item.deadline);
+  setAudienceCheckboxes_(item.audience);
+
+  const builder = document.getElementById("surveyQuestionsBuilder");
+  builder.innerHTML = "";
+  (item.questions || []).forEach(q => addQuestionCard_(q));
+  if (!item.questions || !item.questions.length) addQuestionCard_();
+
+  document.querySelector(".survey-panel").scrollTo({ top: 0, behavior: "smooth" });
+  showToastSurvey_(`下書き「${item.subject}」を再開しました`);
+}
+
+// 過去のアンケートの内容を、新規作成フォームにコピーする
+async function copySurveyToForm_(surveyId){
+  try {
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const data = await res.json();
+    if (!data.success){
+      alert("コピー元の読み込みに失敗しました");
+      return;
+    }
+    const survey = data.survey;
+
+    currentSurveyId = ""; // コピーは新規作成なので、編集中IDはリセットする
+    athleteTargetIds = [];
+    generalTargetIds = [];
+    updateSpecificBadges_();
+    document.getElementById("surveySubjectInput").value = survey.subject;
+    document.getElementById("surveyContentInput").value = survey.content || "";
+    document.getElementById("surveyNotesInput").value = survey.notes || "";
+    document.getElementById("surveyPublishDateInput").value = "";
+    document.getElementById("surveyPublishHourInput").value = "";
+    document.getElementById("surveyDeadlineInput").value = ""; // 締切日は必ず選び直してもらう
+    document.getElementById("surveyDeadlineHourInput").value = "";
+    setAudienceCheckboxes_(survey.audience);
+
+    const builder = document.getElementById("surveyQuestionsBuilder");
+    builder.innerHTML = "";
+    (survey.questions || []).forEach(q => addQuestionCard_(q));
+    if (!survey.questions || !survey.questions.length) addQuestionCard_();
+
+    document.querySelector(".survey-panel").scrollTo({ top: 0, behavior: "smooth" });
+    showToastSurvey_("内容をコピーしました。締切日を設定して作成してください");
+  } catch (err){
+    console.error(err);
+    alert("通信に失敗しました");
+  }
+}
+
+// staff.html独自の簡易トースト（既存のshowToastは無いので、ここで最小限用意する）
+function showToastSurvey_(msg){
+  let el = document.getElementById("surveyToast");
+  if (!el){
+    el = document.createElement("div");
+    el.id = "surveyToast";
+    el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;z-index:90;opacity:0;transition:opacity 0.25s ease;";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = "1";
+  clearTimeout(showToastSurvey_._t);
+  showToastSurvey_._t = setTimeout(() => { el.style.opacity = "0"; }, 2200);
+}
+
+async function loadSurveyListForSystem_(){
+  const listEl = document.getElementById("surveyList");
+  listEl.innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
+  try {
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyList&password=${encodeURIComponent(currentPassword)}`);
+    const data = await res.json();
+    const list = data.list || [];
+    if (!list.length){
+      listEl.innerHTML = `<div class="survey-list-empty">アンケートはまだありません</div>`;
+      return list;
+    }
+    listEl.innerHTML = "";
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    list.forEach(item => {
+      const isDraft = item.status === "draft";
+      const el = document.createElement("div");
+      el.className = "survey-list-item";
+      const badge = isDraft ? `<span class="sli-draft-badge">一時保存</span>` : "";
+      const audienceLabel = SYSTEM_LABEL[item.audience] || "選手用・一般用";
+      const hasSpecific = (item.athleteTargetIds && item.athleteTargetIds.length) || (item.generalTargetIds && item.generalTargetIds.length);
+      const audienceDisplay = audienceLabel + (hasSpecific ? "（指定あり）" : "");
+
+      let statusLabel = "";
+      if (!isDraft){
+        const pastDeadline = item.deadline && item.deadline < todayStr;
+        const beforePublish = item.publishDate && item.publishDate > todayStr;
+        if (!item.active) statusLabel = "停止中";
+        else if (pastDeadline) statusLabel = "配信終了（締切済み）";
+        else if (beforePublish) statusLabel = "公開待ち";
+        else statusLabel = "配信中";
+      }
+
+      const meta = isDraft
+        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""} ／ 配信先: ${audienceDisplay}`
+        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${statusLabel} ／ 配信先: ${audienceDisplay}`;
+      el.innerHTML = `<div class="sli-subject">${badge}<span>${item.subject}</span></div>
+        <div class="sli-meta">${meta}</div>`;
+      el.addEventListener("click", () => {
+        if (isDraft) resumeSurveyDraft_(item);
+        else openSurveyResults_(item.id);
+      });
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "sli-copy-btn";
+      copyBtn.textContent = "コピーして作成";
+      copyBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // 親のクリックを発火させない
+        copySurveyToForm_(item.id);
+      });
+      el.appendChild(copyBtn);
+
+      if (!isDraft){
+        const resultsBtn = document.createElement("button");
+        resultsBtn.className = "sli-results-btn";
+        resultsBtn.textContent = "回答結果を見る";
+        resultsBtn.addEventListener("click", (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          openSurveyResults_(item.id);
+        });
+        el.appendChild(resultsBtn);
+
+        const remindBtn = document.createElement("button");
+        remindBtn.className = "sli-toggle-btn";
+        remindBtn.textContent = "未回答者にリマインド";
+        remindBtn.addEventListener("click", async (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          if (!confirm(`「${item.subject}」について、まだ回答していない人にだけLINEでお知らせしますか？`)) return;
+          remindBtn.disabled = true;
+          await notifySurveyViaLine_(item.id, true);
+          remindBtn.disabled = false;
+        });
+        el.appendChild(remindBtn);
+      }
+
+      if (!isDraft){
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "sli-toggle-btn";
+        toggleBtn.textContent = item.active ? "停止する" : "再開する";
+        toggleBtn.addEventListener("click", async (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          const nextActive = !item.active;
+          toggleBtn.disabled = true;
+          try {
+            const res = await fetch(SURVEY_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetSurveyActive", password: currentPassword, surveyId: item.id, active: nextActive }),
+            });
+            const data = await res.json();
+            if (data.success){
+              loadSurveyLists_();
+            } else {
+              alert("切り替えに失敗しました");
+              toggleBtn.disabled = false;
+            }
+          } catch (err){
+            console.error(err);
+            alert("通信に失敗しました");
+            toggleBtn.disabled = false;
+          }
+        });
+        el.appendChild(toggleBtn);
+      }
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "sli-delete-btn";
+      deleteBtn.textContent = "削除";
+      deleteBtn.addEventListener("click", async (e) => {
+        e.stopPropagation(); // 親のクリックを発火させない
+        if (!confirm(`「${item.subject}」を削除しますか？${isDraft ? "" : "\n回答データも一緒に削除されます。"}`)) return;
+        deleteBtn.disabled = true;
+        try {
+          const res = await fetch(SURVEY_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "staffDeleteSurvey", password: currentPassword, surveyId: item.id }),
+          });
+          const data = await res.json();
+          if (data.success){
+            if (currentSurveyId === item.id) currentSurveyId = ""; // 編集中だったものが消えたら紐付けも解除
+            loadSurveyLists_();
+          } else {
+            alert("削除に失敗しました" + (data.reason ? "（" + data.reason + "）" : ""));
+            deleteBtn.disabled = false;
+          }
+        } catch (err){
+          console.error(err);
+          alert("通信に失敗しました");
+          deleteBtn.disabled = false;
+        }
+      });
+      el.appendChild(deleteBtn);
+
+      listEl.appendChild(el);
+    });
+    return list;
+  } catch (err){
+    console.error(err);
+    listEl.innerHTML = `<div class="survey-list-empty">読み込みに失敗しました</div>`;
+    return [];
+  }
+}
+
+async function openSurveyResults_(surveyId){
+  const overlay = document.getElementById("surveyResultsOverlay");
+  const box = document.getElementById("surveyResultsBox");
+  const content = document.getElementById("surveyResultsContent");
+  content.innerHTML = "読み込み中…";
+  overlay.classList.add("show");
+  box.classList.add("show");
+
+  try {
+    const res = await fetch(`${SURVEY_ENDPOINT}?action=staffSurveyResults&password=${encodeURIComponent(currentPassword)}&surveyId=${encodeURIComponent(surveyId)}`);
+    const data = await res.json();
+    if (!data.success){
+      content.innerHTML = "結果を取得できませんでした";
+      return;
+    }
+    const audienceLabel = SYSTEM_LABEL[data.survey.audience] || "選手用・一般用";
+    let html = `<div class="survey-section-title">${data.survey.subject}</div>`;
+    html += `<button class="survey-pick-people-btn" id="emailResultsBtn" style="margin-bottom:10px;">📧 メールで送信</button>`;
+    html += `<div id="emailSendRow" style="display:none; margin-bottom:14px;">
+      <input type="email" id="emailRecipientInput" list="teacherEmailList" placeholder="送信先のメールアドレス" class="people-picker-search" style="margin-bottom:6px;" />
+      <datalist id="teacherEmailList"></datalist>
+      <button class="survey-create-btn" id="emailSendConfirmBtn" style="margin-top:0;">この宛先に送信する</button>
+    </div>`;
+    html += `<div class="sli-meta" style="margin-bottom:14px;">配信先: ${audienceLabel}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件</div>`;
+
+    data.tally.forEach(t => {
+      html += `<div class="sr-tally-row"><div class="sr-q">${t.question}</div>`;
+      if (t.type === "radio"){
+        Object.keys(t.counts).forEach(opt => {
+          html += `<div class="sr-tally-opt"><span>${opt}</span><span>${t.counts[opt]}件</span></div>`;
+        });
+      } else if (t.type === "number"){
+        html += `<div class="sr-tally-opt"><span>平均</span><span>${t.average !== null ? t.average.toFixed(1) : "-"}（${t.count}件）</span></div>`;
+      } else if (t.type === "text"){
+        if (t.texts.length){
+          t.texts.forEach(txt => {
+            html += `<div class="sr-tally-opt" style="display:block;">・${txt}</div>`;
+          });
+        } else {
+          html += `<div class="sr-tally-opt"><span>まだ回答がありません</span></div>`;
+        }
+      }
+      html += `</div>`;
+    });
+
+    html += `<div class="survey-field-label">個別の回答</div>`;
+    data.responses.forEach(r => {
+      const sysLabel = SYSTEM_LABEL[r.system] || "";
+      html += `<div class="sr-response-item"><span class="sr-name">${r.name}</span>（${sysLabel}／${r.respondedAt}）<br>`;
+      html += r.answers.map(a => `${a.question}: ${a.answer}`).join(" / ");
+      html += `</div>`;
+    });
+
+    content.innerHTML = html;
+
+    // 講師名簿のメールアドレスを、送信先の候補として読み込んでおく(未登録なら何も出ない)
+    fetch(`${GENERAL_ENDPOINT}?action=staffOverview&password=${encodeURIComponent(currentPassword)}`)
+      .then(res => res.json())
+      .then(overviewData => {
+        const dl = document.getElementById("teacherEmailList");
+        if (!dl) return;
+        (overviewData.teachers || []).forEach(t => {
+          if (!t.email) return;
+          const opt = document.createElement("option");
+          opt.value = t.email;
+          opt.label = t.displayName || t.fullName;
+          dl.appendChild(opt);
+        });
+      })
+      .catch(err => console.error(err));
+
+    // 本文を組み立てておく(送信ボタンを押した時に使う)
+    let emailBodyText = `【${data.survey.subject}】の集計結果\n配信先: ${audienceLabel}／締切: ${data.survey.deadline}／回答 ${data.responses.length}件\n\n`;
+    data.tally.forEach(t => {
+      emailBodyText += `■ ${t.question}\n`;
+      if (t.type === "radio"){
+        Object.keys(t.counts).forEach(opt => { emailBodyText += `　${opt}: ${t.counts[opt]}件\n`; });
+      } else if (t.type === "number"){
+        emailBodyText += `　平均: ${t.average !== null ? t.average.toFixed(1) : "-"}（${t.count}件）\n`;
+      } else if (t.type === "text"){
+        t.texts.forEach(txt => { emailBodyText += `　・${txt}\n`; });
+      }
+      emailBodyText += "\n";
+    });
+    emailBodyText += "――― 個別の回答 ―――\n";
+    data.responses.forEach(r => {
+      const sysLabel = SYSTEM_LABEL[r.system] || "";
+      emailBodyText += `${r.name}（${sysLabel}／${r.respondedAt}）\n`;
+      emailBodyText += r.answers.map(a => `${a.question}: ${a.answer}`).join(" / ") + "\n\n";
+    });
+
+    document.getElementById("emailResultsBtn").addEventListener("click", () => {
+      document.getElementById("emailSendRow").style.display = "block";
+      document.getElementById("emailRecipientInput").focus();
+    });
+
+    document.getElementById("emailSendConfirmBtn").addEventListener("click", async () => {
+      const to = document.getElementById("emailRecipientInput").value.trim();
+      if (!to){
+        alert("送信先のメールアドレスを入力してください");
+        return;
+      }
+      const btn = document.getElementById("emailSendConfirmBtn");
+      btn.disabled = true;
+      btn.textContent = "送信中…";
+      try {
+        const res = await fetch(SURVEY_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "staffSendSurveyEmail", password: currentPassword,
+            to: to, subject: `アンケート結果：${data.survey.subject}`, body: emailBodyText,
+          }),
+        });
+        const result = await res.json();
+        if (result.success){
+          showToastSurvey_(to + " に送信しました");
+          document.getElementById("emailSendRow").style.display = "none";
+        } else {
+          alert("送信に失敗しました" + (result.reason ? "（" + result.reason + "）" : ""));
+        }
+      } catch (err){
+        console.error(err);
+        alert("通信に失敗しました");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "この宛先に送信する";
+      }
+    });
+  } catch (err){
+    console.error(err);
+    content.innerHTML = "通信に失敗しました";
+  }
+}
+
+document.getElementById("surveyResultsCloseBtn").addEventListener("click", () => {
+  document.getElementById("surveyResultsOverlay").classList.remove("show");
+  document.getElementById("surveyResultsBox").classList.remove("show");
+});
+document.getElementById("surveyResultsOverlay").addEventListener("click", () => {
+  document.getElementById("surveyResultsOverlay").classList.remove("show");
+  document.getElementById("surveyResultsBox").classList.remove("show");
+});
+
+// 前回ログイン済みならパスワード入力を省略
+(function start(){
   let saved = "";
-  try { saved = sessionStorage.getItem("staffPasswordGeneral") || ""; } catch (e) {}
+  try { saved = sessionStorage.getItem("unifiedStaffPassword") || ""; } catch (e) {}
   if (saved) tryLogin(saved);
 })();
 </script>
