@@ -117,6 +117,8 @@
   .sq-options-row input { flex: 1; margin-bottom: 0; }
   .sq-add-option-btn { border: none; background: var(--cream-deep, #EFE9DC); color: var(--ink-soft); font-size: 12px; padding: 6px 10px; border-radius: 8px; }
   .sq-number-hint { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
+  .sq-required-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+  .sq-required-row input { width: auto; margin: 0; }
   .sq-minmax-row { display: flex; gap: 10px; }
   .sq-minmax-col { flex: 1; }
   .sq-minmax-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 3px; }
@@ -150,6 +152,15 @@
     margin-top: 8px; margin-right: 6px; border: 1px solid var(--orange); background: var(--white); color: var(--orange);
     font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
   }
+  .sli-results-btn {
+    margin-top: 8px; margin-right: 6px; border: none; background: var(--orange); color: var(--white);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-toggle-btn {
+    margin-top: 8px; margin-right: 6px; border: 1px solid var(--ink-soft); background: var(--white); color: var(--ink-soft);
+    font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .sli-toggle-btn:disabled { opacity: 0.5; }
   .sli-delete-btn {
     margin-top: 8px; border: 1px solid var(--danger); background: var(--white); color: var(--danger);
     font-weight: 700; font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
@@ -568,6 +579,17 @@ function addQuestionCard_(prefill){
   if (prefill && prefill.question) questionInput.value = prefill.question;
   card.appendChild(questionInput);
 
+  const requiredRow = document.createElement("label");
+  requiredRow.className = "sq-required-row";
+  const requiredCheckbox = document.createElement("input");
+  requiredCheckbox.type = "checkbox";
+  requiredCheckbox.checked = !(prefill && prefill.required === false); // 未指定の場合は必須がデフォルト
+  requiredRow.appendChild(requiredCheckbox);
+  const requiredLabel = document.createElement("span");
+  requiredLabel.textContent = "この質問への回答を必須にする";
+  requiredRow.appendChild(requiredLabel);
+  card.appendChild(requiredRow);
+
   const radioFields = document.createElement("div");
   radioFields.className = "sq-radio-fields";
   const optionsWrap = document.createElement("div");
@@ -645,15 +667,16 @@ function addQuestionCard_(prefill){
   card._collect = () => {
     const question = questionInput.value.trim();
     if (!question) return null;
+    const required = requiredCheckbox.checked;
     if (typeSelect.value === "radio"){
       const options = Array.from(optionsWrap.querySelectorAll("input")).map(i => i.value.trim()).filter(Boolean);
       if (options.length < 2) return null;
-      return { type: "radio", question: question, options: options };
+      return { type: "radio", question: question, options: options, required: required };
     }
     if (typeSelect.value === "text"){
-      return { type: "text", question: question };
+      return { type: "text", question: question, required: required };
     }
-    return { type: "number", question: question, min: Number(minInput.value) || 1, max: Number(maxInput.value) || 5 };
+    return { type: "number", question: question, min: Number(minInput.value) || 1, max: Number(maxInput.value) || 5, required: required };
   };
 
   builder.appendChild(card);
@@ -1044,6 +1067,17 @@ async function loadSurveyListForSystem_(){
         copySurveyToForm_(item.id);
       });
       el.appendChild(copyBtn);
+
+      if (!isDraft){
+        const resultsBtn = document.createElement("button");
+        resultsBtn.className = "sli-results-btn";
+        resultsBtn.textContent = "回答結果を見る";
+        resultsBtn.addEventListener("click", (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          openSurveyResults_(item.id);
+        });
+        el.appendChild(resultsBtn);
+      }
 
       if (!isDraft){
         const toggleBtn = document.createElement("button");
