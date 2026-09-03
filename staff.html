@@ -823,6 +823,31 @@ document.getElementById("peoplePickerDoneBtn").addEventListener("click", () => {
   closePeoplePicker_();
 });
 
+// 指定アンケートの対象者へ、LINEで一斉にお知らせを送る
+async function notifySurveyViaLine_(surveyId){
+  try {
+    const res = await fetch(SURVEY_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffNotifySurveyViaLine", password: currentPassword, surveyId: surveyId }),
+    });
+    const data = await res.json();
+    if (data.success){
+      let msg = `一般用${data.generalSent}件`;
+      if (data.athleteSkipped){
+        msg += "／選手用は未設定のため送信できませんでした";
+      } else if (data.athleteSent){
+        msg += `／選手用${data.athleteSent}件`;
+      }
+      alert("LINEでお知らせしました（" + msg + "）");
+    } else {
+      alert("LINE通知の送信に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    alert("LINE通知の送信中に通信エラーが発生しました");
+  }
+}
+
 function getSelectedAudience_(){
   const athlete = document.getElementById("targetAthlete").checked;
   const general = document.getElementById("targetGeneral").checked;
@@ -896,6 +921,9 @@ async function saveSurvey_(isDraft){
         showToastSurvey_("一時保存しました");
       } else {
         alert("作成しました");
+        if (confirm("皆さんにLINEでお知らせしますか？")){
+          await notifySurveyViaLine_(data.id);
+        }
         resetSurveyForm_();
       }
     } else {
