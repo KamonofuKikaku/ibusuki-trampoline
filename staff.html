@@ -824,11 +824,14 @@ document.getElementById("peoplePickerDoneBtn").addEventListener("click", () => {
 });
 
 // 指定アンケートの対象者へ、LINEで一斉にお知らせを送る
-async function notifySurveyViaLine_(surveyId){
+async function notifySurveyViaLine_(surveyId, onlyUnanswered){
   try {
     const res = await fetch(SURVEY_ENDPOINT, {
       method: "POST",
-      body: JSON.stringify({ action: "staffNotifySurveyViaLine", password: currentPassword, surveyId: surveyId }),
+      body: JSON.stringify({
+        action: onlyUnanswered ? "staffRemindSurveyViaLine" : "staffNotifySurveyViaLine",
+        password: currentPassword, surveyId: surveyId,
+      }),
     });
     const data = await res.json();
     if (data.success){
@@ -1129,6 +1132,18 @@ async function loadSurveyListForSystem_(){
           openSurveyResults_(item.id);
         });
         el.appendChild(resultsBtn);
+
+        const remindBtn = document.createElement("button");
+        remindBtn.className = "sli-toggle-btn";
+        remindBtn.textContent = "未回答者にリマインド";
+        remindBtn.addEventListener("click", async (e) => {
+          e.stopPropagation(); // 親のクリックを発火させない
+          if (!confirm(`「${item.subject}」について、まだ回答していない人にだけLINEでお知らせしますか？`)) return;
+          remindBtn.disabled = true;
+          await notifySurveyViaLine_(item.id, true);
+          remindBtn.disabled = false;
+        });
+        el.appendChild(remindBtn);
       }
 
       if (!isDraft){
