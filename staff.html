@@ -78,6 +78,28 @@
     font-size: 13.5px; box-sizing: border-box; font-family: inherit;
   }
   .survey-target-row { display: flex; gap: 14px; }
+  .survey-target-col {
+    flex: 1; background: var(--cream); border-radius: 10px; padding: 10px; display: flex;
+    flex-direction: column; gap: 6px; align-items: flex-start;
+  }
+  .survey-target-specific-badge {
+    font-size: 10px; font-weight: 700; color: var(--orange); background: var(--orange-soft, #FFE3D6);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .survey-pick-people-btn {
+    border: 1px solid var(--ink-soft); background: var(--white); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 8px;
+  }
+  .people-picker-hint { font-size: 11.5px; color: var(--ink-soft); margin: 6px 0 10px; }
+  .people-picker-search {
+    width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #E6DFD3;
+    font-size: 13px; box-sizing: border-box; margin-bottom: 10px;
+  }
+  .people-picker-list { max-height: 40vh; overflow-y: auto; margin-bottom: 10px; }
+  .people-picker-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #F0EAE0; font-size: 13.5px;
+  }
+  .people-picker-item input { width: auto; margin: 0; }
   .survey-datetime-row { display: flex; gap: 8px; }
   .survey-datetime-row input[type="date"] { flex: 1.4; }
   .survey-datetime-row select { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid #E6DFD3; font-size: 12.5px; background: var(--white); }
@@ -279,8 +301,16 @@
 
       <label class="survey-field-label">配信先 <span class="survey-required">*</span></label>
       <div class="survey-target-row">
-        <label class="survey-checkbox"><input type="checkbox" id="targetAthlete" checked /> 選手用</label>
-        <label class="survey-checkbox"><input type="checkbox" id="targetGeneral" checked /> 一般用</label>
+        <div class="survey-target-col">
+          <label class="survey-checkbox"><input type="checkbox" id="targetAthlete" checked /> 選手用</label>
+          <span class="survey-target-specific-badge" id="athleteSpecificBadge" style="display:none;">指定あり</span>
+          <button type="button" class="survey-pick-people-btn" id="pickAthletePeopleBtn">対象者を選択</button>
+        </div>
+        <div class="survey-target-col">
+          <label class="survey-checkbox"><input type="checkbox" id="targetGeneral" checked /> 一般用</label>
+          <span class="survey-target-specific-badge" id="generalSpecificBadge" style="display:none;">指定あり</span>
+          <button type="button" class="survey-pick-people-btn" id="pickGeneralPeopleBtn">対象者を選択</button>
+        </div>
       </div>
 
       <label class="survey-field-label">件名 <span class="survey-required">*</span></label>
@@ -322,6 +352,16 @@
   <div class="survey-results-box" id="surveyResultsBox">
     <button class="survey-results-close" id="surveyResultsCloseBtn">×</button>
     <div id="surveyResultsContent"></div>
+  </div>
+
+  <div class="modal-overlay-survey" id="peoplePickerOverlay"></div>
+  <div class="survey-results-box" id="peoplePickerBox">
+    <button class="survey-results-close" id="peoplePickerCloseBtn">×</button>
+    <div class="survey-section-title" id="peoplePickerTitle">対象者を選択</div>
+    <div class="people-picker-hint">チェックした人にだけ配信します（誰もチェックしなければ全員に配信します）</div>
+    <input type="text" id="peoplePickerSearch" placeholder="名前で検索" class="people-picker-search" />
+    <div id="peoplePickerList" class="people-picker-list"></div>
+    <button class="survey-create-btn" id="peoplePickerDoneBtn">選択を確定</button>
   </div>
 
   <div class="loading-overlay" id="loginLoadingOverlay">
@@ -631,8 +671,20 @@ addQuestionCard_(); // 最初から1問分用意しておく
 // 編集中のアンケートのID（一時保存を繰り返した時に、同じ下書きを上書きするために使う。新規作成中は空文字）
 let currentSurveyId = "";
 
+// 個別対象者の指定（システムごとのuserId配列。空配列 = 全員対象）
+let athleteTargetIds = [];
+let generalTargetIds = [];
+
+function updateSpecificBadges_(){
+  document.getElementById("athleteSpecificBadge").style.display = athleteTargetIds.length ? "inline-block" : "none";
+  document.getElementById("generalSpecificBadge").style.display = generalTargetIds.length ? "inline-block" : "none";
+}
+
 function resetSurveyForm_(){
   currentSurveyId = "";
+  athleteTargetIds = [];
+  generalTargetIds = [];
+  updateSpecificBadges_();
   document.getElementById("surveySubjectInput").value = "";
   document.getElementById("surveyContentInput").value = "";
   document.getElementById("surveyNotesInput").value = "";
@@ -645,6 +697,81 @@ function resetSurveyForm_(){
   document.getElementById("surveyQuestionsBuilder").innerHTML = "";
   addQuestionCard_();
 }
+
+/* ---------- 対象者選択ポップアップ ---------- */
+let pickerCurrentSys = null; // "athlete" または "general"
+let pickerCheckedIds = new Set();
+let peoplePickerCache_ = [];
+
+function renderPeoplePickerList_(list){
+  const keyword = document.getElementById("peoplePickerSearch").value.trim();
+  const filtered = keyword ? list.filter(p => p.name.includes(keyword)) : list;
+  const listEl = document.getElementById("peoplePickerList");
+  if (!filtered.length){
+    listEl.innerHTML = `<div class="survey-list-empty">該当する人がいません</div>`;
+    return;
+  }
+  listEl.innerHTML = "";
+  filtered.forEach(p => {
+    const row = document.createElement("label");
+    row.className = "people-picker-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = pickerCheckedIds.has(p.userId);
+    cb.addEventListener("change", () => {
+      if (cb.checked) pickerCheckedIds.add(p.userId);
+      else pickerCheckedIds.delete(p.userId);
+    });
+    row.appendChild(cb);
+    const span = document.createElement("span");
+    span.textContent = p.name;
+    row.appendChild(span);
+    listEl.appendChild(row);
+  });
+}
+
+async function openPeoplePicker_(sys){
+  pickerCurrentSys = sys;
+  pickerCheckedIds = new Set(sys === "athlete" ? athleteTargetIds : generalTargetIds);
+
+  document.getElementById("peoplePickerTitle").textContent = (sys === "athlete" ? "選手用" : "一般用") + "の対象者を選択";
+  document.getElementById("peoplePickerSearch").value = "";
+  document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
+  document.getElementById("peoplePickerOverlay").classList.add("show");
+  document.getElementById("peoplePickerBox").classList.add("show");
+
+  const endpoint = sys === "athlete" ? ATHLETE_ENDPOINT : GENERAL_ENDPOINT;
+  try {
+    const res = await fetch(`${endpoint}?action=staffUserList&password=${encodeURIComponent(currentPassword)}`);
+    const data = await res.json();
+    peoplePickerCache_ = data.list || [];
+    renderPeoplePickerList_(peoplePickerCache_);
+  } catch (err){
+    console.error(err);
+    document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込みに失敗しました</div>`;
+  }
+}
+
+document.getElementById("pickAthletePeopleBtn").addEventListener("click", () => openPeoplePicker_("athlete"));
+document.getElementById("pickGeneralPeopleBtn").addEventListener("click", () => openPeoplePicker_("general"));
+
+document.getElementById("peoplePickerSearch").addEventListener("input", () => {
+  renderPeoplePickerList_(peoplePickerCache_);
+});
+
+function closePeoplePicker_(){
+  document.getElementById("peoplePickerOverlay").classList.remove("show");
+  document.getElementById("peoplePickerBox").classList.remove("show");
+}
+document.getElementById("peoplePickerCloseBtn").addEventListener("click", closePeoplePicker_);
+document.getElementById("peoplePickerOverlay").addEventListener("click", closePeoplePicker_);
+document.getElementById("peoplePickerDoneBtn").addEventListener("click", () => {
+  const ids = Array.from(pickerCheckedIds);
+  if (pickerCurrentSys === "athlete") athleteTargetIds = ids;
+  else generalTargetIds = ids;
+  updateSpecificBadges_();
+  closePeoplePicker_();
+});
 
 function getSelectedAudience_(){
   const athlete = document.getElementById("targetAthlete").checked;
@@ -709,6 +836,7 @@ async function saveSurvey_(isDraft){
         action: "staffSaveSurvey", password: currentPassword,
         id: currentSurveyId || undefined,
         subject, content, notes, publishDate, publishHour, deadline, deadlineHour, questions, isDraft, audience,
+        athleteTargetIds, generalTargetIds,
       }),
     });
     const data = await res.json();
@@ -789,6 +917,9 @@ function setDateTimeFields_(dateInputId, hourInputId, stored){
 
 function resumeSurveyDraft_(item){
   currentSurveyId = item.id;
+  athleteTargetIds = item.athleteTargetIds || [];
+  generalTargetIds = item.generalTargetIds || [];
+  updateSpecificBadges_();
 
   document.getElementById("surveySubjectInput").value = item.subject || "";
   document.getElementById("surveyContentInput").value = item.content || "";
@@ -818,6 +949,9 @@ async function copySurveyToForm_(surveyId){
     const survey = data.survey;
 
     currentSurveyId = ""; // コピーは新規作成なので、編集中IDはリセットする
+    athleteTargetIds = [];
+    generalTargetIds = [];
+    updateSpecificBadges_();
     document.getElementById("surveySubjectInput").value = survey.subject;
     document.getElementById("surveyContentInput").value = survey.content || "";
     document.getElementById("surveyNotesInput").value = survey.notes || "";
@@ -875,6 +1009,8 @@ async function loadSurveyListForSystem_(){
       el.className = "survey-list-item";
       const badge = isDraft ? `<span class="sli-draft-badge">一時保存</span>` : "";
       const audienceLabel = SYSTEM_LABEL[item.audience] || "選手用・一般用";
+      const hasSpecific = (item.athleteTargetIds && item.athleteTargetIds.length) || (item.generalTargetIds && item.generalTargetIds.length);
+      const audienceDisplay = audienceLabel + (hasSpecific ? "（指定あり）" : "");
 
       let statusLabel = "";
       if (!isDraft){
@@ -887,8 +1023,8 @@ async function loadSurveyListForSystem_(){
       }
 
       const meta = isDraft
-        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""} ／ 配信先: ${audienceLabel}`
-        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${statusLabel} ／ 配信先: ${audienceLabel}`;
+        ? `質問${item.questionCount}問${item.deadline ? " ／ 締切: " + item.deadline : ""} ／ 配信先: ${audienceDisplay}`
+        : `締切: ${item.deadline} ／ 回答 ${item.responseCount}件 ／ ${statusLabel} ／ 配信先: ${audienceDisplay}`;
       el.innerHTML = `<div class="sli-subject">${badge}<span>${item.subject}</span></div>
         <div class="sli-meta">${meta}</div>`;
       el.addEventListener("click", () => {
