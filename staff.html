@@ -757,21 +757,44 @@ function renderPeoplePickerList_(list){
   });
 }
 
+// システムごとの利用者一覧のキャッシュ(一度読み込んだら、タブを閉じるまで使い回す)
+const userListCache_ = { athlete: null, general: null };
+
+async function fetchUserList_(sys){
+  if (userListCache_[sys]) return userListCache_[sys]; // すでにあればそれを使う(通信しない)
+  const endpoint = sys === "athlete" ? ATHLETE_ENDPOINT : GENERAL_ENDPOINT;
+  const res = await fetch(`${endpoint}?action=staffUserList&password=${encodeURIComponent(currentPassword)}`);
+  const data = await res.json();
+  userListCache_[sys] = data.list || [];
+  return userListCache_[sys];
+}
+
+// アンケートタブを開いた時点で裏側で先に読み込んでおき、実際にボタンを押した時には
+// 待ち時間なしで開けるようにする
+function prefetchUserLists_(){
+  fetchUserList_("athlete").catch(err => console.error(err));
+  fetchUserList_("general").catch(err => console.error(err));
+}
+
 async function openPeoplePicker_(sys){
   pickerCurrentSys = sys;
   pickerCheckedIds = new Set(sys === "athlete" ? athleteTargetIds : generalTargetIds);
 
   document.getElementById("peoplePickerTitle").textContent = (sys === "athlete" ? "選手用" : "一般用") + "の対象者を選択";
   document.getElementById("peoplePickerSearch").value = "";
-  document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
   document.getElementById("peoplePickerOverlay").classList.add("show");
   document.getElementById("peoplePickerBox").classList.add("show");
 
-  const endpoint = sys === "athlete" ? ATHLETE_ENDPOINT : GENERAL_ENDPOINT;
+  if (userListCache_[sys]){
+    // キャッシュがあれば通信を待たず即座に表示する
+    peoplePickerCache_ = userListCache_[sys];
+    renderPeoplePickerList_(peoplePickerCache_);
+    return;
+  }
+
+  document.getElementById("peoplePickerList").innerHTML = `<div class="survey-list-empty">読み込み中…</div>`;
   try {
-    const res = await fetch(`${endpoint}?action=staffUserList&password=${encodeURIComponent(currentPassword)}`);
-    const data = await res.json();
-    peoplePickerCache_ = data.list || [];
+    peoplePickerCache_ = await fetchUserList_(sys);
     renderPeoplePickerList_(peoplePickerCache_);
   } catch (err){
     console.error(err);
@@ -912,6 +935,7 @@ document.getElementById("draftSurveyBtn").addEventListener("click", () => saveSu
 document.getElementById("createSurveyBtn").addEventListener("click", () => saveSurvey_(false));
 
 async function loadSurveyLists_(){
+  prefetchUserLists_(); // 対象者選択ボタンを押す前に、裏側で先に読み込んでおく
   const list = await loadSurveyListForSystem_();
 
   // 下書きがあれば、まだ何も編集していない状態の時だけ、再開するか確認する
