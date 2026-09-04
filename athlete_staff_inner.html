@@ -1332,18 +1332,47 @@ function renderBilling(list){
 
     row.appendChild(nameRow);
 
-    // 現金決済チェック + 支払い済み月表示（一般用と同じ仕組み）
+    // 対象外チェック(理由入力欄付き) + 支払い済み月表示（一般用と同じ仕組み）
     const cashRow = document.createElement("div");
     cashRow.className = "cash-row";
-    cashRow.style.cssText = "display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:6px;";
+    cashRow.style.cssText = "display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:6px; flex-wrap:wrap;";
     const cashCheckbox = document.createElement("input");
     cashCheckbox.type = "checkbox";
     cashCheckbox.checked = !!item.cashPayment;
     cashCheckbox.style.width = "auto";
     const cashLabel = document.createElement("span");
-    cashLabel.textContent = "現金決済";
+    cashLabel.textContent = "対象外(理由：";
     cashRow.appendChild(cashCheckbox);
     cashRow.appendChild(cashLabel);
+
+    const reasonInput = document.createElement("input");
+    reasonInput.type = "text";
+    reasonInput.placeholder = "例：兄弟・現金決済など";
+    reasonInput.value = item.excludeReason || "";
+    reasonInput.style.cssText = "width:110px; padding:3px 6px; border-radius:6px; border:1px solid #E6DFD3; font-size:11px;";
+    reasonInput.addEventListener("change", async () => {
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reasonInput.value }),
+        });
+        const result = await res.json();
+        if (result.success){
+          item.excludeReason = reasonInput.value;
+          showToast("理由を保存しました");
+        } else {
+          showToast("保存に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      }
+    });
+    cashRow.appendChild(reasonInput);
+
+    const closeParen = document.createElement("span");
+    closeParen.textContent = ")";
+    cashRow.appendChild(closeParen);
 
     const paidMonthEl = document.createElement("span");
     paidMonthEl.style.cssText = "font-size:11px; color:var(--ink-soft);";
@@ -1389,7 +1418,7 @@ function renderBilling(list){
         const result = await res.json();
         if (result.success){
           item.cashPayment = checked;
-          showToast(checked ? "現金決済に設定しました" : "現金決済を解除しました");
+          showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
         } else {
           cashCheckbox.checked = !checked;
           markPaidBtn.style.display = !checked ? "inline-block" : "none";
@@ -1471,8 +1500,9 @@ function renderBilling(list){
       try {
         let result = await doCharge(amount, false);
         if (!result.success && result.reason === "cash_payment"){
+          const reasonNote = item.excludeReason ? `（理由：${item.excludeReason}）` : "";
           const proceed = window.confirm(
-            `${item.name}さんは現金決済のため除外されています。\nお間違えないですか？\n\n「OK」で進む／「キャンセル」で中止`
+            `${item.name}さんは対象外${reasonNote}に設定されているため除外されています。\nお間違えないですか？\n\n「OK」で進む／「キャンセル」で中止`
           );
           if (!proceed){
             chargeBtn.disabled = false;
