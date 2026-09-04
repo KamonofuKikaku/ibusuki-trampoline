@@ -1332,6 +1332,80 @@ function renderBilling(list){
 
     row.appendChild(nameRow);
 
+    // 現金決済チェック + 支払い済み月表示（一般用と同じ仕組み）
+    const cashRow = document.createElement("div");
+    cashRow.className = "cash-row";
+    cashRow.style.cssText = "display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:6px;";
+    const cashCheckbox = document.createElement("input");
+    cashCheckbox.type = "checkbox";
+    cashCheckbox.checked = !!item.cashPayment;
+    cashCheckbox.style.width = "auto";
+    const cashLabel = document.createElement("span");
+    cashLabel.textContent = "現金決済";
+    cashRow.appendChild(cashCheckbox);
+    cashRow.appendChild(cashLabel);
+
+    const paidMonthEl = document.createElement("span");
+    paidMonthEl.style.cssText = "font-size:11px; color:var(--ink-soft);";
+    paidMonthEl.textContent = item.cashPaidMonth ? `最終支払い確認: ${item.cashPaidMonth}` : "支払い確認なし";
+    cashRow.appendChild(paidMonthEl);
+
+    const markPaidBtn = document.createElement("button");
+    markPaidBtn.textContent = "今月分を確認済みにする";
+    markPaidBtn.style.cssText = "border:none; background:var(--mint); color:#fff; font-weight:700; font-size:11px; padding:4px 9px; border-radius:999px; margin-left:auto;";
+    markPaidBtn.style.display = item.cashPayment ? "inline-block" : "none";
+    markPaidBtn.addEventListener("click", async () => {
+      markPaidBtn.disabled = true;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffMarkCashPaid", password: password, userId: item.userId }),
+        });
+        const result = await res.json();
+        if (result.success){
+          paidMonthEl.textContent = `最終支払い確認: ${result.month}`;
+          showToast(item.name + "さんの今月分を確認済みにしました");
+        } else {
+          showToast("更新に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      } finally {
+        markPaidBtn.disabled = false;
+      }
+    });
+    cashRow.appendChild(markPaidBtn);
+
+    cashCheckbox.addEventListener("change", async () => {
+      const checked = cashCheckbox.checked;
+      markPaidBtn.style.display = checked ? "inline-block" : "none";
+      cashCheckbox.disabled = true;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffSetCashPayment", password: password, userId: item.userId, cashPayment: checked }),
+        });
+        const result = await res.json();
+        if (result.success){
+          item.cashPayment = checked;
+          showToast(checked ? "現金決済に設定しました" : "現金決済を解除しました");
+        } else {
+          cashCheckbox.checked = !checked;
+          markPaidBtn.style.display = !checked ? "inline-block" : "none";
+          showToast("更新に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        cashCheckbox.checked = !checked;
+        markPaidBtn.style.display = !checked ? "inline-block" : "none";
+        showToast("通信に失敗しました");
+      } finally {
+        cashCheckbox.disabled = false;
+      }
+    });
+    row.appendChild(cashRow);
+
     const monthInput = document.createElement("input");
     monthInput.type = "month";
     monthInput.className = "billing-month-input";
@@ -1360,7 +1434,7 @@ function renderBilling(list){
       : "今月の予約はまだありません";
     row.appendChild(datesEl);
 
-    async function doCharge(amount){
+    async function doCharge(amount, forceSquare){
       const res = await fetch(GAS_ENDPOINT, {
         method: "POST",
         body: JSON.stringify({
@@ -1369,6 +1443,7 @@ function renderBilling(list){
           userId: item.userId,
           amount: amount,
           billingMonth: monthInput.value,
+          forceSquare: !!forceSquare,
         }),
       });
       return await res.json();
@@ -1394,7 +1469,18 @@ function renderBilling(list){
       chargeBtn.disabled = true;
       chargeBtn.textContent = "処理中…";
       try {
-        const result = await doCharge(amount);
+        let result = await doCharge(amount, false);
+        if (!result.success && result.reason === "cash_payment"){
+          const proceed = window.confirm(
+            `${item.name}さんは現金決済のため除外されています。\nお間違えないですか？\n\n「OK」で進む／「キャンセル」で中止`
+          );
+          if (!proceed){
+            chargeBtn.disabled = false;
+            chargeBtn.textContent = "請求する";
+            return;
+          }
+          result = await doCharge(amount, true);
+        }
         if (result.success){
           if (result.status === "charged"){
             showToast(item.name + "さんへの引き落としが完了しました");
