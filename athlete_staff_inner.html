@@ -737,6 +737,32 @@
       </div>
     </div>
   </div>
+
+  <div class="modal-overlay" id="excludeReasonModal">
+    <div class="modal-card">
+      <div class="modal-title">対象外の理由を選んでください</div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+          <input type="radio" name="excludeReasonRadio" value="現金決済" style="width:auto;">
+          <span>現金決済</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+          <input type="radio" name="excludeReasonRadio" value="兄弟/姉妹など" style="width:auto;">
+          <span>兄弟/姉妹など</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+          <input type="radio" name="excludeReasonRadio" value="その他" style="width:auto;">
+          <span>その他</span>
+        </label>
+        <input type="text" id="excludeReasonOtherInput" placeholder="理由を入力" style="display:none;">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel-btn" id="excludeReasonCancelBtn">キャンセル</button>
+        <button class="modal-save-btn" id="excludeReasonConfirmBtn">決定</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1293,6 +1319,43 @@ function updateBillingBulkUI(){
   billingSelectAll.checked = checkedCount > 0 && checkedCount === billingRowElements.length;
 }
 
+/* ---------- 対象外の理由選択ポップアップ ---------- */
+const excludeReasonModalEl = document.getElementById("excludeReasonModal");
+const excludeReasonOtherInput = document.getElementById("excludeReasonOtherInput");
+const excludeReasonCancelBtn = document.getElementById("excludeReasonCancelBtn");
+const excludeReasonConfirmBtn = document.getElementById("excludeReasonConfirmBtn");
+let excludeReasonResolve_ = null;
+
+document.querySelectorAll('input[name="excludeReasonRadio"]').forEach(radio => {
+  radio.addEventListener("change", () => {
+    excludeReasonOtherInput.style.display = radio.value === "その他" && radio.checked ? "block" : "none";
+  });
+});
+
+// 対象外チェックが入った時に呼ぶ。理由の文字列(キャンセル時はnull)をPromiseで返す
+function openExcludeReasonModal_(){
+  document.querySelectorAll('input[name="excludeReasonRadio"]').forEach(r => r.checked = false);
+  excludeReasonOtherInput.value = "";
+  excludeReasonOtherInput.style.display = "none";
+  excludeReasonModalEl.classList.add("show");
+  return new Promise(resolve => { excludeReasonResolve_ = resolve; });
+}
+function closeExcludeReasonModal_(result){
+  excludeReasonModalEl.classList.remove("show");
+  if (excludeReasonResolve_) excludeReasonResolve_(result);
+  excludeReasonResolve_ = null;
+}
+excludeReasonCancelBtn.addEventListener("click", () => closeExcludeReasonModal_(null));
+excludeReasonConfirmBtn.addEventListener("click", () => {
+  const checked = document.querySelector('input[name="excludeReasonRadio"]:checked');
+  if (!checked){
+    showToast("理由を選んでください");
+    return;
+  }
+  const reason = checked.value === "その他" ? (excludeReasonOtherInput.value.trim() || "その他") : checked.value;
+  closeExcludeReasonModal_(reason);
+});
+
 function renderBilling(list){
   billingList.innerHTML = "";
   billingRowElements.length = 0;
@@ -1408,6 +1471,16 @@ function renderBilling(list){
 
     cashCheckbox.addEventListener("change", async () => {
       const checked = cashCheckbox.checked;
+
+      let reasonToSave = null;
+      if (checked){
+        reasonToSave = await openExcludeReasonModal_();
+        if (reasonToSave === null){
+          cashCheckbox.checked = false; // キャンセルされたら、チェックも元に戻す
+          return;
+        }
+      }
+
       markPaidBtn.style.display = checked ? "inline-block" : "none";
       cashCheckbox.disabled = true;
       try {
@@ -1419,6 +1492,18 @@ function renderBilling(list){
         if (result.success){
           item.cashPayment = checked;
           showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
+
+          if (checked && reasonToSave){
+            const reasonRes = await fetch(GAS_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reasonToSave }),
+            });
+            const reasonResult = await reasonRes.json();
+            if (reasonResult.success){
+              item.excludeReason = reasonToSave;
+              reasonInput.value = reasonToSave;
+            }
+          }
         } else {
           cashCheckbox.checked = !checked;
           markPaidBtn.style.display = !checked ? "inline-block" : "none";
