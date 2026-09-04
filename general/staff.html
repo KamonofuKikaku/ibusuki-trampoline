@@ -1426,6 +1426,13 @@ function renderBilling(list){
     badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
     badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
     nameRow.appendChild(badge);
+    if (item.lastCardPaidMonth){
+      const cardPaidEl = document.createElement("span");
+      cardPaidEl.className = "card-badge on";
+      cardPaidEl.style.marginLeft = "4px";
+      cardPaidEl.textContent = "カード支払い済:" + item.lastCardPaidMonth;
+      nameRow.appendChild(cardPaidEl);
+    }
     row.appendChild(nameRow);
 
     const datesEl = document.createElement("div");
