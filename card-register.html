@@ -4,84 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>カードのご登録 | 指宿トランポリンジム</title>
-
-<!--
-  【設定するもの】
-  1. GAS_ENDPOINT: Code.gsのデプロイURL(staff.html/index.htmlと同じもの)
-  2. SQUARE_APP_ID: Square開発者ダッシュボードのApplication ID
-     (本番なら「sq0idp-」から始まるProduction用のID。sandboxのものとは別)
-  3. SQUARE_LOCATION_ID: Square開発者ダッシュボードのLocation ID(本番用)
-
-  【重要】下のscriptタグのSDK読み込み元URLも、環境に合わせて変更が必要です。
-  - Sandboxで試す場合: https://sandbox.web.squarecdn.com/v1/square.js
-  - 本番の場合        : https://web.squarecdn.com/v1/square.js
-  現在は「本番用」のURLになっています。Sandboxで試す場合は書き換えてください。
--->
 <script src="https://web.squarecdn.com/v1/square.js"></script>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --cream: #FFFBF3;
     --ink: #2B2320;
     --ink-soft: #7A6F63;
+    --orange: #FF6F3C;
     --mint: #2FBF8F;
     --danger: #E0503A;
     --white: #FFFFFF;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--cream);
-    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
-    color: var(--ink);
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap {
-    max-width: 420px;
-    margin: 0 auto;
-    padding: 32px 20px 60px;
-  }
-  .eyebrow {
-    text-align: center;
-    color: var(--mint);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    margin-bottom: 6px;
-  }
-  h1 {
-    text-align: center;
-    font-size: 20px;
-    margin: 0 0 8px;
-  }
-  .sub {
-    text-align: center;
-    color: var(--ink-soft);
-    font-size: 13px;
-    margin: 0 0 28px;
-  }
-  .card-box {
-    background: var(--white);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 3px 14px rgba(43,35,32,0.08);
-    margin-bottom: 16px;
-  }
-  #card-container {
-    min-height: 90px;
-    margin-bottom: 16px;
-  }
-  .submit-btn {
-    width: 100%;
-    border: none;
-    padding: 14px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 15px;
-    color: var(--white);
-    background: linear-gradient(135deg, var(--mint), #45D6A0);
-  }
-  .submit-btn:disabled { opacity: 0.5; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--ink); font-family: "Zen Kaku Gothic New", sans-serif; }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 32px 20px 40px; }
+  .eyebrow { font-size: 12px; color: var(--mint); font-weight: 700; letter-spacing: 0.06em; text-align: center; }
+  h1 { font-family: "Zen Maru Gothic", sans-serif; font-weight: 900; font-size: 21px; margin: 8px 0 4px; text-align: center; }
+  .sub { font-size: 13px; color: var(--ink-soft); text-align: center; margin: 0 0 20px; }
 
   .amount-box {
     background: var(--white);
@@ -94,6 +35,14 @@
   .amount-label { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
   .amount-value { font-size: 24px; font-weight: 900; }
 
+  .card-box {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 3px 14px rgba(43,35,32,0.08);
+  }
+  #card-container { margin-bottom: 16px; }
+
   .consent-row {
     display: flex;
     align-items: flex-start;
@@ -104,27 +53,28 @@
     margin-bottom: 16px;
   }
   .consent-row input { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; }
-  .status-msg {
-    text-align: center;
-    font-size: 13.5px;
-    margin-top: 14px;
-    color: var(--ink-soft);
+
+  .submit-btn {
+    width: 100%;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-family: "Zen Maru Gothic", sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--orange), #FF9466);
   }
+  .submit-btn:disabled { opacity: 0.5; }
+
+  .status-msg { min-height: 20px; margin-top: 10px; font-size: 12.5px; text-align: center; }
   .status-msg.error { color: var(--danger); font-weight: 700; }
-  .status-msg.success { color: var(--mint); font-weight: 700; }
-  .hint {
-    text-align: center;
-    font-size: 11.5px;
-    color: var(--ink-soft);
-    margin-top: 20px;
-    line-height: 1.6;
-  }
-  .done-box {
-    display: none;
-    text-align: center;
-    padding: 40px 10px;
-  }
-  .done-box .icon { font-size: 48px; margin-bottom: 10px; }
+
+  .hint { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; text-align: center; margin-top: 16px; }
+
+  .done-box { display: none; max-width: 420px; margin: 80px auto 0; padding: 0 20px; text-align: center; }
+  .done-box .icon { font-size: 44px; margin-bottom: 10px; }
+  .done-box h1 { margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -163,11 +113,23 @@
   </div>
 
 <script>
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
+/* =========================================================
+   選手用・一般用の両方から、このページ1つを共通で使う。
+   URLの ?system=general / ?system=athlete でどちらのGASに
+   送るかを切り替える(未指定の場合は選手用として扱う＝後方互換)
+========================================================= */
+const ENDPOINTS = {
+  athlete: "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec",
+  general: "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec",
+};
+// Square のApplication ID / Location IDは選手用・一般用で同じSquareアカウントを使っているため共通でOK
 const SQUARE_APP_ID = "sq0idp-gZNfM5-eqELTtB1PnFKi_Q";
 const SQUARE_LOCATION_ID = "LD9GHQ49VQTB2";
 
 const params = new URLSearchParams(window.location.search);
+const system = params.get("system") === "general" ? "general" : "athlete";
+const GAS_ENDPOINT = ENDPOINTS[system];
+
 const userId = params.get("userId");
 const amount = params.get("amount");
 const chargeTitle = params.get("title");
