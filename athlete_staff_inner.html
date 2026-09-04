@@ -1506,6 +1506,10 @@ function renderBilling(list){
         const result = await res.json();
         if (result.success){
           item.cashPayment = checked;
+          amountInput.disabled = checked;
+          amountInput.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
+          chargeBtn.disabled = checked;
+          chargeBtn.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
           showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
 
           if (checked && reasonToSave){
@@ -1548,11 +1552,19 @@ function renderBilling(list){
     amountInput.placeholder = "金額(1100円単位)";
     // 今月の予約回数×1100円を自動入力(なければ前回保存値)
     amountInput.value = item.suggestedAmount > 0 ? item.suggestedAmount : (item.amount || "");
+    if (item.cashPayment){
+      amountInput.disabled = true;
+      amountInput.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
+    }
     row.appendChild(amountInput);
 
     const chargeBtn = document.createElement("button");
     chargeBtn.className = "charge-btn";
     chargeBtn.textContent = "請求する";
+    if (item.cashPayment){
+      chargeBtn.disabled = true;
+      chargeBtn.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
+    }
     row.appendChild(chargeBtn);
 
     // 予約日を名前の下に表示(分かりやすさのため)
