@@ -191,6 +191,14 @@
   .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .card-badge.on { background: var(--mint-soft); color: var(--mint); }
   .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
+  .paid-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--orange-soft);
+    color: var(--orange);
+  }
   .cash-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
   .cash-row input[type="checkbox"] { width: auto; margin: 0; }
   .cash-paid-month { font-size: 11px; color: var(--ink-soft); }
@@ -1428,9 +1436,9 @@ function renderBilling(list){
     nameRow.appendChild(badge);
     if (item.lastCardPaidMonth){
       const cardPaidEl = document.createElement("span");
-      cardPaidEl.className = "card-badge on";
-      cardPaidEl.style.marginLeft = "4px";
-      cardPaidEl.textContent = "カード支払い済:" + item.lastCardPaidMonth;
+      cardPaidEl.className = "paid-badge";
+      const [py, pm] = item.lastCardPaidMonth.split("-");
+      cardPaidEl.textContent = `${py}年${Number(pm)}月分支払い済み`;
       nameRow.appendChild(cardPaidEl);
     }
     row.appendChild(nameRow);
