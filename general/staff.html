@@ -242,6 +242,7 @@
       <button class="tab-btn active" data-tab="template">カレンダー</button>
       <button class="tab-btn" data-tab="bookings">予約状況(2ヶ月)</button>
       <button class="tab-btn" data-tab="billing">お月謝</button>
+      <button class="tab-btn" data-tab="onetime">単発請求</button>
     </div>
 
     <div class="tab-panel active" id="tab-template">
@@ -271,15 +272,53 @@
     <div class="tab-panel" id="tab-billing">
       <div class="section">
         <div class="label">今月の請求</div>
-        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。</div>
+        <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。チェックを付けて選んだ人に、まとめて請求できます。</div>
         <button class="save-btn" id="refreshCardBtn" style="background: var(--white); color: var(--ink-soft); box-shadow: 0 1px 6px rgba(43,35,32,0.05); margin-bottom: 10px;">カード登録状況を更新</button>
 
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-          <select id="bulkMonthSelect" style="flex:1; min-width:140px; padding:10px; border-radius:10px; border:1px solid #E6DFD3; font-size:13.5px;"></select>
-          <button class="save-btn" id="bulkChargeBtn" style="width:auto; flex-shrink:0; padding:10px 16px;">この月の未決済者へ一括請求</button>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; flex-shrink:0;">
+            <input type="checkbox" id="billingSelectAll" style="width:auto;">すべて選択
+          </label>
+          <select id="unpaidMonthSelect" style="flex:1; min-width:120px; padding:8px; border-radius:8px; border:1px solid #E6DFD3; font-size:12.5px;"></select>
+          <button class="save-btn" id="selectUnpaidBtn" style="width:auto; flex-shrink:0; padding:8px 12px; background:var(--white); color:var(--ink-soft); box-shadow:0 1px 6px rgba(43,35,32,0.05);">未決済者を選択</button>
+          <button class="save-btn" id="billingBulkBtn" style="width:auto; flex-shrink:0; padding:8px 14px; display:none;">
+            選択した人に一括請求(<span id="billingSelectedCount">0</span>)
+          </button>
         </div>
 
         <div id="billingList"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-onetime">
+      <div class="section">
+        <div class="label">単発請求（年会費など）</div>
+        <div class="hint">請求内容と金額を入力し、対象の人にチェックを付けて請求してください。カード登録済みの人は自動引き落とし、未登録の人には支払いリンクが届きます。</div>
+
+        <div style="background:var(--cream); border-radius:12px; padding:12px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <div style="width:50px; font-size:12.5px; color:var(--ink-soft); flex-shrink:0;">内容</div>
+            <input type="text" id="onetimeTitle" placeholder="例：年会費（自由入力も可）" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #E6DFD3;">
+          </div>
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button type="button" class="save-btn" data-onetime-title="練習" style="width:auto; flex:1; padding:6px; font-size:12.5px; background:var(--white); color:var(--ink-soft); box-shadow:0 1px 6px rgba(43,35,32,0.05);">練習</button>
+            <button type="button" class="save-btn" data-onetime-title="年会費" style="width:auto; flex:1; padding:6px; font-size:12.5px; background:var(--white); color:var(--ink-soft); box-shadow:0 1px 6px rgba(43,35,32,0.05);">年会費</button>
+            <button type="button" class="save-btn" data-onetime-title="その他" style="width:auto; flex:1; padding:6px; font-size:12.5px; background:var(--white); color:var(--ink-soft); box-shadow:0 1px 6px rgba(43,35,32,0.05);">その他</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:50px; font-size:12.5px; color:var(--ink-soft); flex-shrink:0;">金額</div>
+            <input type="number" id="onetimeAmount" step="100" min="0" placeholder="例：3300" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #E6DFD3;">
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; flex-shrink:0;">
+            <input type="checkbox" id="onetimeSelectAll" style="width:auto;">すべて選択
+          </label>
+          <button class="save-btn" id="onetimeChargeBtn" style="width:auto; flex-shrink:0; padding:8px 14px;">選択した人に請求(<span id="onetimeSelectedCount">0</span>)</button>
+        </div>
+
+        <div id="onetimeList"></div>
       </div>
     </div>
   </div>
@@ -411,6 +450,69 @@ const warnApproveBtn = document.getElementById("warnApproveBtn");
 const upcomingList = document.getElementById("upcomingList");
 const billingList = document.getElementById("billingList");
 const refreshCardBtn = document.getElementById("refreshCardBtn");
+const billingSelectAll = document.getElementById("billingSelectAll");
+const billingBulkBtn = document.getElementById("billingBulkBtn");
+const billingSelectedCountEl = document.getElementById("billingSelectedCount");
+const billingRowElements = []; // {userId, name, checkbox, amountInput, monthInput, chargeBtn, doCharge, cashPayment, effectivePaidThrough}
+
+function updateBillingBulkUI(){
+  const checkedCount = billingRowElements.filter(r => r.checkbox.checked).length;
+  const selectableCount = billingRowElements.filter(r => !r.checkbox.disabled).length;
+  billingSelectedCountEl.textContent = checkedCount;
+  billingBulkBtn.style.display = checkedCount > 0 ? "inline-block" : "none";
+  billingSelectAll.checked = checkedCount > 0 && checkedCount === selectableCount;
+}
+billingSelectAll.addEventListener("change", () => {
+  billingRowElements.forEach(r => { if (!r.checkbox.disabled) r.checkbox.checked = billingSelectAll.checked; });
+  updateBillingBulkUI();
+});
+billingBulkBtn.addEventListener("click", async () => {
+  const targets = billingRowElements.filter(r => r.checkbox.checked);
+  if (!targets.length) return;
+
+  const summary = targets.map(t => `・${t.name}：${Number(t.amountInput.value).toLocaleString()}円`).join("\n");
+  const ok = window.confirm(`以下の${targets.length}名にまとめて請求します。よろしいですか？\n\n${summary}`);
+  if (!ok) return;
+
+  billingBulkBtn.disabled = true;
+  let successCount = 0;
+  const failures = [];
+
+  for (const t of targets) {
+    const rawAmount = Number(t.amountInput.value);
+    if (!rawAmount || rawAmount <= 0){
+      failures.push({ name: t.name, reason: "金額が未入力です" });
+      continue;
+    }
+    t.chargeBtn.disabled = true;
+    t.chargeBtn.textContent = "処理中…";
+    try {
+      const result = await t.doCharge(rawAmount, false);
+      if (result.success) {
+        successCount++;
+      } else {
+        failures.push({ name: t.name, reason: result.reason || "不明なエラー" });
+      }
+    } catch (err) {
+      console.error(err);
+      failures.push({ name: t.name, reason: "通信エラー" });
+    } finally {
+      t.chargeBtn.disabled = false;
+      t.chargeBtn.textContent = "請求する";
+    }
+  }
+
+  billingBulkBtn.disabled = false;
+
+  if (failures.length === 0){
+    showToast(`一括請求：成功${successCount}件`);
+  } else {
+    const detail = failures.map(f => `・${f.name}：${f.reason}`).join("\n");
+    window.alert(`一括請求結果\n\n成功：${successCount}件\n失敗：${failures.length}件\n\n【失敗の詳細】\n${detail}`);
+  }
+  fetchBillingList();
+  loadUnpaidMonths_();
+});
 
 let password = "";
 let lastOverviewData = null;
@@ -1440,11 +1542,118 @@ async function fetchBillingList(){
     const data = await res.json();
     if (data.error) return;
     renderBilling(data.list || []);
+    renderOnetimeList(data.list || []);
   } catch (err){
     console.error(err);
     showToast("請求一覧の取得に失敗しました");
   }
 }
+
+/* ---------- 単発請求（年会費など） ---------- */
+const onetimeList = document.getElementById("onetimeList");
+const onetimeSelectAll = document.getElementById("onetimeSelectAll");
+const onetimeChargeBtn = document.getElementById("onetimeChargeBtn");
+const onetimeSelectedCountEl = document.getElementById("onetimeSelectedCount");
+const onetimeCheckboxes = []; // {userId, name, checkbox}
+
+// 練習・年会費・その他のクイック選択(押すと内容欄に自動入力。その後も自由に編集可能)
+document.querySelectorAll("[data-onetime-title]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const titleInput = document.getElementById("onetimeTitle");
+    if (btn.dataset.onetimeTitle === "その他"){
+      titleInput.value = "";
+      titleInput.focus();
+    } else {
+      titleInput.value = btn.dataset.onetimeTitle;
+    }
+  });
+});
+
+function renderOnetimeList(list){
+  onetimeList.innerHTML = "";
+  onetimeCheckboxes.length = 0;
+
+  if (!list.length){
+    onetimeList.innerHTML = `<span class="empty-note">対象の利用者がまだいません</span>`;
+    return;
+  }
+
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "billing-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.cssText = "width:auto; margin-right:8px;";
+    checkbox.addEventListener("change", updateOnetimeUI);
+    row.appendChild(checkbox);
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "billing-name";
+    nameRow.innerHTML = `<span>${item.name}</span>`;
+    const badge = document.createElement("span");
+    badge.className = "card-badge " + (item.cardOnFile ? "on" : "off");
+    badge.textContent = item.cardOnFile ? "カード登録済み" : "未登録";
+    nameRow.appendChild(badge);
+    row.appendChild(nameRow);
+
+    onetimeCheckboxes.push({ userId: item.userId, name: item.name, checkbox });
+    onetimeList.appendChild(row);
+  });
+
+  updateOnetimeUI();
+}
+
+function updateOnetimeUI(){
+  const checkedCount = onetimeCheckboxes.filter(r => r.checkbox.checked).length;
+  onetimeSelectedCountEl.textContent = checkedCount;
+  onetimeSelectAll.checked = checkedCount > 0 && checkedCount === onetimeCheckboxes.length;
+}
+
+onetimeSelectAll.addEventListener("change", () => {
+  onetimeCheckboxes.forEach(r => { r.checkbox.checked = onetimeSelectAll.checked; });
+  updateOnetimeUI();
+});
+
+onetimeChargeBtn.addEventListener("click", async () => {
+  const title = document.getElementById("onetimeTitle").value.trim();
+  const rawAmount = Number(document.getElementById("onetimeAmount").value);
+  const targets = onetimeCheckboxes.filter(r => r.checkbox.checked);
+
+  if (!title){ showToast("請求内容を入力してください"); return; }
+  if (!rawAmount || rawAmount <= 0){ showToast("金額を入力してください"); return; }
+  if (!targets.length){ showToast("対象者を選んでください"); return; }
+
+  const summary = targets.map(t => `・${t.name}`).join("\n");
+  const ok = window.confirm(`以下の${targets.length}名に「${title}(${rawAmount.toLocaleString()}円)」を請求します。よろしいですか？\n\n${summary}`);
+  if (!ok) return;
+
+  onetimeChargeBtn.disabled = true;
+  let successCount = 0, failCount = 0;
+
+  for (const t of targets) {
+    try {
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffCharge",
+          password: password,
+          userId: t.userId,
+          amount: rawAmount,
+          title: title,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) successCount++; else failCount++;
+    } catch (err) {
+      console.error(err);
+      failCount++;
+    }
+  }
+
+  onetimeChargeBtn.disabled = false;
+  showToast(`単発請求：成功${successCount}件${failCount > 0 ? "・失敗" + failCount + "件" : ""}`);
+});
 
 /* ---------- 対象外の理由選択ポップアップ ---------- */
 const excludeReasonModalOverlay = document.getElementById("excludeReasonModalOverlay");
@@ -1489,6 +1698,7 @@ excludeReasonConfirmBtn.addEventListener("click", () => {
 
 function renderBilling(list){
   billingList.innerHTML = "";
+  billingRowElements.length = 0;
   if (!list.length){
     billingList.innerHTML = `<span class="empty-note">対象の利用者がまだいません</span>`;
     return;
@@ -1497,6 +1707,21 @@ function renderBilling(list){
   list.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.style.cssText = "width:auto; margin-right:8px;";
+    if (item.cashPayment) checkbox.disabled = true; // 対象外の人は選択できないようにする
+    checkbox.addEventListener("change", updateBillingBulkUI);
+    row.appendChild(checkbox);
+
+    // カード・現金それぞれの最終支払い月のうち、新しい方を「実質どこまで払い済みか」として扱う
+    const effectivePaidThrough = (() => {
+      const c = item.lastCardPaidMonth || "";
+      const h = item.cashPaidMonth || "";
+      if (c && h) return c >= h ? c : h;
+      return c || h || "";
+    })();
 
     const nameRow = document.createElement("div");
     nameRow.className = "billing-name";
@@ -1688,6 +1913,12 @@ function renderBilling(list){
     });
     row.appendChild(cashRow);
 
+    const monthInput = document.createElement("input");
+    monthInput.type = "month";
+    monthInput.value = new Date().toISOString().slice(0, 7); // デフォルトは今月
+    monthInput.style.cssText = "margin-bottom:8px;";
+    row.appendChild(monthInput);
+
     const amountInput = document.createElement("input");
     amountInput.type = "number";
     amountInput.step = "100";
@@ -1707,6 +1938,18 @@ function renderBilling(list){
       chargeBtn.disabled = true;
       chargeBtn.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
     }
+
+    async function doCharge(amount, forceSquare){
+      const res = await fetch(GAS_ENDPOINT, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "staffCharge", password: password, userId: item.userId, amount: amount,
+          billingMonth: monthInput.value, forceSquare: !!forceSquare,
+        }),
+      });
+      return await res.json();
+    }
+
     chargeBtn.addEventListener("click", async () => {
       const amount = Number(amountInput.value);
       if (!amount || amount <= 0){
@@ -1732,14 +1975,7 @@ function renderBilling(list){
         chargeBtn.disabled = true;
         chargeBtn.textContent = "処理中…";
         try {
-          const res = await fetch(GAS_ENDPOINT, {
-            method: "POST",
-            body: JSON.stringify({
-              action: "staffCharge", password: password, userId: item.userId, amount: amount,
-              forceSquare: forceSquare,
-            }),
-          });
-          const result = await res.json();
+          const result = await doCharge(amount, forceSquare);
           if (result.success){
             showToast(item.name + "さんへの請求処理が完了しました");
           } else if (result.reason === "cash_payment"){
@@ -1758,12 +1994,17 @@ function renderBilling(list){
     });
     row.appendChild(chargeBtn);
 
+    billingRowElements.push({
+      userId: item.userId, name: item.name, checkbox, amountInput, monthInput, chargeBtn, doCharge,
+      cashPayment: !!item.cashPayment, effectivePaidThrough: effectivePaidThrough,
+    });
+
     billingList.appendChild(row);
   });
 }
 
-const bulkMonthSelect = document.getElementById("bulkMonthSelect");
-const bulkChargeBtn = document.getElementById("bulkChargeBtn");
+const unpaidMonthSelect = document.getElementById("unpaidMonthSelect");
+const selectUnpaidBtn = document.getElementById("selectUnpaidBtn");
 
 function formatMonthLabel_(monthStr){
   const [y, m] = monthStr.split("-");
@@ -1775,63 +2016,43 @@ async function loadUnpaidMonths_(){
     const res = await fetch(`${GAS_ENDPOINT}?action=staffGetUnpaidMonths&password=${encodeURIComponent(password)}`);
     const data = await res.json();
     const months = data.months || [];
-    bulkMonthSelect.innerHTML = "";
+    unpaidMonthSelect.innerHTML = "";
     if (!months.length){
       const opt = document.createElement("option");
       opt.textContent = "未決済の月はありません";
-      bulkMonthSelect.appendChild(opt);
-      bulkChargeBtn.disabled = true;
+      unpaidMonthSelect.appendChild(opt);
+      selectUnpaidBtn.disabled = true;
       return;
     }
-    bulkChargeBtn.disabled = false;
+    selectUnpaidBtn.disabled = false;
     months.forEach(month => {
       const opt = document.createElement("option");
       opt.value = month;
       opt.textContent = formatMonthLabel_(month) + "分";
-      bulkMonthSelect.appendChild(opt);
+      unpaidMonthSelect.appendChild(opt);
     });
   } catch (err){
     console.error(err);
   }
 }
 
-bulkChargeBtn.addEventListener("click", async () => {
-  const month = bulkMonthSelect.value;
+// 選んだ月について、まだその月まで支払いが済んでいない人（対象外を除く）のチェックボックスだけを選択する
+// (実際の請求は、これまで通り「選択した人に一括請求」ボタンで行う)
+selectUnpaidBtn.addEventListener("click", () => {
+  const month = unpaidMonthSelect.value;
   if (!month) return;
-  const label = formatMonthLabel_(month);
-  if (!window.confirm(`${label}分について、まだ支払いが済んでいない人（対象外を除く）へ、まとめて請求します。\nカード未登録の人には、代わりにカード登録リンクが届きます。\n\nよろしいですか？`)) return;
-
-  bulkChargeBtn.disabled = true;
-  bulkChargeBtn.textContent = "処理中…";
-  try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({ action: "staffBulkChargeByMonth", password: password, month: month }),
-    });
-    const data = await res.json();
-    if (data.success){
-      const results = data.results || [];
-      const charged = results.filter(r => r.success && r.status === "charged").length;
-      const linkSent = results.filter(r => r.success && r.status === "registration_link_sent").length;
-      const pending = results.filter(r => r.success && r.status === "pending").length;
-      const failed = results.filter(r => !r.success);
-      let msg = `${label}分の一括請求結果\n\n引き落とし成功：${charged}件\n登録リンク送信：${linkSent}件\n要確認：${pending}件`;
-      if (failed.length){
-        msg += `\n失敗：${failed.length}件\n` + failed.map(r => `・${r.name}：${r.reason || "不明"}`).join("\n");
-      }
-      window.alert(msg);
-      fetchBillingList();
-      loadUnpaidMonths_();
-    } else {
-      showToast("一括請求に失敗しました");
+  let count = 0;
+  billingRowElements.forEach(r => {
+    if (r.checkbox.disabled) { r.checkbox.checked = false; return; } // 対象外は常に対象外
+    const unpaid = !(r.effectivePaidThrough && r.effectivePaidThrough >= month);
+    r.checkbox.checked = unpaid;
+    if (unpaid) {
+      count++;
+      if (r.monthInput) r.monthInput.value = month; // 一括請求時にこの月宛てで請求されるようにする
     }
-  } catch (err){
-    console.error(err);
-    showToast("通信に失敗しました");
-  } finally {
-    bulkChargeBtn.disabled = false;
-    bulkChargeBtn.textContent = "この月の未決済者へ一括請求";
-  }
+  });
+  updateBillingBulkUI();
+  showToast(`${formatMonthLabel_(month)}分 未決済の${count}名を選択しました`);
 });
 
 refreshCardBtn.addEventListener("click", async () => {
