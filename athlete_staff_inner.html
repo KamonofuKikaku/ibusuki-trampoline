@@ -669,13 +669,10 @@
         <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
 
         <div class="billing-toolbar" style="flex-wrap:wrap;">
-          <label class="billing-select-all">
-            <input type="checkbox" id="billingSelectAll">すべて選択
-          </label>
           <select id="unpaidMonthSelect" style="flex:1; min-width:120px; padding:8px; border-radius:8px; border:1px solid #E6DFD3; font-size:12.5px;"></select>
-          <button class="toolbar-btn" id="selectUnpaidBtn" style="flex-shrink:0;">未決済者を選択</button>
-          <button class="toolbar-btn primary" id="billingBulkBtn" style="display:none;">
-            選択した生徒に一括請求(<span id="billingSelectedCount">0</span>)
+          <button class="toolbar-btn" id="selectUnpaidBtn" style="flex-shrink:0; background:var(--mint); color:#fff; border:none;">未決済者を選択</button>
+          <button class="toolbar-btn" id="billingBulkBtn" style="background:var(--orange); color:#fff; border:none;">
+            選択者に一括請求(<span id="billingSelectedCount">0</span>)
           </button>
         </div>
 
@@ -1305,7 +1302,6 @@ async function fetchBillingList(){
 }
 
 const billingRowElements = []; // {userId, name, checkbox, amountInput, chargeBtn, doCharge}
-const billingSelectAll = document.getElementById("billingSelectAll");
 const billingBulkBtn = document.getElementById("billingBulkBtn");
 const billingSelectedCountEl = document.getElementById("billingSelectedCount");
 
@@ -1316,10 +1312,7 @@ function formatBillingDateLabel_(dateStr){
 
 function updateBillingBulkUI(){
   const checkedCount = billingRowElements.filter(r => r.checkbox.checked).length;
-  const selectableCount = billingRowElements.filter(r => !r.checkbox.disabled).length;
   billingSelectedCountEl.textContent = checkedCount;
-  billingBulkBtn.style.display = checkedCount > 0 ? "inline-block" : "none";
-  billingSelectAll.checked = checkedCount > 0 && checkedCount === selectableCount;
 }
 
 /* ---------- 対象外の理由選択ポップアップ ---------- */
@@ -1653,14 +1646,12 @@ function renderBilling(list){
   updateBillingBulkUI();
 }
 
-billingSelectAll.addEventListener("change", () => {
-  billingRowElements.forEach(r => { if (!r.checkbox.disabled) r.checkbox.checked = billingSelectAll.checked; });
-  updateBillingBulkUI();
-});
-
 billingBulkBtn.addEventListener("click", async () => {
   const targets = billingRowElements.filter(r => r.checkbox.checked);
-  if (!targets.length) return;
+  if (!targets.length){
+    showToast("選択されていません");
+    return;
+  }
 
   const summary = targets.map(t => `・${t.name}：${Number(t.amountInput.value).toLocaleString()}円`).join("\n");
   const ok = window.confirm(`以下の${targets.length}名にまとめて請求します。よろしいですか？\n\n${summary}`);
