@@ -273,6 +273,12 @@
         <div class="label">今月の請求</div>
         <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。</div>
         <button class="save-btn" id="refreshCardBtn" style="background: var(--white); color: var(--ink-soft); box-shadow: 0 1px 6px rgba(43,35,32,0.05); margin-bottom: 10px;">カード登録状況を更新</button>
+
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+          <select id="bulkMonthSelect" style="flex:1; min-width:140px; padding:10px; border-radius:10px; border:1px solid #E6DFD3; font-size:13.5px;"></select>
+          <button class="save-btn" id="bulkChargeBtn" style="width:auto; flex-shrink:0; padding:10px 16px;">この月の未決済者へ一括請求</button>
+        </div>
+
         <div id="billingList"></div>
       </div>
     </div>
@@ -1508,7 +1514,7 @@ function renderBilling(list){
     }
     row.appendChild(nameRow);
 
-    if (!item.cardOnFile){
+    if (!item.cardOnFile && !item.cashPayment){
       const sendLinkBtn = document.createElement("button");
       sendLinkBtn.textContent = "カード登録リンクを送る";
       sendLinkBtn.style.cssText = "border:none; background:var(--orange); color:#fff; font-weight:700; font-size:11.5px; padding:6px 12px; border-radius:999px; margin-bottom:8px;";
@@ -1744,6 +1750,78 @@ function renderBilling(list){
   });
 }
 
+const bulkMonthSelect = document.getElementById("bulkMonthSelect");
+const bulkChargeBtn = document.getElementById("bulkChargeBtn");
+
+function formatMonthLabel_(monthStr){
+  const [y, m] = monthStr.split("-");
+  return `${y}年${Number(m)}月`;
+}
+
+async function loadUnpaidMonths_(){
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=staffGetUnpaidMonths&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    const months = data.months || [];
+    bulkMonthSelect.innerHTML = "";
+    if (!months.length){
+      const opt = document.createElement("option");
+      opt.textContent = "未決済の月はありません";
+      bulkMonthSelect.appendChild(opt);
+      bulkChargeBtn.disabled = true;
+      return;
+    }
+    bulkChargeBtn.disabled = false;
+    months.forEach(month => {
+      const opt = document.createElement("option");
+      opt.value = month;
+      opt.textContent = formatMonthLabel_(month) + "分";
+      bulkMonthSelect.appendChild(opt);
+    });
+  } catch (err){
+    console.error(err);
+  }
+}
+
+bulkChargeBtn.addEventListener("click", async () => {
+  const month = bulkMonthSelect.value;
+  if (!month) return;
+  const label = formatMonthLabel_(month);
+  if (!window.confirm(`${label}分について、まだ支払いが済んでいない人（対象外を除く）へ、まとめて請求します。\nカード未登録の人には、代わりにカード登録リンクが届きます。\n\nよろしいですか？`)) return;
+
+  bulkChargeBtn.disabled = true;
+  bulkChargeBtn.textContent = "処理中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffBulkChargeByMonth", password: password, month: month }),
+    });
+    const data = await res.json();
+    if (data.success){
+      const results = data.results || [];
+      const charged = results.filter(r => r.success && r.status === "charged").length;
+      const linkSent = results.filter(r => r.success && r.status === "registration_link_sent").length;
+      const pending = results.filter(r => r.success && r.status === "pending").length;
+      const failed = results.filter(r => !r.success);
+      let msg = `${label}分の一括請求結果\n\n引き落とし成功：${charged}件\n登録リンク送信：${linkSent}件\n要確認：${pending}件`;
+      if (failed.length){
+        msg += `\n失敗：${failed.length}件\n` + failed.map(r => `・${r.name}：${r.reason || "不明"}`).join("\n");
+      }
+      window.alert(msg);
+      fetchBillingList();
+      loadUnpaidMonths_();
+    } else {
+      showToast("一括請求に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    bulkChargeBtn.disabled = false;
+    bulkChargeBtn.textContent = "この月の未決済者へ一括請求";
+  }
+});
+
 refreshCardBtn.addEventListener("click", async () => {
   refreshCardBtn.disabled = true;
   refreshCardBtn.textContent = "更新中…";
@@ -1792,6 +1870,7 @@ async function tryLogin(pw){
     mainView.style.display = "block";
     renderOverview(data);
     fetchBillingList();
+    loadUnpaidMonths_();
     try { window.parent.postMessage({ type: "innerPageReady", system: "general" }, "*"); } catch (e) {}
   } catch (err){
     console.error(err);
