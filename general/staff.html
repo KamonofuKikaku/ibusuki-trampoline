@@ -1435,6 +1435,36 @@ function renderBilling(list){
     }
     row.appendChild(nameRow);
 
+    if (!item.cardOnFile){
+      const sendLinkBtn = document.createElement("button");
+      sendLinkBtn.textContent = "カード登録リンクを送る";
+      sendLinkBtn.style.cssText = "border:none; background:var(--orange); color:#fff; font-weight:700; font-size:11.5px; padding:6px 12px; border-radius:999px; margin-bottom:8px;";
+      sendLinkBtn.addEventListener("click", async () => {
+        sendLinkBtn.disabled = true;
+        sendLinkBtn.textContent = "送信中…";
+        try {
+          const res = await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "sendCardRegisterLink", password: password, userId: item.userId }),
+          });
+          const result = await res.json();
+          if (result.success){
+            showToast(item.name + "さんへ登録リンクを送信しました");
+          } else {
+            showToast("送信に失敗しました");
+            sendLinkBtn.disabled = false;
+            sendLinkBtn.textContent = "カード登録リンクを送る";
+          }
+        } catch (err){
+          console.error(err);
+          showToast("通信に失敗しました");
+          sendLinkBtn.disabled = false;
+          sendLinkBtn.textContent = "カード登録リンクを送る";
+        }
+      });
+      row.appendChild(sendLinkBtn);
+    }
+
     const datesEl = document.createElement("div");
     datesEl.className = "billing-dates";
     datesEl.textContent = item.bookingEntries.length
