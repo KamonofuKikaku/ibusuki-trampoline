@@ -1555,20 +1555,30 @@ function renderBilling(list){
     cashRow.appendChild(cashCheckbox);
     cashRow.appendChild(cashLabel);
 
-    const reasonInput = document.createElement("input");
-    reasonInput.type = "text";
-    reasonInput.placeholder = "例：兄弟・現金決済など";
-    reasonInput.value = item.excludeReason || "";
-    reasonInput.style.cssText = "width:110px; padding:3px 6px; border-radius:6px; border:1px solid #E6DFD3; font-size:11px;";
-    reasonInput.addEventListener("change", async () => {
+    const reasonSpan = document.createElement("span");
+    reasonSpan.textContent = item.excludeReason || "(タップして選択)";
+    reasonSpan.style.cssText = "font-size:11px; color:var(--orange); text-decoration:underline; cursor:pointer;";
+    reasonSpan.addEventListener("click", async () => {
+      const reason = await openExcludeReasonModal_();
+      if (reason === null) return;
       try {
         const res = await fetch(GAS_ENDPOINT, {
           method: "POST",
-          body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reasonInput.value }),
+          body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reason }),
         });
         const result = await res.json();
         if (result.success){
-          item.excludeReason = reasonInput.value;
+          item.excludeReason = reason;
+          reasonSpan.textContent = reason;
+          if (!cashCheckbox.checked){
+            cashCheckbox.checked = true;
+            markPaidBtn.style.display = "inline-block";
+            await fetch(GAS_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetCashPayment", password: password, userId: item.userId, cashPayment: true }),
+            });
+            item.cashPayment = true;
+          }
           showToast("理由を保存しました");
         } else {
           showToast("保存に失敗しました");
@@ -1578,7 +1588,7 @@ function renderBilling(list){
         showToast("通信に失敗しました");
       }
     });
-    cashRow.appendChild(reasonInput);
+    cashRow.appendChild(reasonSpan);
 
     const closeParen = document.createElement("span");
     closeParen.textContent = ")";
@@ -1649,7 +1659,7 @@ function renderBilling(list){
             const reasonResult = await reasonRes.json();
             if (reasonResult.success){
               item.excludeReason = reasonToSave;
-              reasonInput.value = reasonToSave;
+              reasonSpan.textContent = reasonToSave;
             }
           }
         } else {
