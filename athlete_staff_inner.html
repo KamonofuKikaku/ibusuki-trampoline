@@ -668,6 +668,11 @@
         <div class="hint">金額は初回1100円、以降は前回請求した金額が初期値になります（手で調整も可）。チェックを付けて選んだ生徒に、まとめて請求できます。</div>
         <button class="refresh-btn" id="refreshCardBtn">カード登録状況を更新</button>
 
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+          <select id="bulkMonthSelect" style="flex:1; min-width:140px; padding:10px; border-radius:10px; border:1px solid #E6DFD3; font-size:13.5px;"></select>
+          <button class="refresh-btn" id="bulkChargeBtn" style="width:auto; flex-shrink:0; padding:10px 16px; background:var(--orange); color:#fff; border:none;">この月の未決済者へ一括請求</button>
+        </div>
+
         <div class="billing-toolbar">
           <label class="billing-select-all">
             <input type="checkbox" id="billingSelectAll">すべて選択
@@ -1408,20 +1413,30 @@ function renderBilling(list){
     cashRow.appendChild(cashCheckbox);
     cashRow.appendChild(cashLabel);
 
-    const reasonInput = document.createElement("input");
-    reasonInput.type = "text";
-    reasonInput.placeholder = "例：兄弟・現金決済など";
-    reasonInput.value = item.excludeReason || "";
-    reasonInput.style.cssText = "width:110px; padding:3px 6px; border-radius:6px; border:1px solid #E6DFD3; font-size:11px;";
-    reasonInput.addEventListener("change", async () => {
+    const reasonSpan = document.createElement("span");
+    reasonSpan.textContent = item.excludeReason || "(タップして選択)";
+    reasonSpan.style.cssText = "font-size:11px; color:var(--orange); text-decoration:underline; cursor:pointer;";
+    reasonSpan.addEventListener("click", async () => {
+      const reason = await openExcludeReasonModal_();
+      if (reason === null) return;
       try {
         const res = await fetch(GAS_ENDPOINT, {
           method: "POST",
-          body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reasonInput.value }),
+          body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reason }),
         });
         const result = await res.json();
         if (result.success){
-          item.excludeReason = reasonInput.value;
+          item.excludeReason = reason;
+          reasonSpan.textContent = reason;
+          if (!cashCheckbox.checked){
+            cashCheckbox.checked = true;
+            markPaidBtn.style.display = "inline-block";
+            await fetch(GAS_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetCashPayment", password: password, userId: item.userId, cashPayment: true }),
+            });
+            item.cashPayment = true;
+          }
           showToast("理由を保存しました");
         } else {
           showToast("保存に失敗しました");
@@ -1431,7 +1446,7 @@ function renderBilling(list){
         showToast("通信に失敗しました");
       }
     });
-    cashRow.appendChild(reasonInput);
+    cashRow.appendChild(reasonSpan);
 
     const closeParen = document.createElement("span");
     closeParen.textContent = ")";
@@ -1501,7 +1516,7 @@ function renderBilling(list){
             const reasonResult = await reasonRes.json();
             if (reasonResult.success){
               item.excludeReason = reasonToSave;
-              reasonInput.value = reasonToSave;
+              reasonSpan.textContent = reasonToSave;
             }
           }
         } else {
@@ -1796,6 +1811,78 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
+const bulkMonthSelect = document.getElementById("bulkMonthSelect");
+const bulkChargeBtn = document.getElementById("bulkChargeBtn");
+
+function formatMonthLabel_(monthStr){
+  const [y, m] = monthStr.split("-");
+  return `${y}年${Number(m)}月`;
+}
+
+async function loadUnpaidMonths_(){
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=staffGetUnpaidMonths&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    const months = data.months || [];
+    bulkMonthSelect.innerHTML = "";
+    if (!months.length){
+      const opt = document.createElement("option");
+      opt.textContent = "未決済の月はありません";
+      bulkMonthSelect.appendChild(opt);
+      bulkChargeBtn.disabled = true;
+      return;
+    }
+    bulkChargeBtn.disabled = false;
+    months.forEach(month => {
+      const opt = document.createElement("option");
+      opt.value = month;
+      opt.textContent = formatMonthLabel_(month) + "分";
+      bulkMonthSelect.appendChild(opt);
+    });
+  } catch (err){
+    console.error(err);
+  }
+}
+
+bulkChargeBtn.addEventListener("click", async () => {
+  const month = bulkMonthSelect.value;
+  if (!month) return;
+  const label = formatMonthLabel_(month);
+  if (!window.confirm(`${label}分について、まだ支払いが済んでいない人（対象外を除く）へ、まとめて請求します。\nカード未登録の人には、代わりにカード登録リンクが届きます。\n\nよろしいですか？`)) return;
+
+  bulkChargeBtn.disabled = true;
+  bulkChargeBtn.textContent = "処理中…";
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffBulkChargeByMonth", password: password, month: month }),
+    });
+    const data = await res.json();
+    if (data.success){
+      const results = data.results || [];
+      const charged = results.filter(r => r.success && r.status === "charged").length;
+      const linkSent = results.filter(r => r.success && r.status === "registration_link_sent").length;
+      const pending = results.filter(r => r.success && r.status === "pending").length;
+      const failed = results.filter(r => !r.success);
+      let msg = `${label}分の一括請求結果\n\n引き落とし成功：${charged}件\n登録リンク送信：${linkSent}件\n要確認：${pending}件`;
+      if (failed.length){
+        msg += `\n失敗：${failed.length}件\n` + failed.map(r => `・${r.name}：${r.reason || "不明"}`).join("\n");
+      }
+      window.alert(msg);
+      fetchBillingList();
+      loadUnpaidMonths_();
+    } else {
+      showToast("一括請求に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  } finally {
+    bulkChargeBtn.disabled = false;
+    bulkChargeBtn.textContent = "この月の未決済者へ一括請求";
+  }
+});
+
 refreshCardBtn.addEventListener("click", async () => {
   refreshCardBtn.disabled = true;
   refreshCardBtn.textContent = "更新中…";
@@ -1835,6 +1922,7 @@ async function tryLogin(pw){
     mainView.style.display = "block";
     renderOverview(data);
     fetchBillingList();
+    loadUnpaidMonths_();
     try { window.parent.postMessage({ type: "innerPageReady", system: "athlete" }, "*"); } catch (e) {}
   } catch (err){
     console.error(err);
