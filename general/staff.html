@@ -187,7 +187,7 @@
 
   /* ---------- お月謝 ---------- */
   .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
-  .billing-row .billing-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .billing-row .billing-name { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
   .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .card-badge.on { background: var(--mint-soft); color: var(--mint); }
   .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
@@ -216,6 +216,9 @@
     opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none; z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  input[type="radio"][name="excludeReasonRadio"] {
+    width: 16px; height: 16px; margin: 0; flex-shrink: 0; position: relative; top: 0;
+  }
 </style>
 </head>
 <body>
@@ -1719,7 +1722,7 @@ function renderBilling(list){
   sortedList.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
-    row.style.cssText = "display:flex; align-items:center; gap:10px;" + (item.cashPayment ? " opacity:0.5;" : "");
+    row.style.cssText = "display:flex; align-items:center; gap:16px;" + (item.cashPayment ? " opacity:0.5;" : "");
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
