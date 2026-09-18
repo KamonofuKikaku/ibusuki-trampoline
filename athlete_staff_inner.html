@@ -1385,6 +1385,7 @@ function renderBilling(list){
   sortedList.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
+    if (item.cashPayment) row.style.opacity = "0.5";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -1392,6 +1393,10 @@ function renderBilling(list){
     if (item.cashPayment) checkbox.disabled = true; // 対象外の人は選択できないようにする
     checkbox.addEventListener("change", updateBillingBulkUI);
     row.appendChild(checkbox);
+
+    const checkboxDivider = document.createElement("div");
+    checkboxDivider.style.cssText = "width:1px; align-self:stretch; background:#E6DFD3; flex-shrink:0;";
+    row.appendChild(checkboxDivider);
 
     const contentDiv = document.createElement("div");
     contentDiv.style.cssText = "flex:1; min-width:0;";
@@ -1488,7 +1493,7 @@ function renderBilling(list){
 
     const markPaidBtn = document.createElement("button");
     markPaidBtn.textContent = "今月分を確認済みにする";
-    markPaidBtn.style.cssText = "border:none; background:var(--mint); color:#fff; font-weight:700; font-size:11px; padding:4px 9px; border-radius:999px; margin-left:auto;";
+    markPaidBtn.style.cssText = "border:none; background:var(--mint); color:#fff; font-weight:700; font-size:11px; padding:4px 9px; border-radius:999px; flex-basis:100%; margin-top:2px;";
     markPaidBtn.style.display = item.cashPayment ? "inline-block" : "none";
     markPaidBtn.addEventListener("click", async () => {
       markPaidBtn.disabled = true;
@@ -1539,6 +1544,7 @@ function renderBilling(list){
           amountInput.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
           chargeBtn.disabled = checked;
           chargeBtn.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
+          row.style.opacity = checked ? "0.5" : "1";
           showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
 
           if (checked && pickedReason){
