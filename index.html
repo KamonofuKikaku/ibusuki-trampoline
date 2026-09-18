@@ -632,7 +632,7 @@
     </div>
   </div>
 
-  <button class="edit-name-link" id="editNameBtn">登録した名前を変更する</button>
+  <button class="edit-name-link" id="editNameBtn">登録した名前を変更・生徒を追加する</button>
 
   <div class="selection-panel" id="selectionPanel" style="display:none;">
     <div class="label">選択中の日程</div>
@@ -663,6 +663,19 @@
       <div class="register-title">生徒の氏名を教えてください</div>
       <div class="register-hint">予約・お月謝の管理に使用します。<br>フルネームでご入力ください。</div>
       <input type="text" id="registerNameInput" class="register-input" placeholder="例：山田太郎">
+
+      <div style="margin: 14px 0 6px; font-size: 13px; color: var(--ink-soft); text-align:center;">
+        生徒数が複数人の方 ▷
+        <select id="studentCountSelect" style="font-size:13px; padding:4px 8px; border-radius:8px; border:1px solid #E6DFD3;">
+          <option value="1">1名</option>
+          <option value="2">2名</option>
+          <option value="3">3名</option>
+          <option value="4">4名</option>
+          <option value="5">5名</option>
+        </select>
+      </div>
+      <div id="additionalStudentFields"></div>
+
       <button class="register-btn" id="registerSaveBtn">登録する</button>
     </div>
   </div>
@@ -1102,10 +1115,48 @@ function updateRegisteredNameDisplay(){
   }
 }
 
-document.getElementById("editNameBtn").addEventListener("click", () => {
+document.getElementById("editNameBtn").addEventListener("click", async () => {
   document.getElementById("registerNameInput").value = currentRegisteredName;
+  await fetchMyStudents_();
+  const count = Math.max(1, currentStudents.length);
+  studentCountSelect.value = String(Math.min(count, 5));
+  renderAdditionalStudentFields_();
   document.getElementById("registerOverlay").classList.add("show");
 });
+
+const studentCountSelect = document.getElementById("studentCountSelect");
+const additionalStudentFields = document.getElementById("additionalStudentFields");
+let currentStudents = []; // 登録済みの生徒一覧([{studentId, name, registeredDate}, ...])
+
+// プルダウンで選んだ人数ぶん、2人目以降の名前入力欄を出す(既存の生徒がいればその名前で埋めておく)
+function renderAdditionalStudentFields_(){
+  const count = Number(studentCountSelect.value);
+  additionalStudentFields.innerHTML = "";
+  for (let i = 2; i <= count; i++){
+    const existingName = currentStudents[i - 1] ? currentStudents[i - 1].name : "";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "register-input";
+    input.id = "studentNameInput" + i;
+    input.placeholder = `${i}人目の生徒のお名前`;
+    input.value = existingName;
+    input.style.marginBottom = "8px";
+    additionalStudentFields.appendChild(input);
+  }
+}
+studentCountSelect.addEventListener("change", renderAdditionalStudentFields_);
+
+async function fetchMyStudents_(){
+  if (!liffProfile) return;
+  try {
+    const res = await fetch(`${GAS_ENDPOINT}?action=myStudents&userId=${encodeURIComponent(liffProfile.userId)}`);
+    const data = await res.json();
+    currentStudents = data.students || [];
+  } catch (err){
+    console.error("fetchMyStudents failed", err);
+    currentStudents = [];
+  }
+}
 
 document.getElementById("registerSaveBtn").addEventListener("click", async () => {
   const input = document.getElementById("registerNameInput");
@@ -1135,6 +1186,23 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
     if (result.success){
       currentRegisteredName = name;
       updateRegisteredNameDisplay();
+
+      // 2人目以降の生徒名が入力されていれば、まとめて登録する
+      const count = Number(studentCountSelect.value);
+      for (let i = 2; i <= count; i++){
+        const additionalInput = document.getElementById("studentNameInput" + i);
+        const additionalName = additionalInput ? additionalInput.value.trim() : "";
+        if (!additionalName) continue;
+        try {
+          await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "customerAddStudent", userId: liffProfile.userId, name: additionalName }),
+          });
+        } catch (err){
+          console.error("customerAddStudent failed", err);
+        }
+      }
+
       document.getElementById("registerOverlay").classList.remove("show");
       try {
         localStorage.setItem("cachedRegistered", "true");
