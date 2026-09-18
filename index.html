@@ -644,6 +644,16 @@
     <button class="cta-btn" id="submitBtn" disabled>この日程で予約する</button>
   </div>
 
+  <div class="register-overlay" id="studentSelectOverlay">
+    <div class="register-card">
+      <div class="register-title">誰の予約ですか？</div>
+      <div class="register-hint">対象の生徒にチェックを付けてください（複数選択できます）。</div>
+      <div id="studentSelectList" style="text-align:left; margin: 12px 0;"></div>
+      <button class="register-btn" id="studentSelectConfirmBtn">この生徒で予約する</button>
+      <button class="edit-name-link" id="studentSelectCancelBtn">キャンセル</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <div class="register-overlay" id="surveyOverlay">
@@ -652,6 +662,7 @@
       <div class="register-title" id="surveySubjectEl" style="text-align:center;"></div>
       <div class="register-hint" id="surveyContentEl" style="text-align:center;"></div>
       <div class="survey-notes" id="surveyNotesEl" style="display:none;"></div>
+      <div id="surveyStudentSelectEl" style="display:none; text-align:left; background:var(--cream, #f7f4ee); border-radius:12px; padding:10px 14px; margin-bottom:12px;"></div>
       <div id="surveyQuestionsEl"></div>
       <button class="register-btn" id="surveySubmitBtn">回答する</button>
       <button class="edit-name-link" id="surveySkipBtn">今はしない</button>
@@ -1057,6 +1068,64 @@ submitBtn.addEventListener("click", async () => {
     return;
   }
 
+  await fetchMyStudents_();
+  if (currentStudents.length <= 1){
+    await doSubmitBooking_(dates.map(d => ({ date: d, studentName: "" })));
+    return;
+  }
+
+  openStudentSelectPopup_(dates);
+});
+
+/* ---------- 複数生徒がいる場合の「誰の予約か」選択ポップアップ ---------- */
+const studentSelectOverlay = document.getElementById("studentSelectOverlay");
+const studentSelectList = document.getElementById("studentSelectList");
+const studentSelectConfirmBtn = document.getElementById("studentSelectConfirmBtn");
+const studentSelectCancelBtn = document.getElementById("studentSelectCancelBtn");
+let pendingDates_ = null;
+
+function openStudentSelectPopup_(dates){
+  pendingDates_ = dates;
+  studentSelectList.innerHTML = "";
+  currentStudents.forEach(student => {
+    const label = document.createElement("label");
+    label.style.cssText = "display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = student.name;
+    checkbox.checked = true;
+    checkbox.style.cssText = "width:18px; height:18px; margin:0; flex-shrink:0;";
+    label.appendChild(checkbox);
+    const span = document.createElement("span");
+    span.textContent = student.name;
+    label.appendChild(span);
+    studentSelectList.appendChild(label);
+  });
+  studentSelectOverlay.classList.add("show");
+}
+function closeStudentSelectPopup_(){
+  studentSelectOverlay.classList.remove("show");
+  pendingDates_ = null;
+}
+studentSelectCancelBtn.addEventListener("click", closeStudentSelectPopup_);
+
+studentSelectConfirmBtn.addEventListener("click", async () => {
+  const checked = Array.from(studentSelectList.querySelectorAll("input[type=checkbox]:checked")).map(c => c.value);
+  if (!checked.length){
+    showToast("生徒を1人以上選んでください");
+    return;
+  }
+  const expandedDates = [];
+  pendingDates_.forEach(dateStr => {
+    checked.forEach(studentName => {
+      expandedDates.push({ date: dateStr, studentName: studentName });
+    });
+  });
+  closeStudentSelectPopup_();
+  await doSubmitBooking_(expandedDates);
+});
+
+async function doSubmitBooking_(dates){
   submitBtn.disabled = true;
   submitBtn.textContent = "送信中…";
   showLoadingOverlay("よやくちゅう…");
@@ -1067,7 +1136,7 @@ submitBtn.addEventListener("click", async () => {
       body: JSON.stringify({
         action: "book",
         userId: liffProfile.userId,
-        displayName: liffProfile.displayName,
+        displayName: currentRegisteredName || liffProfile.displayName,
         dates: dates,
       }),
     }, 2, 15000); // 予約処理は少し重いのでタイムアウトを長めに
@@ -1101,7 +1170,7 @@ submitBtn.addEventListener("click", async () => {
     submitBtn.textContent = "この日程で予約する";
     hideLoadingOverlay();
   }
-});
+}
 
 let currentRegisteredName = "";
 
@@ -1262,6 +1331,34 @@ function renderSurveyQuestions(){
   document.getElementById("surveyNotesEl").textContent = activeSurvey.notes || "";
   document.getElementById("surveyNotesEl").style.display = activeSurvey.notes ? "block" : "none";
 
+  const studentSelectEl = document.getElementById("surveyStudentSelectEl");
+  const unanswered = activeSurvey.unansweredStudents || [""];
+  studentSelectEl.innerHTML = "";
+  if (unanswered.length > 1 && unanswered.some(n => n)){
+    studentSelectEl.style.display = "block";
+    const label = document.createElement("div");
+    label.style.cssText = "font-size:12.5px; color:var(--ink-soft, #7A6F63); margin-bottom:8px;";
+    label.textContent = "回答する生徒にチェックを付けてください（複数選択できます）";
+    studentSelectEl.appendChild(label);
+    unanswered.forEach(name => {
+      const row = document.createElement("label");
+      row.style.cssText = "display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:6px;";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = name;
+      cb.checked = true;
+      cb.className = "survey-student-checkbox";
+      cb.style.cssText = "width:18px; height:18px; margin:0; flex-shrink:0;";
+      row.appendChild(cb);
+      const span = document.createElement("span");
+      span.textContent = name;
+      row.appendChild(span);
+      studentSelectEl.appendChild(row);
+    });
+  } else {
+    studentSelectEl.style.display = "none";
+  }
+
   surveyAnswers = {};
   const wrap = document.getElementById("surveyQuestionsEl");
   wrap.innerHTML = "";
@@ -1351,6 +1448,16 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
   }
   const answers = activeSurvey.questions.map((q, qIndex) => ({ question: q.question, answer: surveyAnswers[qIndex] !== undefined ? surveyAnswers[qIndex] : "" }));
 
+  const allUnanswered = activeSurvey.unansweredStudents || [""];
+  let studentNames = allUnanswered;
+  if (allUnanswered.length > 1 && allUnanswered.some(n => n)){
+    studentNames = Array.from(document.querySelectorAll(".survey-student-checkbox:checked")).map(cb => cb.value);
+    if (!studentNames.length){
+      showToast("生徒を1人以上選んでください");
+      return;
+    }
+  }
+
   const btn = document.getElementById("surveySubmitBtn");
   btn.disabled = true;
   btn.textContent = "送信中…";
@@ -1361,14 +1468,25 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
         action: "surveySubmit", userId: liffProfile.userId,
         displayName: currentRegisteredName || liffProfile.displayName,
         surveyId: activeSurvey.id, answers: answers, system: "athlete",
+        studentNames: studentNames,
       }),
     });
     const result = await res.json();
     if (result.success){
-      showToast("回答ありがとうございました！");
       closeSurveyPopup();
-      document.getElementById("surveyBanner").style.display = "none";
-      activeSurvey = null;
+      const remaining = allUnanswered.filter(n => studentNames.indexOf(n) === -1);
+      if (remaining.length){
+        activeSurvey.unansweredStudents = remaining;
+        if (window.confirm(`ご回答ありがとうございました！\n\n続けて「${remaining.join("・")}」の分も回答しますか？`)){
+          openSurveyPopup();
+        } else {
+          document.getElementById("surveyBanner").style.display = "none";
+        }
+      } else {
+        showToast("回答ありがとうございました！");
+        document.getElementById("surveyBanner").style.display = "none";
+        activeSurvey = null;
+      }
     } else if (result.reason === "already_answered"){
       showToast("すでに回答済みです");
       closeSurveyPopup();
