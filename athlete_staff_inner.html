@@ -1393,6 +1393,10 @@ function renderBilling(list){
     checkbox.addEventListener("change", updateBillingBulkUI);
     row.appendChild(checkbox);
 
+    const contentDiv = document.createElement("div");
+    contentDiv.style.cssText = "flex:1; min-width:0;";
+    row.appendChild(contentDiv);
+
     const nameRow = document.createElement("div");
     nameRow.className = "billing-name";
     nameRow.innerHTML = `<span>${item.name}</span>`;
@@ -1416,7 +1420,7 @@ function renderBilling(list){
     lineBadge.style.display = item.lineOptOut ? "inline-block" : "none";
     nameRow.appendChild(lineBadge);
 
-    row.appendChild(nameRow);
+    contentDiv.appendChild(nameRow);
 
     // 対象外チェック(理由入力欄付き) + 支払い済み月表示（一般用と同じ仕組み）
     const cashRow = document.createElement("div");
@@ -1568,13 +1572,12 @@ function renderBilling(list){
         cashCheckbox.disabled = false;
       }
     });
-    row.appendChild(cashRow);
 
     const monthInput = document.createElement("input");
     monthInput.type = "month";
     monthInput.className = "billing-month-input";
     monthInput.value = new Date().toISOString().slice(0, 7); // デフォルトは今月
-    row.appendChild(monthInput);
+    contentDiv.appendChild(monthInput);
 
     const amountInput = document.createElement("input");
     amountInput.type = "number";
@@ -1587,7 +1590,7 @@ function renderBilling(list){
       amountInput.disabled = true;
       amountInput.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
     }
-    row.appendChild(amountInput);
+    contentDiv.appendChild(amountInput);
 
     const chargeBtn = document.createElement("button");
     chargeBtn.className = "charge-btn";
@@ -1596,15 +1599,16 @@ function renderBilling(list){
       chargeBtn.disabled = true;
       chargeBtn.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
     }
-    row.appendChild(chargeBtn);
+    contentDiv.appendChild(chargeBtn);
 
     // 予約日を名前の下に表示(分かりやすさのため)
     const datesEl = document.createElement("div");
     datesEl.className = "billing-dates";
     datesEl.textContent = item.bookingDates.length
-      ? `今月の予約(${item.bookingCount}回): ${item.bookingDates.map(formatBillingDateLabel_).join(", ")}`
-      : "今月の予約はまだありません";
-    row.appendChild(datesEl);
+      ? `直近1ヶ月の予約(${item.bookingCount}回): ${item.bookingDates.map(formatBillingDateLabel_).join(", ")}`
+      : "直近1ヶ月の予約はまだありません";
+    contentDiv.appendChild(datesEl);
+    contentDiv.appendChild(cashRow);
 
     async function doCharge(amount, forceSquare){
       const res = await fetch(GAS_ENDPOINT, {
@@ -1702,7 +1706,7 @@ function renderBilling(list){
         showToast("通信に失敗しました");
       }
     });
-    row.appendChild(deleteUserLink);
+    contentDiv.appendChild(deleteUserLink);
 
     billingRowElements.push({
       userId: item.userId, name: item.name, checkbox, amountInput, chargeBtn, doCharge, monthInput,
