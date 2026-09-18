@@ -199,12 +199,12 @@
     background: var(--orange-soft);
     color: var(--orange);
   }
-  .cash-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+  .cash-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
   .cash-row input[type="checkbox"] { width: auto; margin: 0; }
   .cash-paid-month { font-size: 11px; color: var(--ink-soft); }
   .cash-paid-btn {
     border: none; background: var(--mint-soft); color: var(--mint); font-weight: 700; font-size: 11px;
-    padding: 4px 9px; border-radius: 999px; margin-left: auto;
+    padding: 4px 9px; border-radius: 999px; flex-basis: 100%; margin-top: 2px;
   }
   .billing-dates { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 6px; }
   .billing-row input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #E6DFD3; font-size: 13px; margin-bottom: 6px; }
@@ -1719,7 +1719,7 @@ function renderBilling(list){
   sortedList.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
-    row.style.cssText = "display:flex; align-items:center; gap:10px;";
+    row.style.cssText = "display:flex; align-items:center; gap:10px;" + (item.cashPayment ? " opacity:0.5;" : "");
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -1727,6 +1727,10 @@ function renderBilling(list){
     if (item.cashPayment) checkbox.disabled = true; // 対象外の人は選択できないようにする
     checkbox.addEventListener("change", updateBillingBulkUI);
     row.appendChild(checkbox);
+
+    const checkboxDivider = document.createElement("div");
+    checkboxDivider.style.cssText = "width:1px; align-self:stretch; background:#E6DFD3; flex-shrink:0;";
+    row.appendChild(checkboxDivider);
 
     const contentDiv = document.createElement("div");
     contentDiv.style.cssText = "flex:1; min-width:0;";
@@ -1911,6 +1915,7 @@ function renderBilling(list){
           amountInput.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
           chargeBtn.disabled = checked;
           chargeBtn.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
+          row.style.opacity = checked ? "0.5" : "1";
           showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
 
           // チェックを入れた時は、選んだ理由・LINE配信設定もあわせて保存する
