@@ -593,6 +593,7 @@ async function fetchMyBookings(){
 
     // 登録状況もここで一緒に受け取る(別通信を省いて表示を早くするため)
     currentRegisteredName = data.name || "";
+    await fetchMyStudents_();
     updateRegisteredNameDisplay();
     if (data.registered) {
       // 既に登録済みだと分かったので、開いていたフォームを自動で閉じる
@@ -611,8 +612,11 @@ async function fetchMyBookings(){
 
 function updateRegisteredNameDisplay(){
   const el = document.getElementById("registeredNameDisplay");
-  if (currentRegisteredName){
-    el.textContent = currentRegisteredName + "さん";
+  const jointName = (currentStudents && currentStudents.length)
+    ? currentStudents.map(s => s.name).join("・")
+    : currentRegisteredName;
+  if (jointName){
+    el.textContent = jointName + "さん";
     el.style.display = "block";
   } else {
     el.style.display = "none";
@@ -1335,7 +1339,6 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
     const result = await res.json();
     if (result.success){
       currentRegisteredName = name;
-      updateRegisteredNameDisplay();
 
       // 2人目以降の生徒名が入力されていれば、まとめて登録する
       const count = Number(studentCountSelect.value);
@@ -1352,6 +1355,8 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
           console.error("customerAddStudent failed", err);
         }
       }
+      await fetchMyStudents_(); // 追加した生徒も含めて、連名表示を最新化する
+      updateRegisteredNameDisplay();
 
       document.getElementById("registerOverlay").classList.remove("show");
       try {
