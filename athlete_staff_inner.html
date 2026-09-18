@@ -180,7 +180,7 @@
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 16px;
     background: var(--cream);
     border-radius: 12px;
     padding: 10px 12px;
@@ -200,7 +200,7 @@
     align-items: center;
     gap: 6px;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 17px;
   }
   .card-badge {
     font-size: 10.5px;
@@ -593,6 +593,9 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  input[type="radio"][name="excludeReasonRadio"] {
+    width: 16px; height: 16px; margin: 0; flex-shrink: 0; position: relative; top: 0;
+  }
 </style>
 </head>
 <body>
