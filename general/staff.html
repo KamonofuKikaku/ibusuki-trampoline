@@ -2037,11 +2037,85 @@ function renderBilling(list){
     contentDiv.appendChild(datesEl);
     contentDiv.appendChild(cashRow);
 
+    // 生徒管理（追加・削除）
+    const studentMgmtRow = document.createElement("div");
+    studentMgmtRow.style.cssText = "display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px;";
+    const studentMgmtLabel = document.createElement("span");
+    studentMgmtLabel.style.cssText = "font-weight:700;";
+    studentMgmtLabel.textContent = "生徒:";
+    studentMgmtRow.appendChild(studentMgmtLabel);
+
+    function renderStudentChips_(){
+      studentMgmtRow.querySelectorAll(".student-chip").forEach(el => el.remove());
+      (item.students || []).forEach(student => {
+        const chip = document.createElement("span");
+        chip.className = "student-chip";
+        chip.style.cssText = "display:inline-flex; align-items:center; gap:4px; background:var(--cream); border-radius:999px; padding:3px 4px 3px 9px;";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = student.name;
+        chip.appendChild(nameSpan);
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "×";
+        delBtn.style.cssText = "border:none; background:var(--danger-soft); color:var(--danger); width:15px; height:15px; border-radius:50%; font-size:10px; line-height:1; cursor:pointer;";
+        delBtn.addEventListener("click", async () => {
+          if (!window.confirm(`「${student.name}」を生徒一覧から削除しますか？（予約履歴は残ります）`)) return;
+          try {
+            const res = await fetch(GAS_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffRemoveStudent", password: password, studentId: student.studentId }),
+            });
+            const result = await res.json();
+            if (result.success){
+              showToast(`「${student.name}」を削除しました`);
+              fetchBillingList();
+            } else {
+              showToast("削除に失敗しました");
+            }
+          } catch (err){
+            console.error(err);
+            showToast("通信に失敗しました");
+          }
+        });
+        chip.appendChild(delBtn);
+        studentMgmtRow.insertBefore(chip, addStudentBtn);
+      });
+    }
+
+    const addStudentBtn = document.createElement("button");
+    addStudentBtn.textContent = "＋生徒を追加";
+    addStudentBtn.style.cssText = "border:none; background:var(--mint-soft); color:var(--mint); font-weight:700; font-size:11px; padding:4px 9px; border-radius:999px; cursor:pointer;";
+    addStudentBtn.addEventListener("click", async () => {
+      const newName = window.prompt("追加する生徒のお名前を入力してください");
+      if (!newName || !newName.trim()) return;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffAddStudent", password: password, userId: item.userId, name: newName.trim() }),
+        });
+        const result = await res.json();
+        if (result.success){
+          item.students = result.students;
+          renderStudentChips_();
+          showToast(`「${newName.trim()}」を追加しました`);
+          fetchBillingList();
+        } else {
+          showToast("追加に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      }
+    });
+    studentMgmtRow.appendChild(addStudentBtn);
+    renderStudentChips_();
+    contentDiv.appendChild(studentMgmtRow);
+
     const deleteUserLink = document.createElement("div");
     deleteUserLink.textContent = "この人の情報を削除";
     deleteUserLink.style.cssText = "font-size:10.5px; color:var(--danger); text-decoration:underline; cursor:pointer; margin-top:8px; text-align:right;";
     deleteUserLink.addEventListener("click", async () => {
-      const typed = window.prompt(`本当に削除する場合は、確認のため「${item.name}」と入力してください。\n（予約履歴・アンケート回答は消えません。連絡先・お月謝情報だけが削除されます）`);
+      const dateNote = item.registeredDate ? `（登録日：${item.registeredDate}）` : "";
+      const typed = window.prompt(`本当に削除する場合は、確認のため「${item.name}」${dateNote}と入力してください。\n（予約履歴・アンケート回答は消えません。連絡先・お月謝情報だけが削除されます）`);
       if (typed !== item.name) {
         if (typed !== null) showToast("名前が一致しないため中止しました");
         return;
