@@ -754,10 +754,18 @@
           <span>指導者</span>
         </label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+          <input type="radio" name="excludeReasonRadio" value="休会中" style="width:auto;">
+          <span>休会中</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
           <input type="radio" name="excludeReasonRadio" value="その他" style="width:auto;">
           <span>その他</span>
         </label>
         <input type="text" id="excludeReasonOtherInput" placeholder="理由を入力" style="display:none;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; border-top:1px solid #EDE6D8; padding-top:12px; margin-top:4px;">
+          <input type="checkbox" id="excludeReasonLineOptOut" style="width:auto;">
+          <span>LINE配信をしない</span>
+        </label>
       </div>
       <div class="modal-actions">
         <button class="modal-cancel-btn" id="excludeReasonCancelBtn">キャンセル</button>
@@ -1322,6 +1330,7 @@ function updateBillingBulkUI(){
 /* ---------- 対象外の理由選択ポップアップ ---------- */
 const excludeReasonModalEl = document.getElementById("excludeReasonModal");
 const excludeReasonOtherInput = document.getElementById("excludeReasonOtherInput");
+const excludeReasonLineOptOut = document.getElementById("excludeReasonLineOptOut");
 const excludeReasonCancelBtn = document.getElementById("excludeReasonCancelBtn");
 const excludeReasonConfirmBtn = document.getElementById("excludeReasonConfirmBtn");
 let excludeReasonResolve_ = null;
@@ -1329,14 +1338,16 @@ let excludeReasonResolve_ = null;
 document.querySelectorAll('input[name="excludeReasonRadio"]').forEach(radio => {
   radio.addEventListener("change", () => {
     excludeReasonOtherInput.style.display = radio.value === "その他" && radio.checked ? "block" : "none";
+    if (radio.value === "休会中" && radio.checked) excludeReasonLineOptOut.checked = true; // 休会中は確定でLINE配信しない
   });
 });
 
-// 対象外チェックが入った時に呼ぶ。理由の文字列(キャンセル時はnull)をPromiseで返す
+// 対象外チェックが入った時に呼ぶ。{reason, lineOptOut}(キャンセル時はnull)をPromiseで返す
 function openExcludeReasonModal_(){
   document.querySelectorAll('input[name="excludeReasonRadio"]').forEach(r => r.checked = false);
   excludeReasonOtherInput.value = "";
   excludeReasonOtherInput.style.display = "none";
+  excludeReasonLineOptOut.checked = false;
   excludeReasonModalEl.classList.add("show");
   return new Promise(resolve => { excludeReasonResolve_ = resolve; });
 }
@@ -1353,7 +1364,7 @@ excludeReasonConfirmBtn.addEventListener("click", () => {
     return;
   }
   const reason = checked.value === "その他" ? (excludeReasonOtherInput.value.trim() || "その他") : checked.value;
-  closeExcludeReasonModal_(reason);
+  closeExcludeReasonModal_({ reason: reason, lineOptOut: excludeReasonLineOptOut.checked });
 });
 
 function renderBilling(list){
@@ -1366,7 +1377,12 @@ function renderBilling(list){
     return;
   }
 
-  list.forEach(item => {
+  // 対象外の人は、請求時に紛れないよう一覧の一番下にまとめる(それ以外の並び順は変えない)
+  const sortedList = list.map((item, i) => ({ item, i }))
+    .sort((a, b) => (a.item.cashPayment === b.item.cashPayment) ? (a.i - b.i) : (a.item.cashPayment ? 1 : -1))
+    .map(x => x.item);
+
+  sortedList.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
 
@@ -1394,6 +1410,12 @@ function renderBilling(list){
       nameRow.appendChild(paidBadge);
     }
 
+    const lineBadge = document.createElement("span");
+    lineBadge.className = "card-badge off";
+    lineBadge.textContent = "LINE×";
+    lineBadge.style.display = item.lineOptOut ? "inline-block" : "none";
+    nameRow.appendChild(lineBadge);
+
     row.appendChild(nameRow);
 
     // 対象外チェック(理由入力欄付き) + 支払い済み月表示（一般用と同じ仕組み）
@@ -1413,8 +1435,9 @@ function renderBilling(list){
     reasonSpan.textContent = item.excludeReason || "(タップして選択)";
     reasonSpan.style.cssText = "font-size:11px; color:var(--orange); text-decoration:underline; cursor:pointer;";
     reasonSpan.addEventListener("click", async () => {
-      const reason = await openExcludeReasonModal_();
-      if (reason === null) return;
+      const picked = await openExcludeReasonModal_();
+      if (picked === null) return;
+      const reason = picked.reason;
       try {
         const res = await fetch(GAS_ENDPOINT, {
           method: "POST",
@@ -1433,6 +1456,12 @@ function renderBilling(list){
             });
             item.cashPayment = true;
           }
+          await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "staffSetLineOptOut", password: password, userId: item.userId, lineOptOut: picked.lineOptOut }),
+          });
+          item.lineOptOut = picked.lineOptOut;
+          if (lineBadge) lineBadge.style.display = picked.lineOptOut ? "inline-block" : "none";
           showToast("理由を保存しました");
         } else {
           showToast("保存に失敗しました");
@@ -1483,10 +1512,10 @@ function renderBilling(list){
     cashCheckbox.addEventListener("change", async () => {
       const checked = cashCheckbox.checked;
 
-      let reasonToSave = null;
+      let pickedReason = null;
       if (checked){
-        reasonToSave = await openExcludeReasonModal_();
-        if (reasonToSave === null){
+        pickedReason = await openExcludeReasonModal_();
+        if (pickedReason === null){
           cashCheckbox.checked = false; // キャンセルされたら、チェックも元に戻す
           return;
         }
@@ -1508,16 +1537,22 @@ function renderBilling(list){
           chargeBtn.style.cssText = checked ? "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;" : "";
           showToast(checked ? "対象外に設定しました" : "対象外を解除しました");
 
-          if (checked && reasonToSave){
+          if (checked && pickedReason){
             const reasonRes = await fetch(GAS_ENDPOINT, {
               method: "POST",
-              body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: reasonToSave }),
+              body: JSON.stringify({ action: "staffSetExcludeReason", password: password, userId: item.userId, excludeReason: pickedReason.reason }),
             });
             const reasonResult = await reasonRes.json();
             if (reasonResult.success){
-              item.excludeReason = reasonToSave;
-              reasonSpan.textContent = reasonToSave;
+              item.excludeReason = pickedReason.reason;
+              reasonSpan.textContent = pickedReason.reason;
             }
+            await fetch(GAS_ENDPOINT, {
+              method: "POST",
+              body: JSON.stringify({ action: "staffSetLineOptOut", password: password, userId: item.userId, lineOptOut: pickedReason.lineOptOut }),
+            });
+            item.lineOptOut = pickedReason.lineOptOut;
+            lineBadge.style.display = pickedReason.lineOptOut ? "inline-block" : "none";
           }
         } else {
           cashCheckbox.checked = !checked;
@@ -1639,6 +1674,35 @@ function renderBilling(list){
         chargeBtn.textContent = "請求する";
       }
     });
+
+    const deleteUserLink = document.createElement("div");
+    deleteUserLink.textContent = "この人の情報を削除";
+    deleteUserLink.style.cssText = "font-size:10.5px; color:var(--danger); text-decoration:underline; cursor:pointer; margin-top:8px; text-align:right;";
+    deleteUserLink.addEventListener("click", async () => {
+      const typed = window.prompt(`本当に削除する場合は、確認のため「${item.name}」と入力してください。\n（予約履歴・アンケート回答は消えません。連絡先・お月謝情報だけが削除されます）`);
+      if (typed !== item.name) {
+        if (typed !== null) showToast("名前が一致しないため中止しました");
+        return;
+      }
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffDeleteUser", password: password, userId: item.userId }),
+        });
+        const result = await res.json();
+        if (result.success){
+          showToast(`${item.name}さんの情報を削除しました`);
+          fetchBillingList();
+          loadUnpaidMonths_();
+        } else {
+          showToast("削除に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      }
+    });
+    row.appendChild(deleteUserLink);
 
     billingRowElements.push({
       userId: item.userId, name: item.name, checkbox, amountInput, chargeBtn, doCharge, monthInput,
