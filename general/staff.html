@@ -1736,7 +1736,7 @@ function renderBilling(list){
     row.appendChild(checkboxDivider);
 
     const contentDiv = document.createElement("div");
-    contentDiv.style.cssText = "flex:1; min-width:0;";
+    contentDiv.style.cssText = "flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;";
     row.appendChild(contentDiv);
 
     // カード・現金それぞれの最終支払い月のうち、新しい方を「実質どこまで払い済みか」として扱う
@@ -1958,7 +1958,6 @@ function renderBilling(list){
     const monthInput = document.createElement("input");
     monthInput.type = "month";
     monthInput.value = new Date().toISOString().slice(0, 7); // デフォルトは今月
-    monthInput.style.cssText = "margin-bottom:8px;";
     contentDiv.appendChild(monthInput);
 
     const amountInput = document.createElement("input");
