@@ -1401,7 +1401,7 @@ function renderBilling(list){
     row.appendChild(checkboxDivider);
 
     const contentDiv = document.createElement("div");
-    contentDiv.style.cssText = "flex:1; min-width:0;";
+    contentDiv.style.cssText = "flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;";
     row.appendChild(contentDiv);
 
     const nameRow = document.createElement("div");
@@ -1582,11 +1582,15 @@ function renderBilling(list){
       }
     });
 
+    const inputRow = document.createElement("div");
+    inputRow.style.cssText = "display:flex; align-items:center; gap:8px; flex-wrap:wrap;";
+    contentDiv.appendChild(inputRow);
+
     const monthInput = document.createElement("input");
     monthInput.type = "month";
     monthInput.className = "billing-month-input";
     monthInput.value = new Date().toISOString().slice(0, 7); // デフォルトは今月
-    contentDiv.appendChild(monthInput);
+    inputRow.appendChild(monthInput);
 
     const amountInput = document.createElement("input");
     amountInput.type = "number";
@@ -1599,7 +1603,7 @@ function renderBilling(list){
       amountInput.disabled = true;
       amountInput.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
     }
-    contentDiv.appendChild(amountInput);
+    inputRow.appendChild(amountInput);
 
     const chargeBtn = document.createElement("button");
     chargeBtn.className = "charge-btn";
@@ -1608,7 +1612,7 @@ function renderBilling(list){
       chargeBtn.disabled = true;
       chargeBtn.style.cssText = "background:#EFE9DC; color:var(--ink-soft); cursor:not-allowed;";
     }
-    contentDiv.appendChild(chargeBtn);
+    inputRow.appendChild(chargeBtn);
 
     // 予約日を名前の下に表示(分かりやすさのため)
     const datesEl = document.createElement("div");
