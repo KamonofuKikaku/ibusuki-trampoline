@@ -179,7 +179,7 @@
   .billing-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     background: var(--cream);
     border-radius: 12px;
@@ -1395,7 +1395,7 @@ function renderBilling(list){
     row.appendChild(checkbox);
 
     const checkboxDivider = document.createElement("div");
-    checkboxDivider.style.cssText = "width:1px; align-self:stretch; background:#E6DFD3; flex-shrink:0;";
+    checkboxDivider.style.cssText = "width:2px; align-self:stretch; background:#D8CFC0; flex-shrink:0; border-radius:1px;";
     row.appendChild(checkboxDivider);
 
     const contentDiv = document.createElement("div");
@@ -1436,13 +1436,14 @@ function renderBilling(list){
     cashCheckbox.checked = !!item.cashPayment;
     cashCheckbox.style.width = "auto";
     const cashLabel = document.createElement("span");
-    cashLabel.textContent = "対象外(理由：";
+    cashLabel.textContent = "対象外(理由";
+    cashLabel.style.cssText = "white-space:nowrap;";
     cashRow.appendChild(cashCheckbox);
     cashRow.appendChild(cashLabel);
 
     const reasonSpan = document.createElement("span");
     reasonSpan.textContent = item.excludeReason || "(タップして選択)";
-    reasonSpan.style.cssText = "font-size:11px; color:var(--orange); text-decoration:underline; cursor:pointer;";
+    reasonSpan.style.cssText = "font-size:11px; color:var(--orange); text-decoration:underline; cursor:pointer; white-space:nowrap;";
     reasonSpan.addEventListener("click", async () => {
       const picked = await openExcludeReasonModal_();
       if (picked === null) return;
@@ -1487,7 +1488,7 @@ function renderBilling(list){
     cashRow.appendChild(closeParen);
 
     const paidMonthEl = document.createElement("span");
-    paidMonthEl.style.cssText = "font-size:11px; color:var(--ink-soft);";
+    paidMonthEl.style.cssText = "font-size:11px; color:var(--ink-soft); white-space:nowrap;";
     paidMonthEl.textContent = item.cashPaidMonth ? `最終支払い確認: ${item.cashPaidMonth}` : "支払い確認なし";
     cashRow.appendChild(paidMonthEl);
 
@@ -1610,8 +1611,8 @@ function renderBilling(list){
     // 予約日を名前の下に表示(分かりやすさのため)
     const datesEl = document.createElement("div");
     datesEl.className = "billing-dates";
-    datesEl.textContent = item.bookingDates.length
-      ? `直近1ヶ月の予約(${item.bookingCount}回): ${item.bookingDates.map(formatBillingDateLabel_).join(", ")}`
+    datesEl.innerHTML = item.bookingDates.length
+      ? `直近1ヶ月の予約(${item.bookingCount}回):<br>${item.bookingDates.map(formatBillingDateLabel_).join(", ")}`
       : "直近1ヶ月の予約はまだありません";
     contentDiv.appendChild(datesEl);
     contentDiv.appendChild(cashRow);
