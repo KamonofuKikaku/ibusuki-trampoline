@@ -2040,10 +2040,6 @@ function renderBilling(list){
     // 生徒管理（追加・削除）
     const studentMgmtRow = document.createElement("div");
     studentMgmtRow.style.cssText = "display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px;";
-    const studentMgmtLabel = document.createElement("span");
-    studentMgmtLabel.style.cssText = "font-weight:700;";
-    studentMgmtLabel.textContent = "生徒:";
-    studentMgmtRow.appendChild(studentMgmtLabel);
 
     function renderStudentChips_(){
       studentMgmtRow.querySelectorAll(".student-chip").forEach(el => el.remove());
@@ -2077,13 +2073,19 @@ function renderBilling(list){
           }
         });
         chip.appendChild(delBtn);
-        studentMgmtRow.insertBefore(chip, addStudentBtn);
+        studentMgmtRow.appendChild(chip);
       });
     }
+    renderStudentChips_();
+    contentDiv.appendChild(studentMgmtRow);
+
+    // 生徒追加・アカウント削除ボタン(緑=追加を左、赤=削除を右)
+    const studentActionRow = document.createElement("div");
+    studentActionRow.style.cssText = "display:flex; gap:8px; margin-top:4px;";
 
     const addStudentBtn = document.createElement("button");
-    addStudentBtn.textContent = "＋生徒を追加";
-    addStudentBtn.style.cssText = "border:none; background:var(--mint-soft); color:var(--mint); font-weight:700; font-size:11px; padding:4px 9px; border-radius:999px; cursor:pointer;";
+    addStudentBtn.textContent = "兄弟など生徒指名を追加";
+    addStudentBtn.style.cssText = "flex:1; border:none; background:var(--mint); color:#fff; font-weight:700; font-size:11.5px; padding:8px 10px; border-radius:8px; cursor:pointer;";
     addStudentBtn.addEventListener("click", async () => {
       const newName = window.prompt("追加する生徒のお名前を入力してください");
       if (!newName || !newName.trim()) return;
@@ -2106,13 +2108,11 @@ function renderBilling(list){
         showToast("通信に失敗しました");
       }
     });
-    studentMgmtRow.appendChild(addStudentBtn);
-    renderStudentChips_();
-    contentDiv.appendChild(studentMgmtRow);
+    studentActionRow.appendChild(addStudentBtn);
 
-    const deleteUserLink = document.createElement("div");
-    deleteUserLink.textContent = "この人の情報を削除";
-    deleteUserLink.style.cssText = "font-size:10.5px; color:var(--danger); text-decoration:underline; cursor:pointer; margin-top:8px; text-align:right;";
+    const deleteUserLink = document.createElement("button");
+    deleteUserLink.textContent = "この生徒の情報を削除";
+    deleteUserLink.style.cssText = "flex:1; border:none; background:var(--danger); color:#fff; font-weight:700; font-size:11.5px; padding:8px 10px; border-radius:8px; cursor:pointer;";
     deleteUserLink.addEventListener("click", async () => {
       const dateNote = item.registeredDate ? `（登録日：${item.registeredDate}）` : "";
       const typed = window.prompt(`本当に削除する場合は、確認のため「${item.name}」${dateNote}と入力してください。\n（予約履歴・アンケート回答は消えません。連絡先・お月謝情報だけが削除されます）`);
@@ -2138,7 +2138,8 @@ function renderBilling(list){
         showToast("通信に失敗しました");
       }
     });
-    contentDiv.appendChild(deleteUserLink);
+    studentActionRow.appendChild(deleteUserLink);
+    contentDiv.appendChild(studentActionRow);
 
     billingRowElements.push({
       userId: item.userId, name: item.name, checkbox, amountInput, monthInput, chargeBtn, doCharge,
