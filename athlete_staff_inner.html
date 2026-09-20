@@ -776,6 +776,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="studentManageModal">
+    <div class="modal-card">
+      <div class="modal-title">生徒の追加・削除</div>
+      <div id="studentManageList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <input type="text" id="studentManageNewNameInput" placeholder="追加する生徒のお名前" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid #E6DFD3;">
+        <button class="modal-save-btn" id="studentManageAddBtn" style="width:auto; flex-shrink:0; background:var(--mint);">追加</button>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel-btn" id="studentManageCloseBtn" style="width:100%;">閉じる</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1369,6 +1383,96 @@ excludeReasonConfirmBtn.addEventListener("click", () => {
   closeExcludeReasonModal_({ reason: reason, lineOptOut: excludeReasonLineOptOut.checked });
 });
 
+/* ---------- 生徒の追加・削除ポップアップ(お月謝一覧の各行から共通で使う) ---------- */
+const studentManageModal = document.getElementById("studentManageModal");
+const studentManageList = document.getElementById("studentManageList");
+const studentManageNewNameInput = document.getElementById("studentManageNewNameInput");
+const studentManageAddBtn = document.getElementById("studentManageAddBtn");
+const studentManageCloseBtn = document.getElementById("studentManageCloseBtn");
+let studentManageTarget_ = null; // {item, onUpdate}
+
+function renderStudentManageList_(){
+  studentManageList.innerHTML = "";
+  const students = studentManageTarget_.item.students || [];
+  if (!students.length){
+    const empty = document.createElement("div");
+    empty.style.cssText = "font-size:13px; color:var(--ink-soft);";
+    empty.textContent = "登録されている生徒がいません";
+    studentManageList.appendChild(empty);
+    return;
+  }
+  students.forEach(student => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex; align-items:center; justify-content:space-between; background:var(--cream); border-radius:8px; padding:8px 12px;";
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = student.name;
+    nameSpan.style.cssText = "font-size:14px;";
+    row.appendChild(nameSpan);
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "削除";
+    delBtn.style.cssText = "border:none; background:var(--danger-soft); color:var(--danger); font-weight:700; font-size:12px; padding:5px 10px; border-radius:6px; cursor:pointer;";
+    delBtn.addEventListener("click", async () => {
+      if (!window.confirm(`「${student.name}」を生徒一覧から削除しますか？（予約履歴は残ります）`)) return;
+      try {
+        const res = await fetch(GAS_ENDPOINT, {
+          method: "POST",
+          body: JSON.stringify({ action: "staffRemoveStudent", password: password, studentId: student.studentId }),
+        });
+        const result = await res.json();
+        if (result.success){
+          studentManageTarget_.item.students = (studentManageTarget_.item.students || []).filter(s => s.studentId !== student.studentId);
+          renderStudentManageList_();
+          showToast(`「${student.name}」を削除しました`);
+        } else {
+          showToast("削除に失敗しました");
+        }
+      } catch (err){
+        console.error(err);
+        showToast("通信に失敗しました");
+      }
+    });
+    row.appendChild(delBtn);
+    studentManageList.appendChild(row);
+  });
+}
+
+function openStudentManageModal_(item, onUpdate){
+  studentManageTarget_ = { item: item, onUpdate: onUpdate };
+  studentManageNewNameInput.value = "";
+  renderStudentManageList_();
+  studentManageModal.classList.add("show");
+}
+function closeStudentManageModal_(){
+  studentManageModal.classList.remove("show");
+  if (studentManageTarget_ && studentManageTarget_.onUpdate){
+    studentManageTarget_.onUpdate(studentManageTarget_.item.students || []);
+  }
+  studentManageTarget_ = null;
+}
+studentManageCloseBtn.addEventListener("click", closeStudentManageModal_);
+studentManageAddBtn.addEventListener("click", async () => {
+  const newName = studentManageNewNameInput.value.trim();
+  if (!newName) return;
+  try {
+    const res = await fetch(GAS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ action: "staffAddStudent", password: password, userId: studentManageTarget_.item.userId, name: newName }),
+    });
+    const result = await res.json();
+    if (result.success){
+      studentManageTarget_.item.students = result.students;
+      studentManageNewNameInput.value = "";
+      renderStudentManageList_();
+      showToast(`「${newName}」を追加しました`);
+    } else {
+      showToast("追加に失敗しました");
+    }
+  } catch (err){
+    console.error(err);
+    showToast("通信に失敗しました");
+  }
+});
+
 function renderBilling(list){
   billingList.innerHTML = "";
   billingRowElements.length = 0;
@@ -1692,76 +1796,42 @@ function renderBilling(list){
       }
     });
 
-    // 生徒管理（追加・削除）
+    // 生徒管理（一覧表示のみ。追加・削除は下のボタンから開くポップアップで行う）
     const studentMgmtRow = document.createElement("div");
     studentMgmtRow.style.cssText = "display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px;";
 
     function renderStudentChips_(){
       studentMgmtRow.querySelectorAll(".student-chip").forEach(el => el.remove());
-      (item.students || []).forEach(student => {
+      // 生徒が1人だけの時は、上の名前と重複するので表示しない(2人以上いる時だけ内訳として表示)
+      if ((item.students || []).length <= 1){
+        studentMgmtRow.style.display = "none";
+        return;
+      }
+      studentMgmtRow.style.display = "flex";
+      item.students.forEach(student => {
         const chip = document.createElement("span");
         chip.className = "student-chip";
-        chip.style.cssText = "display:inline-flex; align-items:center; gap:4px; background:var(--cream); border-radius:999px; padding:3px 4px 3px 9px;";
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = student.name;
-        chip.appendChild(nameSpan);
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "×";
-        delBtn.style.cssText = "border:none; background:var(--danger-soft); color:var(--danger); width:15px; height:15px; border-radius:50%; font-size:10px; line-height:1; cursor:pointer;";
-        delBtn.addEventListener("click", async () => {
-          if (!window.confirm(`「${student.name}」を生徒一覧から削除しますか？（予約履歴は残ります）`)) return;
-          try {
-            const res = await fetch(GAS_ENDPOINT, {
-              method: "POST",
-              body: JSON.stringify({ action: "staffRemoveStudent", password: password, studentId: student.studentId }),
-            });
-            const result = await res.json();
-            if (result.success){
-              showToast(`「${student.name}」を削除しました`);
-              fetchBillingList();
-            } else {
-              showToast("削除に失敗しました");
-            }
-          } catch (err){
-            console.error(err);
-            showToast("通信に失敗しました");
-          }
-        });
-        chip.appendChild(delBtn);
+        chip.style.cssText = "display:inline-flex; align-items:center; background:var(--cream); border-radius:999px; padding:3px 9px;";
+        chip.textContent = student.name;
         studentMgmtRow.appendChild(chip);
       });
     }
     renderStudentChips_();
     contentDiv.appendChild(studentMgmtRow);
 
-    // 生徒追加・アカウント削除ボタン(緑=追加を左、赤=削除を右)
+    // 生徒追加・削除ポップアップ／アカウント削除ボタン(緑=生徒管理を左、赤=削除を右)
     const studentActionRow = document.createElement("div");
     studentActionRow.style.cssText = "display:flex; gap:8px; margin-top:4px;";
 
     const addStudentBtn = document.createElement("button");
     addStudentBtn.textContent = "兄弟など生徒指名を追加";
     addStudentBtn.style.cssText = "flex:1; border:none; background:var(--mint); color:#fff; font-weight:700; font-size:11.5px; padding:8px 10px; border-radius:8px; cursor:pointer;";
-    addStudentBtn.addEventListener("click", async () => {
-      const newName = window.prompt("追加する生徒のお名前を入力してください");
-      if (!newName || !newName.trim()) return;
-      try {
-        const res = await fetch(GAS_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({ action: "staffAddStudent", password: password, userId: item.userId, name: newName.trim() }),
-        });
-        const result = await res.json();
-        if (result.success){
-          item.students = result.students;
-          renderStudentChips_();
-          showToast(`「${newName.trim()}」を追加しました`);
-          fetchBillingList();
-        } else {
-          showToast("追加に失敗しました");
-        }
-      } catch (err){
-        console.error(err);
-        showToast("通信に失敗しました");
-      }
+    addStudentBtn.addEventListener("click", () => {
+      openStudentManageModal_(item, (updatedStudents) => {
+        item.students = updatedStudents;
+        renderStudentChips_();
+        fetchBillingList();
+      });
     });
     studentActionRow.appendChild(addStudentBtn);
 
