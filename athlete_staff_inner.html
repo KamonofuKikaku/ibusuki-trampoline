@@ -1350,11 +1350,20 @@ const excludeReasonLineOptOut = document.getElementById("excludeReasonLineOptOut
 const excludeReasonCancelBtn = document.getElementById("excludeReasonCancelBtn");
 const excludeReasonConfirmBtn = document.getElementById("excludeReasonConfirmBtn");
 let excludeReasonResolve_ = null;
+let excludeReasonLineOptOutTouched_ = false; // スタッフが自分でチェックを操作したら、以後は自動切り替えをやめる
+
+excludeReasonLineOptOut.addEventListener("change", () => {
+  excludeReasonLineOptOutTouched_ = true;
+});
 
 document.querySelectorAll('input[name="excludeReasonRadio"]').forEach(radio => {
   radio.addEventListener("change", () => {
     excludeReasonOtherInput.style.display = radio.value === "その他" && radio.checked ? "block" : "none";
-    if (radio.value === "休会中" && radio.checked) excludeReasonLineOptOut.checked = true; // 休会中は確定でLINE配信しない
+    if (!excludeReasonLineOptOutTouched_ && radio.checked){
+      // 休会中は確定でLINE配信しない。それ以外の理由に変更したら、自動チェックは外す
+      // (スタッフが自分でチェックを操作した後は、ここでは触らない)
+      excludeReasonLineOptOut.checked = (radio.value === "休会中");
+    }
   });
 });
 
@@ -1364,6 +1373,7 @@ function openExcludeReasonModal_(){
   excludeReasonOtherInput.value = "";
   excludeReasonOtherInput.style.display = "none";
   excludeReasonLineOptOut.checked = false;
+  excludeReasonLineOptOutTouched_ = false;
   excludeReasonModalEl.classList.add("show");
   return new Promise(resolve => { excludeReasonResolve_ = resolve; });
 }
