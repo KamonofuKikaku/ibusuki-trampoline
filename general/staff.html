@@ -490,8 +490,12 @@ billingBulkBtn.addEventListener("click", async () => {
     return;
   }
 
-  const summary = targets.map(t => `・${t.name}：${Number(t.amountInput.value).toLocaleString()}円`).join("\n");
-  const ok = window.confirm(`以下の${targets.length}名にまとめて請求します。よろしいですか？\n\n${summary}`);
+  const summary = targets.map(t => {
+    const [y, m] = t.monthInput.value.split("-");
+    const monthLabel = (y && m) ? `${y}年${Number(m)}月分` : "";
+    return `・${t.name}：${monthLabel} ${Number(t.amountInput.value).toLocaleString()}円`;
+  }).join("\n");
+  const ok = window.confirm(`以下の${targets.length}名にまとめて請求します。月をよく確認してください。\n\n${summary}`);
   if (!ok) return;
 
   billingBulkBtn.disabled = true;
