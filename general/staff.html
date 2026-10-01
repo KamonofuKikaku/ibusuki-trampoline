@@ -187,7 +187,7 @@
 
   /* ---------- お月謝 ---------- */
   .billing-row { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; border: 1px solid rgba(43,35,32,0.06); }
-  .billing-row .billing-name { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .billing-row .billing-name { font-weight: 700; font-size: 17px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
   .card-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
   .card-badge.on { background: var(--mint-soft); color: var(--mint); }
   .card-badge.off { background: #EFE9DC; color: var(--ink-soft); }
@@ -1887,6 +1887,36 @@ function renderBilling(list){
     lineBadge.textContent = "LINE×";
     lineBadge.style.display = item.lineOptOut ? "inline-block" : "none";
     nameRow.appendChild(lineBadge);
+
+    if (item.earliestUnpaidMonth){
+      const [fy, fm] = item.earliestUnpaidMonth.split("-");
+      const markFreeBtn = document.createElement("button");
+      markFreeBtn.textContent = `${Number(fm)}月済`;
+      markFreeBtn.style.cssText = "border:none; background:var(--mint-soft); color:var(--mint); font-weight:700; font-size:11px; padding:4px 10px; border-radius:999px; cursor:pointer; margin-left:auto; flex-shrink:0;";
+      markFreeBtn.addEventListener("click", async () => {
+        const monthLabel = `${fy}年${Number(fm)}月`;
+        if (!window.confirm(`${item.name}さんの${monthLabel}分を、0円の支払い済み扱いにします。\n（実際の引き落としは行われません）\n\n本当によろしいですか？`)) return;
+        try {
+          const res = await fetch(GAS_ENDPOINT, {
+            method: "POST",
+            body: JSON.stringify({ action: "staffMarkMonthFree", password: password, userId: item.userId, month: item.earliestUnpaidMonth }),
+          });
+          const result = await res.json();
+          if (result.success){
+            showToast(`${monthLabel}分を支払い済みにしました`);
+            fetchBillingList();
+            loadUnpaidMonths_();
+          } else {
+            showToast("処理に失敗しました");
+          }
+        } catch (err){
+          console.error(err);
+          showToast("通信に失敗しました");
+        }
+      });
+      nameRow.appendChild(markFreeBtn);
+    }
+
     contentDiv.appendChild(nameRow);
 
     if (!item.cardOnFile && !item.cashPayment){
