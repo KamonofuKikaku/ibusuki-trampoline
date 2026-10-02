@@ -1545,7 +1545,7 @@ function renderBilling(list){
     if (item.earliestUnpaidMonth){
       const [fy, fm] = item.earliestUnpaidMonth.split("-");
       const markFreeBtn = document.createElement("button");
-      markFreeBtn.textContent = `${Number(fm)}月済`;
+      markFreeBtn.textContent = `${Number(fm)}月済にする`;
       markFreeBtn.style.cssText = "border:none; background:var(--mint-soft); color:var(--mint); font-weight:700; font-size:11px; padding:4px 10px; border-radius:999px; cursor:pointer; margin-left:auto; flex-shrink:0;";
       markFreeBtn.addEventListener("click", async () => {
         const monthLabel = `${fy}年${Number(fm)}月`;
