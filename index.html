@@ -1339,6 +1339,7 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
 /* ---------- アンケート ---------- */
 let activeSurvey = null;
 let surveyAnswers = {}; // questionIndex(文字列) -> 回答値
+let selectedStudentIds = []; // 今回の送信で対象にする生徒id(複数可。生徒登録が無いアカウントはnullが1件)
 
 async function fetchActiveSurvey(){
   if (!liffProfile) return;
@@ -1349,6 +1350,8 @@ async function fetchActiveSurvey(){
       document.getElementById("surveyBanner").style.display = "none";
       return;
     }
+    surveyAnswers = {};
+    selectedStudentIds = (activeSurvey.unansweredStudents || []).map(s => s.id);
     document.getElementById("surveyBanner").style.display = "flex";
     document.getElementById("surveyBannerText").textContent = activeSurvey.title + "の回答はこちら";
 
@@ -1371,10 +1374,8 @@ function renderSurveyQuestions(){
   // 備考(notes)は新システムには存在しない項目のため、常に非表示にする
   document.getElementById("surveyNotesEl").style.display = "none";
 
-  // 生徒ごとの個別回答(unansweredStudents)は新システムでは未対応(アカウント単位で1回答)のため、常に非表示にする
-  document.getElementById("surveyStudentSelectEl").style.display = "none";
+  renderSurveyStudentSelect_();
 
-  surveyAnswers = {};
   const wrap = document.getElementById("surveyQuestionsEl");
   wrap.innerHTML = "";
 
@@ -1386,11 +1387,14 @@ function renderSurveyQuestions(){
     titleEl.textContent = q.question + (q.required === false ? "（任意）" : "");
     qEl.appendChild(titleEl);
 
+    const existingAnswer = surveyAnswers[qIndex];
+
     if (q.type === "text") {
       const textarea = document.createElement("textarea");
       textarea.className = "survey-text-answer";
       textarea.rows = 3;
       textarea.placeholder = "回答を入力してください";
+      if (existingAnswer !== undefined) textarea.value = existingAnswer;
       textarea.addEventListener("input", () => {
         surveyAnswers[qIndex] = textarea.value;
       });
@@ -1416,6 +1420,10 @@ function renderSurveyQuestions(){
       input.type = "radio";
       input.name = "sq_" + qIndex;
       input.value = choice;
+      if (existingAnswer === choice){
+        input.checked = true;
+        label.classList.add("checked");
+      }
       input.addEventListener("change", () => {
         surveyAnswers[qIndex] = choice;
         optionsEl.querySelectorAll(".survey-option-label").forEach(l => l.classList.remove("checked"));
@@ -1430,6 +1438,46 @@ function renderSurveyQuestions(){
 
     qEl.appendChild(optionsEl);
     wrap.appendChild(qEl);
+  });
+}
+
+// 生徒が複数いる(または複数人分の未回答が残っている)場合だけ、
+// 「誰の分として回答するか」のチェックボックスを出す。1人だけなら出さない。
+function renderSurveyStudentSelect_(){
+  const el = document.getElementById("surveyStudentSelectEl");
+  const unanswered = activeSurvey.unansweredStudents || [];
+  el.innerHTML = "";
+
+  if (unanswered.length <= 1){
+    el.style.display = "none";
+    return;
+  }
+
+  el.style.display = "block";
+  const label = document.createElement("div");
+  label.style.cssText = "font-size:12.5px; color:var(--ink-soft, #7A6F63); margin-bottom:8px;";
+  label.textContent = "回答する生徒にチェックを付けてください（複数選択できます。同じ内容で一度に登録されます）";
+  el.appendChild(label);
+
+  unanswered.forEach(student => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:6px;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selectedStudentIds.includes(student.id);
+    cb.style.cssText = "width:18px; height:18px; margin:0; flex-shrink:0;";
+    cb.addEventListener("change", () => {
+      if (cb.checked){
+        if (!selectedStudentIds.includes(student.id)) selectedStudentIds.push(student.id);
+      } else {
+        selectedStudentIds = selectedStudentIds.filter(id => id !== student.id);
+      }
+    });
+    row.appendChild(cb);
+    const span = document.createElement("span");
+    span.textContent = student.name;
+    row.appendChild(span);
+    el.appendChild(row);
   });
 }
 
@@ -1451,6 +1499,10 @@ document.getElementById("surveySkipBtn").addEventListener("click", () => {
 
 document.getElementById("surveySubmitBtn").addEventListener("click", async () => {
   if (!activeSurvey || !liffProfile) return;
+  if (!selectedStudentIds.length){
+    showToast("生徒を1人以上選んでください");
+    return;
+  }
   // 必須(requiredがfalseでない)の質問だけ、回答が入っているかを確認する
   const missingRequired = activeSurvey.questions.some((q, qIndex) => {
     if (q.required === false) return false;
@@ -1470,14 +1522,27 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
     const res = await fetch(`${API_BASE}/survey`, {
       method: "POST",
       headers: authHeaders_(),
-      body: JSON.stringify({ surveyId: activeSurvey.id, answers: answers }),
+      body: JSON.stringify({ surveyId: activeSurvey.id, answers: answers, studentIds: selectedStudentIds }),
     });
     const result = await res.json();
     if (result.success){
-      showToast("回答ありがとうございました！");
+      const submittedFor = result.submittedFor || [];
+      const remaining = (activeSurvey.unansweredStudents || []).filter(s => submittedFor.indexOf(s.id) === -1);
+      if (remaining.length){
+        // 残りの生徒がいる間はシートを閉じない。入力済みの回答はそのまま残すので、
+        // 「同じ内容のまま送信するだけ」で残りの生徒分も登録できる(内容を変えたい場合は編集してから送信)
+        activeSurvey.unansweredStudents = remaining;
+        showToast(`続けて${remaining.map(s => s.name).join("・")}さんの分もお願いします`);
+        renderSurveyQuestions();
+      } else {
+        showToast("回答ありがとうございました！");
+        closeSurveyPopup();
+        document.getElementById("surveyBanner").style.display = "none";
+        activeSurvey = null;
+      }
+    } else if (result.reason === "already_answered"){
+      showToast("すでに回答済みです");
       closeSurveyPopup();
-      document.getElementById("surveyBanner").style.display = "none";
-      activeSurvey = null;
     } else {
       showToast("送信に失敗しました。もう一度お試しください");
     }
