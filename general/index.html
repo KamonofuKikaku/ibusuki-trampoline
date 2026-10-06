@@ -34,8 +34,8 @@
   /* タップ反応をすべてのボタンで確実に見せるための共通スタイル。
      :active だけだとiOSのSafari/WebViewでタップ時に反映されないことがあるため、
      下のJSでpointerdown/upに合わせて付け外しする.pressedクラスで代用する。 */
-  button { transition: transform 0.12s ease, opacity 0.12s ease; }
-  button.pressed:not(:disabled) { transform: scale(0.95); opacity: 0.8; }
+  button { transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease; }
+  button.pressed:not(:disabled) { transform: scale(0.9); opacity: 0.6; filter: brightness(0.85); }
 
   html, body {
     margin: 0; padding: 0;
