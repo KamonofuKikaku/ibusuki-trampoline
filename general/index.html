@@ -31,6 +31,12 @@
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+  /* タップ反応をすべてのボタンで確実に見せるための共通スタイル。
+     :active だけだとiOSのSafari/WebViewでタップ時に反映されないことがあるため、
+     下のJSでpointerdown/upに合わせて付け外しする.pressedクラスで代用する。 */
+  button { transition: transform 0.12s ease, opacity 0.12s ease; }
+  button.pressed:not(:disabled) { transform: scale(0.95); opacity: 0.8; }
+
   html, body {
     margin: 0; padding: 0;
     background: var(--cream);
@@ -1490,6 +1496,21 @@ async function doSubmitBooking_(entries){
   submitBtn.textContent = "この日程で予約する";
   hideLoadingOverlay();
 }
+
+// タップした瞬間に見た目が変わるよう、全ボタン共通でpressedクラスを付け外しする
+(function setupButtonPressFeedback_(){
+  function press(e){
+    const btn = e.target.closest("button");
+    if (btn) btn.classList.add("pressed");
+  }
+  function release(){
+    document.querySelectorAll("button.pressed").forEach(el => el.classList.remove("pressed"));
+  }
+  document.addEventListener("pointerdown", press, { passive: true });
+  document.addEventListener("pointerup", release, { passive: true });
+  document.addEventListener("pointercancel", release, { passive: true });
+  document.addEventListener("pointerleave", release, { passive: true });
+})();
 
 (async function start(){
   // 前回登録済みだったことが端末に記録されていれば、フォームは出さない
