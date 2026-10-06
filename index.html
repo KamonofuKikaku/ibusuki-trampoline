@@ -715,18 +715,25 @@
    ▼▼▼ ここだけ書き換えれば本番稼働します ▼▼▼
 ========================================================= */
 const LIFF_ID = "2010959314-SoDIKt2f";
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfdIXOL64z7DSMTvcXau6hFXMa5w6rYdwToZ8qg5BR9Aa9Is2w_Dp3X9eO3N7cBE1uXw/exec";
-// アンケートだけは一般用のスプレッドシートに一本化されているため、そちらのURLを直接呼び出す
-const SURVEY_ENDPOINT = "https://script.google.com/macros/s/AKfycbzwp_poHH7SLbSah842xfB0va4oLIDxfTuQ0aO6hbGYddvo7UHrV3aLVl8nlrjOhA33/exec";
+const API_BASE = "https://ibusuki-trampoline.vercel.app/api/liff/athlete";
 /* =========================================================
    ▲▲▲ ここまで ▲▲▲
 ========================================================= */
 
 const WEEKDAY_JP = ["日","月","火","水","木","金","土"];
 
-let liffProfile = null;       // { userId, displayName }
-let availabilityMap = {};     // { "2026-08-10": { full: true/false } }
+let liffProfile = null;        // { userId, displayName }
+let liffIdToken = null;        // サーバー検証用のLIFF IDトークン(文字列)
+let currentRegisteredName = ""; // 登録済みの本名(未登録なら空文字)
+let availabilityMap = {};     // { "2026-08-10": { capacity, booked, remain, full, closed, hours } }
 let bookedSet = new Set();    // あなたが予約済みの日付("2026-08-10"形式)の集合
+let bookingIdsByDate = {};    // { "2026-08-10": ["booking-uuid", ...] } キャンセル送信に使う予約ID(同日に複数生徒の予約がありうる)
+
+// 認証つきAPI呼び出し用のヘッダー。liff.getIDToken()はサーバー側で検証されるIDトークンで、
+// 旧システムのliff.getDecodedIDToken()(クライアント側だけで検証される非推奨のもの)とは別物。
+function authHeaders_(){
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + (liffIdToken || "") };
+}
 
 async function initLiff(){
   try {
@@ -735,6 +742,7 @@ async function initLiff(){
       liff.login();
       return;
     }
+    liffIdToken = liff.getIDToken();
     // getProfile()は毎回LINEへ通信が発生し遅い。
     // ログイン時に受け取るIDトークンにuserId・表示名が既に入っているので、
     // それをそのまま使うことで通信を1回分減らす。
@@ -771,10 +779,14 @@ async function fetchWithRetry_(url, options, retries = 2, timeoutMs = 8000){
 
 async function fetchAvailability(){
   try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=availability`);
+    const from = fmt(TODAY);
+    const toDate = new Date(TODAY);
+    toDate.setDate(toDate.getDate() + 100); // 月送りできる範囲を十分にカバーする
+    const to = fmt(toDate);
+    const data = await fetchWithRetry_(`${API_BASE}/availability?from=${from}&to=${to}`);
     availabilityMap = {};
-    (data.dates || []).forEach(d => {
-      availabilityMap[d.date] = { full: d.full, remain: d.remain, closed: d.closed, hours: d.hours };
+    (data.days || []).forEach(d => {
+      availabilityMap[d.date] = { capacity: d.capacity, booked: d.booked, remain: d.remaining, full: d.full, closed: d.closed, hours: d.hoursText };
     });
     try { localStorage.setItem("cachedAvailability", JSON.stringify(availabilityMap)); } catch (e) {}
   } catch (err){
@@ -796,20 +808,26 @@ function formatHoursCompact_(hours){
 async function fetchMyBookings(){
   if (!liffProfile) return;
   try {
-    const data = await fetchWithRetry_(`${GAS_ENDPOINT}?action=myBookings&userId=${encodeURIComponent(liffProfile.userId)}`);
-    bookedSet = new Set((data.bookings || []).map(b => b.date));
+    const data = await fetchWithRetry_(`${API_BASE}/bookings`, { headers: authHeaders_() });
+    bookedSet = new Set();
+    bookingIdsByDate = {};
+    (data.bookings || []).forEach(b => {
+      bookedSet.add(b.booking_date);
+      if (!bookingIdsByDate[b.booking_date]) bookingIdsByDate[b.booking_date] = [];
+      bookingIdsByDate[b.booking_date].push(b.id);
+    });
     try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
 
-    // 登録状況もここで一緒に受け取る(別通信を省いて表示を早くするため)
-    currentRegisteredName = data.name || "";
+    // 新システムには旧システムの「名前登録(registerName)」という独立した概念が無いため、
+    // 生徒(students)が1人以上登録されていれば「登録済み」とみなす
     await fetchMyStudents_();
     updateRegisteredNameDisplay();
-    if (data.registered) {
+    if (currentStudents.length > 0) {
       // 既に登録済みだと分かったので、開いていたフォームを自動で閉じる
       document.getElementById("registerOverlay").classList.remove("show");
       try {
         localStorage.setItem("cachedRegistered", "true");
-        localStorage.setItem("cachedRegisteredName", currentRegisteredName);
+        localStorage.setItem("cachedRegisteredName", currentStudents[0].name);
       } catch (e) {}
     }
     // 未登録の場合は、アプリ起動時から既に開いているフォームをそのまま使ってもらう
@@ -972,6 +990,16 @@ function confirmCancel(key){
 async function doCancel(key){
   if (!liffProfile) return;
 
+  const bookingIds = bookingIdsByDate[key] || [];
+  if (!bookingIds.length){
+    // 手元の予約情報が古い可能性があるので、最新化してから失敗として扱う
+    console.error("cancel failed: no bookingId for", key);
+    await fetchMyBookings();
+    renderMonth();
+    showToast("キャンセルできませんでした。もう一度お試しください");
+    return;
+  }
+
   // 先に画面を更新（体感速度優先）。失敗したら後で元に戻す
   bookedSet.delete(key);
   try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
@@ -979,27 +1007,26 @@ async function doCancel(key){
   showToast("キャンセルしました");
 
   try {
-    const data = await fetchWithRetry_(GAS_ENDPOINT, {
+    // 同じ日に複数の生徒の予約が入っていることがあるため、紐づく予約を全件キャンセルする
+    const results = await Promise.all(bookingIds.map(bookingId => fetchWithRetry_(`${API_BASE}/cancel`, {
       method: "POST",
-      body: JSON.stringify({
-        action: "cancel",
-        userId: liffProfile.userId,
-        date: key,
-      }),
-    });
-    if (data.success){
-      fetchAvailability().then(renderMonth); // 空きが出るので裏側で更新(表示をブロックしない)
+      headers: authHeaders_(),
+      body: JSON.stringify({ bookingId: bookingId }),
+    })));
+    const allOk = results.every(r => r && r.success);
+    if (allOk){
+      await fetchAvailability();
+      await fetchMyBookings();
+      renderMonth();
     } else {
-      // 失敗していたので元に戻す
-      bookedSet.add(key);
-      try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+      // 一部またはすべて失敗していたので、最新情報で元に戻す
+      await fetchMyBookings();
       renderMonth();
       showToast("キャンセルできませんでした。もう一度お試しください");
     }
   } catch (err){
     console.error("cancel failed", err);
-    bookedSet.add(key);
-    try { localStorage.setItem("cachedBookedDates", JSON.stringify(Array.from(bookedSet))); } catch (e) {}
+    await fetchMyBookings();
     renderMonth();
     showToast("通信に失敗しました。時間をおいて再度お試しください");
   }
@@ -1126,54 +1153,66 @@ studentSelectConfirmBtn.addEventListener("click", async () => {
   await doSubmitBooking_(expandedDates);
 });
 
+// 新システムの/bookは1日=1回のAPI呼び出しなので、旧システムのバッチ送信(dates一括)とは異なり、
+// ここでエントリごとにループして呼び出し、結果を集計してトーストを出す。
 async function doSubmitBooking_(dates){
   submitBtn.disabled = true;
   submitBtn.textContent = "送信中…";
   showLoadingOverlay("よやくちゅう…");
 
-  try {
-    const data = await fetchWithRetry_(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "book",
-        userId: liffProfile.userId,
-        displayName: currentRegisteredName || liffProfile.displayName,
-        dates: dates,
-      }),
-    }, 2, 15000); // 予約処理は少し重いのでタイムアウトを長めに
-    const results = data.results || [];
-    const succeeded = results.filter(r => r.success).length;
-    const failed = results.length - succeeded;
+  let succeeded = 0, failed = 0;
+  const succeededDates = [];
 
-    results.filter(r => r.success).forEach(r => {
-      bookedSet.add(r.date);
-      selectedDates.delete(r.date);
-    });
-    await fetchAvailability(); // 予約人数が変わるので空き状況を再取得
-    renderMonth();
-    renderSelection();
-
-    if (succeeded > 0 && failed === 0){
-      showToast(`${succeeded}件の予約を受け付けました`);
-    } else if (succeeded > 0 && failed > 0){
-      showToast(`${succeeded}件受付・${failed}件は満員のため不可でした`);
-    } else {
-      showToast("選択いただいた日程は受け付けできませんでした");
+  for (const entry of dates){
+    const studentName = entry.studentName
+      || (currentStudents[0] ? currentStudents[0].name : (currentRegisteredName || liffProfile.displayName));
+    const student = currentStudents.find(s => s.name === studentName);
+    try {
+      const data = await fetchWithRetry_(`${API_BASE}/book`, {
+        method: "POST",
+        headers: authHeaders_(),
+        body: JSON.stringify({
+          studentId: student ? student.id : undefined,
+          studentName: studentName,
+          bookingDate: entry.date,
+          displayName: liffProfile.displayName,
+        }),
+      }, 2, 15000); // 予約処理は少し重いのでタイムアウトを長めに
+      if (data && data.success){
+        succeeded++;
+        succeededDates.push(entry.date);
+      } else {
+        failed++;
+      }
+    } catch (err){
+      console.error("booking failed for entry", entry, err);
+      failed++;
     }
-    // 自動では閉じない。予約済み(青いスタンプ)への変化を確認してから、
-    // 本人が画面右上の×ボタンなどで閉じる。
-
-  } catch (err){
-    console.error("booking failed", err);
-    showToast("送信に失敗しました。時間をおいて再度お試しください");
-  } finally {
-    submitBtn.disabled = selectedDates.size === 0;
-    submitBtn.textContent = "この日程で予約する";
-    hideLoadingOverlay();
   }
-}
 
-let currentRegisteredName = "";
+  succeededDates.forEach(date => {
+    bookedSet.add(date);
+    selectedDates.delete(date);
+  });
+  await fetchAvailability(); // 予約人数が変わるので空き状況を再取得
+  await fetchMyBookings(); // 新しい予約IDをキャンセル用に取得しておく
+  renderMonth();
+  renderSelection();
+
+  if (succeeded > 0 && failed === 0){
+    showToast(`${succeeded}件の予約を受け付けました`);
+  } else if (succeeded > 0 && failed > 0){
+    showToast(`${succeeded}件受付・${failed}件は満員のため不可でした`);
+  } else {
+    showToast("選択いただいた日程は受け付けできませんでした");
+  }
+  // 自動では閉じない。予約済み(青いスタンプ)への変化を確認してから、
+  // 本人が画面右上の×ボタンなどで閉じる。
+
+  submitBtn.disabled = selectedDates.size === 0;
+  submitBtn.textContent = "この日程で予約する";
+  hideLoadingOverlay();
+}
 
 function updateRegisteredNameDisplay(){
   const el = document.getElementById("registeredNameDisplay");
@@ -1222,7 +1261,7 @@ studentCountSelect.addEventListener("change", renderAdditionalStudentFields_);
 async function fetchMyStudents_(){
   if (!liffProfile) return;
   try {
-    const res = await fetch(`${GAS_ENDPOINT}?action=myStudents&userId=${encodeURIComponent(liffProfile.userId)}`);
+    const res = await fetch(`${API_BASE}/students`, { headers: authHeaders_() });
     const data = await res.json();
     currentStudents = data.students || [];
   } catch (err){
@@ -1246,53 +1285,44 @@ document.getElementById("registerSaveBtn").addEventListener("click", async () =>
   btn.disabled = true;
   btn.textContent = "登録中…";
   try {
-    const res = await fetch(GAS_ENDPOINT, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "registerName",
-        userId: liffProfile.userId,
-        displayName: liffProfile.displayName,
-        name: name,
-      }),
-    });
-    const result = await res.json();
-    if (result.success){
-      currentRegisteredName = name;
+    // 新システムには「代表者名の登録(registerName)」という独立した概念が無いため、
+    // 1人目の名前も含めて、入力された名前をすべて生徒(students)として登録する。
+    const namesToAdd = [name];
+    const count = Number(studentCountSelect.value);
+    for (let i = 2; i <= count; i++){
+      const additionalInput = document.getElementById("studentNameInput" + i);
+      const additionalName = additionalInput ? additionalInput.value.trim() : "";
+      if (additionalName) namesToAdd.push(additionalName);
+    }
 
-      // 2人目以降の生徒名が入力されていれば、まとめて登録する
-      const count = Number(studentCountSelect.value);
-      for (let i = 2; i <= count; i++){
-        const additionalInput = document.getElementById("studentNameInput" + i);
-        const additionalName = additionalInput ? additionalInput.value.trim() : "";
-        if (!additionalName) continue;
-        try {
-          await fetch(GAS_ENDPOINT, {
-            method: "POST",
-            body: JSON.stringify({ action: "customerAddStudent", userId: liffProfile.userId, name: additionalName }),
-          });
-        } catch (err){
-          console.error("customerAddStudent failed", err);
-        }
-      }
-      await fetchMyStudents_(); // 追加した生徒も含めて、連名表示を最新化する
-      updateRegisteredNameDisplay();
+    await fetchMyStudents_();
+    const existingNames = new Set(currentStudents.map(s => s.name));
+    for (const n of namesToAdd){
+      if (existingNames.has(n)) continue;
+      await fetch(`${API_BASE}/students`, {
+        method: "POST",
+        headers: authHeaders_(),
+        body: JSON.stringify({ name: n }),
+      });
+    }
 
-      document.getElementById("registerOverlay").classList.remove("show");
-      try {
-        localStorage.setItem("cachedRegistered", "true");
-        localStorage.setItem("cachedRegisteredName", name);
-      } catch (e) {}
-      showToast("登録しました。よろしくお願いします！");
-      // 名前登録を優先していたので、保留になっていたアンケートがあればここで開く
-      if (activeSurvey){
-        const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
-        if (dismissedDate !== fmt(new Date())) openSurveyPopup();
-      }
-    } else {
-      showToast("登録に失敗しました。もう一度お試しください");
+    await fetchMyStudents_(); // 追加した生徒も含めて、連名表示を最新化する
+    currentRegisteredName = currentStudents[0] ? currentStudents[0].name : name;
+    updateRegisteredNameDisplay();
+
+    document.getElementById("registerOverlay").classList.remove("show");
+    try {
+      localStorage.setItem("cachedRegistered", "true");
+      localStorage.setItem("cachedRegisteredName", currentRegisteredName);
+    } catch (e) {}
+    showToast("登録しました。よろしくお願いします！");
+    // 名前登録を優先していたので、保留になっていたアンケートがあればここで開く
+    if (activeSurvey){
+      const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
+      if (dismissedDate !== fmt(new Date())) openSurveyPopup();
     }
   } catch (err){
-    console.error("registerName failed", err);
+    console.error("register failed", err);
     showToast("通信に失敗しました");
   } finally {
     btn.disabled = false;
@@ -1307,14 +1337,14 @@ let surveyAnswers = {}; // questionIndex(文字列) -> 回答値
 async function fetchActiveSurvey(){
   if (!liffProfile) return;
   try {
-    const data = await fetchWithRetry_(`${SURVEY_ENDPOINT}?action=surveyActive&userId=${encodeURIComponent(liffProfile.userId)}&system=athlete`);
+    const data = await fetchWithRetry_(`${API_BASE}/survey`, { headers: authHeaders_() });
     activeSurvey = data.survey || null;
     if (!activeSurvey){
       document.getElementById("surveyBanner").style.display = "none";
       return;
     }
     document.getElementById("surveyBanner").style.display = "flex";
-    document.getElementById("surveyBannerText").textContent = activeSurvey.subject + "の回答はこちら";
+    document.getElementById("surveyBannerText").textContent = activeSurvey.title + "の回答はこちら";
 
     const dismissedDate = localStorage.getItem("surveyDismissedDate_" + activeSurvey.id);
     const todayStr = fmt(new Date());
@@ -1329,40 +1359,14 @@ async function fetchActiveSurvey(){
 }
 
 function renderSurveyQuestions(){
-  document.getElementById("surveySubjectEl").textContent = activeSurvey.subject;
-  document.getElementById("surveyContentEl").textContent = activeSurvey.content || "";
-  document.getElementById("surveyContentEl").style.display = activeSurvey.content ? "block" : "none";
-  // 備考は内容と違って省略せず、常に確定で表示する
-  document.getElementById("surveyNotesEl").textContent = activeSurvey.notes || "";
-  document.getElementById("surveyNotesEl").style.display = activeSurvey.notes ? "block" : "none";
+  document.getElementById("surveySubjectEl").textContent = activeSurvey.title;
+  document.getElementById("surveyContentEl").textContent = activeSurvey.body || "";
+  document.getElementById("surveyContentEl").style.display = activeSurvey.body ? "block" : "none";
+  // 備考(notes)は新システムには存在しない項目のため、常に非表示にする
+  document.getElementById("surveyNotesEl").style.display = "none";
 
-  const studentSelectEl = document.getElementById("surveyStudentSelectEl");
-  const unanswered = activeSurvey.unansweredStudents || [""];
-  studentSelectEl.innerHTML = "";
-  if (unanswered.length > 1 && unanswered.some(n => n)){
-    studentSelectEl.style.display = "block";
-    const label = document.createElement("div");
-    label.style.cssText = "font-size:12.5px; color:var(--ink-soft, #7A6F63); margin-bottom:8px;";
-    label.textContent = "回答する生徒にチェックを付けてください（複数選択できます）";
-    studentSelectEl.appendChild(label);
-    unanswered.forEach(name => {
-      const row = document.createElement("label");
-      row.style.cssText = "display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:6px;";
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.value = name;
-      cb.checked = true;
-      cb.className = "survey-student-checkbox";
-      cb.style.cssText = "width:18px; height:18px; margin:0; flex-shrink:0;";
-      row.appendChild(cb);
-      const span = document.createElement("span");
-      span.textContent = name;
-      row.appendChild(span);
-      studentSelectEl.appendChild(row);
-    });
-  } else {
-    studentSelectEl.style.display = "none";
-  }
+  // 生徒ごとの個別回答(unansweredStudents)は新システムでは未対応(アカウント単位で1回答)のため、常に非表示にする
+  document.getElementById("surveyStudentSelectEl").style.display = "none";
 
   surveyAnswers = {};
   const wrap = document.getElementById("surveyQuestionsEl");
@@ -1453,49 +1457,21 @@ document.getElementById("surveySubmitBtn").addEventListener("click", async () =>
   }
   const answers = activeSurvey.questions.map((q, qIndex) => ({ question: q.question, answer: surveyAnswers[qIndex] !== undefined ? surveyAnswers[qIndex] : "" }));
 
-  const allUnanswered = activeSurvey.unansweredStudents || [""];
-  let studentNames = allUnanswered;
-  if (allUnanswered.length > 1 && allUnanswered.some(n => n)){
-    studentNames = Array.from(document.querySelectorAll(".survey-student-checkbox:checked")).map(cb => cb.value);
-    if (!studentNames.length){
-      showToast("生徒を1人以上選んでください");
-      return;
-    }
-  }
-
   const btn = document.getElementById("surveySubmitBtn");
   btn.disabled = true;
   btn.textContent = "送信中…";
   try {
-    const res = await fetch(SURVEY_ENDPOINT, {
+    const res = await fetch(`${API_BASE}/survey`, {
       method: "POST",
-      body: JSON.stringify({
-        action: "surveySubmit", userId: liffProfile.userId,
-        displayName: currentRegisteredName || liffProfile.displayName,
-        surveyId: activeSurvey.id, answers: answers, system: "athlete",
-        studentNames: studentNames,
-      }),
+      headers: authHeaders_(),
+      body: JSON.stringify({ surveyId: activeSurvey.id, answers: answers }),
     });
     const result = await res.json();
     if (result.success){
-      closeSurveyPopup();
-      const remaining = allUnanswered.filter(n => studentNames.indexOf(n) === -1);
-      if (remaining.length){
-        activeSurvey.unansweredStudents = remaining;
-        if (window.confirm(`ご回答ありがとうございました！\n\n続けて「${remaining.join("・")}」の分も回答しますか？`)){
-          openSurveyPopup();
-        } else {
-          document.getElementById("surveyBanner").style.display = "none";
-        }
-      } else {
-        showToast("回答ありがとうございました！");
-        document.getElementById("surveyBanner").style.display = "none";
-        activeSurvey = null;
-      }
-    } else if (result.reason === "already_answered"){
-      showToast("すでに回答済みです");
+      showToast("回答ありがとうございました！");
       closeSurveyPopup();
       document.getElementById("surveyBanner").style.display = "none";
+      activeSurvey = null;
     } else {
       showToast("送信に失敗しました。もう一度お試しください");
     }
