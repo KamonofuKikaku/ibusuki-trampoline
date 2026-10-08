@@ -1791,8 +1791,7 @@ function renderBilling(list){
         showToast("金額を入力してください");
         return;
       }
-      const amount = Math.round(rawAmount / 1100) * 1100;
-      amountInput.value = amount;
+      const amount = rawAmount;
 
       let confirmMessage = `${item.name}さんに\n\n${amount.toLocaleString()}円\n\nを請求します。この金額で間違いないですか？`;
       if (item.lastPaidMonth === monthInput.value){
@@ -1944,8 +1943,7 @@ billingBulkBtn.addEventListener("click", async () => {
       failures.push({ name: t.name, reason: "金額が未入力です" });
       continue;
     }
-    const amount = Math.round(rawAmount / 1100) * 1100;
-    t.amountInput.value = amount;
+    const amount = rawAmount;
     t.chargeBtn.disabled = true;
     t.chargeBtn.textContent = "処理中…";
     try {
