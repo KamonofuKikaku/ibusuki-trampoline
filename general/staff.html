@@ -1602,13 +1602,20 @@ function renderOnetimeList(list){
     return;
   }
 
-  list.forEach(item => {
+  // 対象外の人は、請求時に紛れないよう一覧の一番下にまとめる(renderBillingと同じ並び順)
+  const sortedList = list.map((item, i) => ({ item, i }))
+    .sort((a, b) => (a.item.cashPayment === b.item.cashPayment) ? (a.i - b.i) : (a.item.cashPayment ? 1 : -1))
+    .map(x => x.item);
+
+  sortedList.forEach(item => {
     const row = document.createElement("div");
     row.className = "billing-row";
+    if (item.cashPayment) row.style.opacity = "0.5";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.style.cssText = "width:auto; margin-right:8px;";
+    if (item.cashPayment) checkbox.disabled = true; // 対象外の人は選択できないようにする
     checkbox.addEventListener("change", updateOnetimeUI);
     row.appendChild(checkbox);
 
